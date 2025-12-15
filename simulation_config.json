@@ -1,0 +1,46 @@
+{
+    "theme": "中国古代",
+    "episode": {
+        "emoji": "🚢",
+        "title": "Voyages of Zheng He",
+        "desc": "During the Ming Dynasty, Admiral Zheng He led seven maritime expeditions, expanding China's influence and trade across Asia and Africa."
+    },
+    "storyline": [
+        {
+            "title": "Introduction",
+            "desc": "Facilitator introduces the historical context of the Ming Dynasty and the significance of maritime exploration.",
+            "type": "facilitator"
+        },
+        {
+            "title": "Commissioning of the Fleet",
+            "desc": "Emperor Yongle commissions Zheng He to lead a grand fleet to explore and establish trade routes.",
+            "type": "event"
+        },
+        {
+            "title": "First Voyage",
+            "desc": "Zheng He embarks on his first voyage, reaching Southeast Asia and establishing diplomatic relations.",
+            "type": "event"
+        },
+        {
+            "title": "Expanding Horizons",
+            "desc": "Subsequent voyages take Zheng He to South Asia, the Middle East, and the East African coast, showcasing China's naval power.",
+            "type": "event"
+        },
+        {
+            "title": "Challenges and Achievements",
+            "desc": "The fleet faces challenges such as piracy and navigation difficulties but achieves significant diplomatic and trade successes.",
+            "type": "event"
+        },
+        {
+            "title": "Legacy and Impact",
+            "desc": "Zheng He's voyages enhance China's prestige and influence, leaving a lasting legacy on global maritime history.",
+            "type": "event"
+        }
+    ],
+    "user_role": {
+        "name": "Zheng He",
+        "title": "Admiral",
+        "desc": "The charismatic and skilled leader of the treasure fleet, known for his diplomatic acumen and navigation expertise.",
+        "avatar": "🧭"
+    }
+}
