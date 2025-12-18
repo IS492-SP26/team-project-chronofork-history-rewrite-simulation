@@ -1,105 +1,91 @@
-import argparse
 import asyncio
+import glob
 import json
-import sys
-from fastapi import FastAPI, WebSocket
-import uvicorn
+import os
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import Dict
+from server.cast_engine import CastEngine
 
-from autogen_agentchat.messages import TextMessage
-from autogen_core import CancellationToken
-import global_vars
-from server.components.websocket_manager import WebSocketManager
-from server.execute_core import ExecuteCore
+app = FastAPI()
 
-ws_app = FastAPI()
-
-parser = argparse.ArgumentParser(description="WebSocket server options")
-parser.add_argument('--single', action='store_true', help='Run in Single Agent mode')
-parser.add_argument('--web', action='store_true', help='Run in WebUI Service mode')
-
-# Parse the arguments
-args = parser.parse_args()
-
-async def send_to_client_listener(ws_manager: WebSocketManager):
-    while True:
-        msg_to_send = await ws_manager.send_to_client_queue.get()
-        await ws_manager.websocket.send_text(msg_to_send)
-
-async def recv_from_client_listener(ws_manager: WebSocketManager):
-    while True:
-        raw_input = await ws_manager.websocket.receive_text()
-        print("-----MSG FROM WS------\n"+raw_input)
-        try:
-            json_input = json.loads(raw_input)
-            type = json_input.get("type")
-            data = json_input.get('data')
-            if isinstance(data, str):  # 只有 data 是字符串时才解析
-                try:
-                    json_data = json.loads(data)
-                except json.JSONDecodeError as e:
-                    print("data field decode ERROR: "+str(e))
-            else:
-                json_data = data  # 直接使用字典
-        except Exception as e:
-            print("raw_data decode ERROR: "+str(e))
-        
-        ws_manager.log(type,json.dumps(data,ensure_ascii=False))
-        if type == "user/talk":
-            text = json_data.get("content")
-            target_agent_name = json_data.get("targetAgent")
-            if text == '':
-                return
-            if global_vars.input_future and not global_vars.input_future.done():#用户的提问相应机制
-                global_vars.input_future.set_result('''{
-    "target": "'''+target_agent_name+'''",
-    "answer": "'''+text+'''"
-}''')
-            else:#用户的主动打断机制
-                global_vars.chat_task.cancel()  # 取消任务
-                global_vars.execute_core.start_chat(target_agent_name,text)
-                
-        elif type=="process/start_plan":
-            if(global_vars.chat_task!=None):
-                global_vars.chat_task.cancel()
-            global_vars.execute_core.start_chat()
-        elif type=="user/confirm_solution":
-            solution = json_data.get("solution")
-            original_step = json_data.get("original_step")
-            cancellation_token = CancellationToken()
-            summary = await global_vars.global_formatter.on_messages([
-                TextMessage(source='user',content=f'''Summarize the content within the <text> tag, keeping key points and presenting the result concisely.
-        <text>
-        {solution}
-        </text>''')],
-        
-        cancellation_token=cancellation_token
-            )
-
-            global_vars.execute_core.send_to_client("solution/summary",
-                    {
-                        "original_step":original_step,
-                        "solution_summary":summary.chat_message.content
-                    })
-
-
-@ws_app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    type='B' if args.web else 'C' if args.single else 'A'
-    ws_manager = WebSocketManager(websocket=websocket,type=type)
-    await ws_manager.connect()
+def load_latest_config():
+    """读取 config/ 目录下最新的 session json"""
+    list_of_files = glob.glob('config/session_*.json')
+    if not list_of_files: return {}
+    latest_file = max(list_of_files, key=os.path.getctime)
     try:
-        # Start listeners as tasks
-        send_task = asyncio.create_task(send_to_client_listener(ws_manager))
-        recv_task = asyncio.create_task(recv_from_client_listener(ws_manager))
-        
-        global_vars.execute_core = ExecuteCore(ws_manager=ws_manager,is_single=args.single,is_web=args.web)
+        with open(latest_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except: return {}
 
-        # Wait for both listeners and chat to complete
-        await asyncio.gather(send_task, recv_task)
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[WebSocket, asyncio.Task] = {}
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+
+    def disconnect(self, websocket: WebSocket):
+        # 取消该连接关联的任务
+        if websocket in self.active_connections:
+            self.active_connections[websocket].cancel()
+            del self.active_connections[websocket]
+
+    async def send_json(self, websocket: WebSocket, message: dict):
+        try:
+            await websocket.send_json(message)
+        except: pass
+
+manager = ConnectionManager()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+
+    # --- 2. 初始化 CastEngine (含 StoryEngine) ---
+    config = load_latest_config()
+    cast_engine = CastEngine(config)
+    
+    cast_task = None
+    try:
+        while True:
+            data = await websocket.receive_text()
+            request = json.loads(data)
+            func_name = request.get("type")
+            params = request.get("data", {})
+
+            if func_name == "start_experience":
+                # 1. 启动 CastEngine 状态
+                cast_engine.start()
+                
+                # 2. 启动后台 Loop 任务，并绑定到该 WebSocket
+                # 这个 Loop 会源源不断地 yield 数据 (Token, Status)
+                async def loop_worker():
+                    async for msg in cast_engine.run_loop():
+                        await websocket.send_json(msg)
+                
+                cast_task = asyncio.create_task(loop_worker())
+                manager.active_connections[websocket] = cast_task
+
+            elif func_name == "user_message":
+                # 将用户消息“推”给正在运行的 CastEngine Loop
+                # Loop 会在 await self.input_queue.get() 处收到这个消息并解除阻塞
+                content = params.get("content")
+                target = params.get("target")
+                await cast_engine.push_user_message(content, target)
+
+            elif func_name == "backtrack_to":
+                target_id = params.get("target_id")
+                # 直接操作内部 engine (如果允许) 或通过 cast_engine 代理
+                cast_engine.engine.backtrack_to(target_id)
+                # TODO
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
     except Exception as e:
-        print("ERROR:", str(e))
-    finally:
-        await ws_manager.disconnect()
+        print(f"WS Error: {e}")
+        if cast_task: cast_task.cancel()
 
 if __name__ == "__main__":
-    uvicorn.run(ws_app, host="0.0.0.0", port=8000)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
