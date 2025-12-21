@@ -2,6 +2,7 @@ import re
 import json
 import asyncio
 from typing import List, Dict, Any, AsyncGenerator
+from server.facilitator import Facilitator
 from server.llm_cache import cached_chat_create
 from server.story_engine import StoryEngine
 from typing import List, Dict
@@ -45,33 +46,31 @@ class Agent:
             print(f"Error calling OpenAI: {str(e)}")
             return None
 
+
 class CastEngine:
     def __init__(self, config: Dict):
-        """
-        初始化时直接创建 StoryEngine，保证 Server 无法直接操作 StoryEngine
-        """
-        self._event_buffer = []
+        # --- 1. 通信管道 ---
+        self.output_queue = asyncio.Queue()  # 所有的输出都放入这里
+        self.input_queue = asyncio.Queue()   # 用户的输入
+        self.interruption_event = asyncio.Event() # 打断信号
 
+        # --- 2. 引擎初始化 ---
+        self._event_buffer = [] # 暂时保留，用于 StoryEngine 回调
+        
         def _internal_notifier(event_type: str, payload: Any):
-            """
-            这是传给 StoryEngine 的同步回调。
-            当 StoryEngine 更新图表时，它会调用这个函数。
-            我们将消息暂存在 buffer 中，稍后在 run_loop 中统一发给 WebSocket。
-            """
-            message = { "type": event_type, "data": payload }
-            self._event_buffer.append(message)
-            
-        # --- 初始化 StoryEngine ---
+            # 将同步回调转为异步队列消息
+            self.output_queue.put_nowait({ "type": event_type, "data": payload })
+
         storyline = config.get("storyline", [])
         self.engine = StoryEngine(storyline, update_notifier=_internal_notifier)
+        self.initial_graph_snapshot = self.engine._push_graph_snapshot(no_push=True)
         
-        # --- 初始化 Cast ---
+        # --- 3. 角色与 Facilitator ---
         cast_data = config.get("cast_data", [])
-        self.theme = config.get("theme", "Unknown")
+        self.episode = config.get("episode", {})
         user_role = config.get("user_role", {})
         self.user_role_name = user_role.get("name", "User")
-
-        # 确保 User 在 Cast 列表中
+        
         if self.user_role_name not in [a.get("name") for a in cast_data]:
             cast_data.append(user_role)
             
@@ -80,244 +79,388 @@ class CastEngine:
             self.agents[profile['name']] = Agent(profile)
         self.raw_cast_data = cast_data
 
-        # --- 运行时状态控制 ---
-        self.input_queue = asyncio.Queue() # 用于接收用户输入
-        self.running = False
-        self.current_speaker = None # 当前轮到谁说话
 
-    async def _flush_events(self) -> AsyncGenerator[Dict, None]:
-        """
-        将 _event_buffer 中积累的 StoryEngine 消息（如图表更新）全部 Yield 出去
-        并清空缓冲区。
-        """
-        while self._event_buffer:
-            # 弹出第一个消息 (FIFO)
-            msg = self._event_buffer.pop(0)
-            yield msg
-    # ==========================
-    # 对外接口 (Server调用)
-    # ==========================
-    async def start(self) -> AsyncGenerator[Dict, None]:
-        """启动故事"""
-        self.engine.start_story()
-        async for msg in self._flush_events():
-            yield msg
+        cast_str = "\n".join([f"{p['name']}: {p['title']};" for p in self.raw_cast_data])
+
+        # Facilitator 初始化
+        start_node = self.engine.get_story_context()
+        # 取第一个节点描述作为 Intro
+        start_node_desc = start_node[0].get('desc', '')
+        self.facilitator = Facilitator(self.episode.get("title", ""), cast_str, self.user_role_name, start_node_desc)
+
+        # --- 4. 运行时状态 ---
+        self.running = False
+        self.current_speaker = None
+        self.msg_counter = 0 # 计数器，用于触发 Facilitator
+
+        # 任务句柄，用于取消
+        self.main_logic_task = None
+        
+   
+    def start(self):
+        """启动引擎"""
         self.running = True
-        # 默认由第一个非用户 Agent 开始，或者由配置决定
-        # 这里假设第一个 Agent 先说话
-        first_agent = next((name for name in self.agents.keys() if name != self.user_role_name), None)
-        self.current_speaker = first_agent
+        self.engine.start_story()
+        
+        # 启动后台主逻辑任务
+        self.main_logic_task = asyncio.create_task(self._main_logic_loop())
+        
+    async def output_generator(self) -> AsyncGenerator[Dict, None]:
+        """
+        Server 的 main.py 只需要监听这个生成器。
+        它是一个无限的消费者，从 output_queue 读取数据。
+        """
+        while self.running:
+            # 阻塞等待队列消息
+            msg = await self.output_queue.get()
+            yield msg
+            self.output_queue.task_done()
 
     async def push_user_message(self, content: str, target: str):
-        """Server 将前端收到的消息塞入这里"""
+        """用户发送消息 (含打断逻辑)"""
+        # 1. 触发打断事件
+        self.interruption_event.set()
+        
+        # 2. 入队
         await self.input_queue.put({
             "content": content,
             "target": target
         })
 
-    async def run_loop(self) -> AsyncGenerator[Dict, None]:
+    async def push_user_message(self, content: str, target: str):
+        """Server 将前端收到的消息塞入这里"""
+        await self.input_queue.put({
+            "content": content,
+            "target": target,
+            "interruption": True
+        })
+
+    # ==========================
+    # 内部主逻辑 (串行状态机)
+    # ==========================
+    async def _main_logic_loop(self):
         """
-        核心主循环。
-        Main loop logic: Check Speaker -> (Wait User OR Run Agent) -> Update State -> Repeat
-        Yields: 用于发往前端的 WebSocket 消息对象
+        负责 Intro -> Loop (Agent/User Turn)
         """
-        if not self.running:
-            return
+        try:
+            # --- PHASE 1: Facilitator Intro ---
+            # Facilitator 决定第一个 Speaker
+            first_speaker = await self._run_facilitator_intro()
+            self.current_speaker = first_speaker
 
-        while self.running:
-            async for msg in self.flush_events():
-                yield msg
-            # 1. 检查当前发言人
-            if not self.current_speaker:
-                # 如果没有指定发言人，默认用户发言
-                self.current_speaker = self.user_role_name
+            # --- PHASE 2: Main Loop ---
+            while self.running:
+                # 重置打断信号
+                self.interruption_event.clear()
 
-            # 2. 分支逻辑：用户 vs Agent
-            if self.current_speaker == (self.user_role_name or "user" or "User"):
-                # --- CASE A: 等待用户输入 ---
-                
-                # 通知前端：现在轮到用户了
-                yield {"type": "input_request", "data": {"from": "System", "msg": "Waiting for user..."}}
-                
-                # 暂停 Loop，直到队列里有东西 (Await)
-                user_input = await self.input_queue.get()
-                
-                content = user_input["content"]
-                target = user_input["target"]
+                # --- CASE A: 用户回合 ---
+                if self.current_speaker == self.user_role_name:
+                    # 获取上一个说话的人作为 waiting source
+                    last_msg = self.engine.get_context_messages()[-1] if self.engine.get_context_messages() else {}
+                    from_name = last_msg.get('from', 'System')
 
-                # 存入 StoryEngine
-                self.engine.add_message(
-                    from_name=self.user_role_name,
-                    to_name=target,
-                    content=content
-                )
+                    await self.output_queue.put({
+                        "type": "input_request", 
+                        "data": {"msg": "Your turn...", "from_name": from_name}
+                    })
+                    
+                    # 等待用户输入 (此处也可以被打断，虽然逻辑上用户打断自己没意义，但为了代码一致性)
+                    user_input = await self.input_queue.get() 
+                    # 注意：如果是在 input_request 期间收到的消息，直接处理，不需要“打断逻辑”
+                    await self._process_user_commit(user_input)
 
-                async for msg in self._flush_events():
-                    yield msg
-                
-                # 用户说完，下一个轮到用户指定的 Target
-                self.current_speaker = target
-                
-            else:
                 # --- CASE B: Agent 回合 ---
-                agent_name = self.current_speaker
+                else:
+                    agent_name = self.current_speaker
+                    await self.output_queue.put({"type": "agent_thinking", "data": {"agent": agent_name}})
 
-                # 调用 Agent 生成逻辑 (Streaming)
-                next_target = self.user_role_name # 默认回落给用户
-                
-                async for msg_type, msg_data in self.streaming_step(agent_name):
-                    if msg_type == "token":
-                        # 直接流式输出内容
-                        yield {"type": "stream_token", "data": {"agent": agent_name, "token": msg_data}}
-                    elif msg_type == "meta_next":
-                        # 捕获 Agent 决定的下一个说话人
-                        next_target = msg_data
-                    elif msg_type == "error":
-                        yield {"type": "error", "data": msg_data}
-                  
-                async for msg in self._flush_events():
-                    yield msg
+                    # 执行 Agent 生成 (可被打断)
+                    # next_speaker 会在 _run_agent_turn 内部解析 meta 后返回
+                    next_speaker = await self._run_agent_turn(agent_name)
+                    
+                    # 检查是否发生过打断 (如果是打断，_run_agent_turn 会返回 None 或特定标识)
+                    if self.interruption_event.is_set():
+                        # 打断发生后，消费 Input Queue 里的那条打断消息
+                        if not self.input_queue.empty():
+                            user_input = self.input_queue.get_nowait()
+                            await self._process_user_commit(user_input)
+                        # 打断处理完，current_speaker 已在 _process_user_commit 更新
+                    else:
+                        # 正常结束，流转到下一个人
+                        self.current_speaker = next_speaker
 
-                # Agent 说完，更新下一轮发言人
-                self.current_speaker = next_target
-                
-                # 可以稍微 sleep 一下避免死循环过快
-                await asyncio.sleep(0.1)
+                    # 稍微歇息
+                    await asyncio.sleep(0.1)
+
+        except asyncio.CancelledError:
+            print("Main logic loop cancelled.")
+        except Exception as e:
+            print(f"CRITICAL ERROR in Logic Loop: {e}")
+            import traceback
+            traceback.print_exc()
 
     # ==========================
-    # 内部逻辑 (Prompt & LLM)
+    # 子任务处理
     # ==========================
+
+    async def _run_facilitator_intro(self):
+        """运行 Intro，直接推送到 output_queue，并解析 Meta 返回 first_speaker"""
+        await self.output_queue.put({"type": "agent_thinking", "data": {"agent": "Facilitator"}})
+        
+        buffer = ""
+        meta_parsed = False
+        target_name = "User" # Default
+        
+        async for token in self.facilitator.run_intro():
+            # 这里也需要 Strict Parsing 吗？最好保持一致，虽然 Intro 只有 Meta 没有 Target 变更
+            if not meta_parsed:
+                buffer += token
+                if "/>" in buffer:
+                    t_name, _ = self._parse_meta_line(buffer) # Reuse existing parser
+                    if t_name: target_name = t_name
+                    
+                    # 发送剩余部分
+                    split_idx = buffer.find("/>") + 2
+                    remaining = buffer[split_idx:].lstrip()
+                    if remaining:
+                         await self.output_queue.put({
+                            "type": "stream_token", 
+                            "data": {"agent": "Facilitator", "token": remaining, "target": "User"}
+                        })
+                    meta_parsed = True
+            else:
+                 await self.output_queue.put({
+                    "type": "stream_token", 
+                    "data": {"agent": "Facilitator", "token": token, "target": "User"}
+                })
+        
+        return target_name
     
-    # ... _construct_system_message 和 _parse_meta_line 保持不变 ...
+    async def _run_agent_turn(self, agent_name: str):
+        """
+        运行 Agent 的一轮对话。
+        关键：实现“打断”和“Strict Meta Parsing”。
+        """
+        agent = self.agents[agent_name]
+
+        if not agent:
+            print(f"Error: Agent {agent_name} not found.")
+            return
+        
+        sys_msg = self._construct_system_message(agent_name)
+        agent.update_system_message(sys_msg)
+        context = self.engine.get_context_messages()
+
+        # 1. 启动 LLM 请求 Task
+        # 我们不直接 await chat()，而是把它包装成 task 以便 cancel
+        chat_coro = agent.chat(context)
+        chat_task = asyncio.create_task(chat_coro)
+        # 2. 显式创建打断任务 (Fix RuntimeWarning)
+        interrupt_task = asyncio.create_task(self.interruption_event.wait())
+        
+        stream = None
+        try:
+            # Race condition: 等待 API 响应 VS 打断信号
+            done, pending = await asyncio.wait(
+                [chat_task, interrupt_task], 
+                return_when=asyncio.FIRST_COMPLETED
+            )
+
+            if self.interruption_event.is_set():
+                # 被打断了！
+                chat_task.cancel() # 取消请求
+                return None
+
+            # 正常拿到 Stream
+            interrupt_task.cancel()
+            stream = await chat_task 
+        except Exception as e:
+            print(f"LLM Call Error: {e}")
+            if not chat_task.done(): chat_task.cancel()
+            if not interrupt_task.done(): interrupt_task.cancel()
+            return self.user_role_name
+
+        if not stream: return self.user_role_name
+
+        # 3. 处理流 (Strict Meta + Interrupt Check)
+        buffer = ""
+        meta_parsed = False
+        target_name = self.user_role_name
+        meta_node_id = self.engine._current_node_id
+        full_content = []
+        
+        # 手动迭代器，以便在每次 next() 前检查打断
+        async_iter = stream.__aiter__()
+        
+        try:
+            while True:
+                # 每次取 Token 前检查打断
+                if self.interruption_event.is_set():
+                    # 这里不需要 cancel stream，直接 break，GC 会处理连接断开
+                    # 保存“半句话”
+                    partial = "".join(full_content).strip()
+                    if partial:
+                        self.engine.add_message(agent_name, target_name, partial + " --(interrupted)")
+                    return None
+
+                try:
+                    # 获取下一个 Token，设置极短超时以保持响应性 (可选，或者直接 await)
+                    # 直接 await 也可以，因为 interruption_event 主要靠上面的 wait 捕获
+                    # 但为了粒度更细，我们可以用 wait wrap next
+                    # 简化起见：直接 await，因为 OpenAI chunk 很快。
+                    # 如果要极致打断，可以用 asyncio.wait([next_task, interrupt_wait])
+                    chunk = await async_iter.__anext__()
+                except StopAsyncIteration:
+                    break
+
+                if chunk.choices[0].delta.content:
+                    token = chunk.choices[0].delta.content
+                    
+                    if not meta_parsed:
+                        buffer += token
+                        # Strict Parsing: 只有找到 /> 才放行
+                        if "/>" in buffer:
+                            t_name, n_id = self._parse_meta_line(buffer)
+                            if t_name: target_name = t_name
+                            if n_id: meta_node_id = n_id
+                            meta_parsed = True
+                            
+                            # 发送积压的 buffer 里的正文
+                            split_idx = buffer.find("/>") + 2
+                            remaining = buffer[split_idx:].lstrip()
+                            if remaining:
+                                full_content.append(remaining)
+                                await self.output_queue.put({
+                                    "type": "stream_token",
+                                    "data": {"agent": agent_name, "token": remaining, "target": target_name}
+                                })
+                    else:
+                        # Meta 已解析，Token 和 Target 安全发送
+                        full_content.append(token)
+                        await self.output_queue.put({
+                            "type": "stream_token",
+                            "data": {"agent": agent_name, "token": token, "target": target_name}
+                        })
+        
+        except asyncio.CancelledError:
+             return None
+
+        # 4. 正常结束处理
+        final_body = "".join(full_content).strip()
+        
+        # 状态更新 (Move Node)
+        if meta_node_id == self.engine._current_node_id:
+            print(f"Info: Staying at node {self.engine._current_node_id}.")
+        elif meta_node_id == "diverged":
+            print(f"Info: Divergence detected at node {self.engine._current_node_id} by {agent_name}.")
+        else:
+            if int(meta_node_id.split('.')[0]) == int(self.engine._current_node_id.split('.')[0])+1:
+                self.engine.move_next()
+            else:
+                print(f"Warning: Unable to parse/move node ids: {self.engine._current_node_id}, {meta_node_id}")
+
+        if final_body:
+            self._commit_message_and_trigger_facilitator(agent_name, target_name, final_body)
+
+        return target_name
+
+    # ==========================
+    # 辅助逻辑
+    # ==========================
+
+    async def _process_user_commit(self, user_input):
+        """处理用户输入提交"""
+        content = user_input["content"]
+        target = user_input["target"]
+        
+        self._commit_message_and_trigger_facilitator(self.user_role_name, target, content)
+        self.current_speaker = target
+    
+    def _commit_message_and_trigger_facilitator(self, src, tgt, content):
+        """统一提交消息入口，并检查 Facilitator 触发条件"""
+        self.engine.add_message(src, tgt, content)
+        self.msg_counter += 1
+        
+        # 每 3 条消息，且不在 Intro 阶段，并行触发 Facilitator
+        if self.msg_counter % 3 == 0:
+            # Fire-and-forget task
+            asyncio.create_task(self._run_parallel_facilitator_reflection())
+
+    async def _run_parallel_facilitator_reflection(self):
+        """并行运行 Facilitator 反思，不阻塞主流程"""
+        try:
+            # 获取最近 3 条消息作为上下文
+            recent = self.engine.get_context_messages()[-3:]
+            
+            async for token in self.facilitator.run_reflection(recent):
+                await self.output_queue.put({
+                    "type": "facilitator_stream", 
+                    "data": {"token": token}
+                })
+                
+            await self.output_queue.put({
+                "type": "facilitator_stream", 
+                "data": {"token": "<END>"}
+            })
+        except Exception as e:
+            print(f"Facilitator Error: {e}")
+    
     def _construct_system_message(self, agent_name: str) -> str:
-        # (保持你原有的逻辑，只需把 self.user_role 改为 self.user_role_name)
         agent = self.agents.get(agent_name)
-        other_cast = [p for p in self.raw_cast_data if p['name'] != agent_name]
-        cast_json = json.dumps(other_cast, ensure_ascii=False, indent=2)
+        cast_str = "\n".join([f"{p['name']}: {p['title']};" for p in self.raw_cast_data if p['name'] != agent_name])
+        
         storyline_json = self.engine.get_story_context()
-        prompt = f"""You are {agent.name}, role-playing as {agent.profile['title']} in the historical theme: {self.theme}.
-The user role-plays as: {self.user_role_name}.
+        prompt = f"""You are {agent.name}, role-playing as {agent.profile['title']} in: {self.episode.get('title','')}.
+User role: {self.user_role_name}.
 
 You are given:
 <storyline>
 {storyline_json}
 </storyline>
-
 <cast>
-{cast_json}
+{cast_str}
 </cast>
 
-MISSION
-Co-roleplay the episode with the user in a historically grounded, decision-driven way, using the active Storyline node as the immediate anchor.
+GOAL
+Co-roleplay the episode, staying historically grounded and engaging.
 
-CORE RULES
-1) Anchor on the active node: Identify the node where status == "Active". Stay within its time/place/conflict until the node’s dilemma is reached and resolved.
-2) Slow, detailed progression: Gradually unfold the active node (4–8 conversational turns) Add concrete situational details, constraints, and interpersonal dynamics. Do NOT resolve everything at once.
-3) Co-roleplay (not Q&A): Treat the user as an in-world participant. Engage them through questions, invitations, and reactions (negotiate, persuade, request action, respond to their moves).
-4) Decision checkpoints are story beats, not mandatory user choices:
-   - When approaching the node’s key dilemma (node title), surface it clearly in-character.
-   - The user MAY influence, advise, resist, propose alternatives, or take side actions.
-   - If the user does not initiate a divergence, the appropriate in-world decision-maker(s) (often a CharacterAgent) may proceed with the canonical choice to advance the story.
-5) Divergence can happen anytime:
-   - Encourage plausible divergences at key checkpoints AND during non-checkpoint moments (new tactics, side negotiations, changed tone, different messaging, etc.).
-   - If a divergence meaningfully departs from canonical events, continue in-context and mark nodeid as "<activeNodeId>/diverged".
-6) Plausibility guardrails:
-   - If the user requests absurd/out-of-context actions (aliens, impossible tech, ahistorical magic), refuse briefly in-character and steer to plausible options within the setting.
-7) Transition logic:
-   - Once the active node’s dilemma is resolved (canonically or via divergence), naturally move toward the next node (by chronology and consequences), without jumping multiple nodes at once.
+RULES
+- Anchor on the node where status=="Active". Stay in its time/place/conflict.
+- Slow-burn: do NOT reach the node.title dilemma in the first 3 turns. Play 5–8 short turns total.
+- Micro-beats only: each turn advances ONE small beat + mentions 1 concrete detail from active node.desc.
+- Talk like speech: 1–3 short sentences. End with at most ONE short question.
+- No Q&A and no menus: don’t lecture; don’t list options (“A or B”). Ask open-endedly.
+- Divergence anytime: encourage plausible side moves.
+- Dilemma reveal: hint pressure → surface tensions → ask next move
+- Absurd requests: refuse briefly, redirect to plausible actions.
+- After the dilemma resolves, move to the next node naturally (no skips).
 
-OUTPUT FORMAT (STRICT)
-Return plain text with exactly:
-- Line 1: <meta targetName="..." nodeid="..." />
-- Line 2+: Your in-character message (spoken, natural).
+OUTPUT (STRICT)
+Line 1: <meta targetName="..." nodeid="..." />
+Line 2+: in-character message (spoken, natural, very concise).
 
-META TAG RULES
-- targetName: the primary person you are addressing this turn (a cast member name or {self.user_role_name}).
+META
+- targetName: who you’re addressing (exact name in <cast>).
 - nodeid:
-  - If staying on canonical track: use the active node id (e.g., "2.1").
-  - If a meaningful divergence is underway at this node: use "diverged".
+    - If still in the current Active node, use its id (e.g., "2.1").
+    - If a major divergence happens OR the dilemma resolves non-canonically, use "diverged".
+    - If you have entered the next node canonically, use the next node id (e.g., "3.1").
 
-Do not output JSON. Do not add any other tags or headers."""
+No JSON. No extra headers."""
         
         return prompt
-
+    
     def _parse_meta_line(self, content: str):
-        meta_pattern = r'<meta targetName="(.*?)" nodeid="(.*?)"\s*/>'
-        match = re.search(meta_pattern, content)
-        if match:
-            return match.group(1), match.group(2)
+        # 1. 提取 targetName (必须存在)
+        target_match = re.search(r'targetName="(.*?)"', content)
+        target_name = target_match.group(1) if target_match else None
+
+        # 2. 提取 nodeid (可选)
+        node_match = re.search(r'nodeid="(.*?)"', content)
+        node_id = node_match.group(1) if node_match else None
+
+        # 只要有 targetName 就算解析成功
+        if target_name:
+            return target_name, node_id
+            
         return None, None
-
-    async def streaming_step(self, agent_name: str):
-        """
-        异步生成器。
-        Yields: ("token", str) 或 ("meta_next", str)
-        """
-        current_agent = self.agents.get(agent_name)
-        if not current_agent:
-            print(f"Error: Agent {agent_name} not found.")
-            yield "error", f"Agent {agent_name} not found."
-            return
-
-        # 1. 准备 Context
-        sys_msg = self._construct_system_message(agent_name)
-        current_agent.update_system_message(sys_msg)
-        context_msgs = self.engine.get_context_messages()
-
-        # 2. 调用 LLM (Async Stream)
-        stream = await current_agent.chat(context_msgs)
-        if not stream:
-            return
-
-        buffer = ""
-        meta_parsed = False
-        target_name = self.user_role_name
-        meta_node_id = self.engine._current_node_id
-        full_content_body = []
-
-        # 3. 异步迭代流
-        async for chunk in stream:
-            if chunk.choices[0].delta.content:
-                token = chunk.choices[0].delta.content
-                
-                if not meta_parsed:
-                    buffer += token
-                    if "\n" in buffer or "/>" in buffer:
-                        if "/>" in buffer:
-                            split_idx = buffer.find("/>") + 2
-                            meta_line = buffer[:split_idx]
-                            remaining = buffer[split_idx:].lstrip()
-                            
-                            t_name, n_id = self._parse_meta_line(meta_line)
-                            if t_name: target_name = t_name
-                            if n_id: meta_node_id = n_id
-                            
-                            meta_parsed = True
-                            
-                            if remaining:
-                                full_content_body.append(remaining)
-                                yield "token", remaining
-                else:
-                    full_content_body.append(token)
-                    yield "token", token
-
-        # 4. 结束处理 (Side Effects)
-        final_body = "".join(full_content_body).strip()
-        
-        # 更新 StoryEngine 状态 (Log / Move Next)
-        current_engine_node = self.engine._current_node_id
-        if meta_node_id != "diverged" and meta_node_id != current_engine_node:
-             try:
-                 curr_depth = int(current_engine_node.split('.')[0])
-                 llm_depth = int(meta_node_id.split('.')[0])
-                 if llm_depth > curr_depth:
-                     self.engine.move_next()
-             except: 
-                print(f"Warning: Unable to parse node ids: {current_engine_node}, {meta_node_id}")
-                pass
-
-        if final_body:
-            self.engine.add_message(from_name=agent_name, to_name=target_name, content=final_body)
-
-        # 告知 Loop 谁是下一个
-        yield "meta_next", target_name

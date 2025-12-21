@@ -66,10 +66,6 @@ css = """
     background-color: #f0fff4 !important;
 }
 
-.bk-input-group label, .bk-input-group span {
-    font-size: 1.25em !important;
-    line-height: 1.7 !important;
-}
 .description-box {
     font-size: 1.2em !important;  /* 增大描述文本字体 */
     color: #444;
@@ -82,8 +78,7 @@ textarea, input {
 }
 
 """
-
-description_style={'background': '#f5f5f5', 'padding': '10px', 'border-radius': '8px', 'font-size': '1.1em'}
+aa="#444"
 
 pn.extension(raw_css=[css],notifications=True)
 
@@ -109,31 +104,94 @@ class ConfigPage(pn.viewable.Viewer):
         self.theme_confirm_btn = pn.widgets.Button(name='Analyze Theme', button_type='primary', sizing_mode='stretch_width')
         self.theme_confirm_btn.on_click(partial(self.on_theme_confirm))
         
-        self.episode_list_col = pn.Column() # Container for generated episode buttons
+        self.episode_list_col = pn.Column(sizing_mode='stretch_both') # Container for generated episode buttons
         
         self.card1_content = pn.Column(
-            "### 1.1 Theme Input",
+            "### Theme Input",
             self.theme_input,
             self.theme_confirm_btn,
-            self.episode_list_col
+            self.episode_list_col,sizing_mode='stretch_both'
         )
-        self.card1 = pn.Card(self.card1_content, title='Stage 1: Configuration', sizing_mode='stretch_width', collapsed=False,margin=(0, 10, 0, 0))
+        self.card1 = pn.Card(self.card1_content, title='Stage 1: Configuration', sizing_mode='stretch_both', collapsed=False,margin=(0, 10, 0, 0))
 
         # --- STAGE 2: STORYLINE ---
-        self.graph_container = pn.Column("Please select an episode in Stage 1.")
+        self.loading_spinner = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), "Constructing Story Graph...",sizing_mode='stretch_width',visible=False)
+        self.graph_desc=pn.pane.HTML("Please select an episode in Stage 1.", sizing_mode='stretch_both')
+        
+        self.graph_desc_container = pn.Column(self.loading_spinner, self.graph_desc, sizing_mode='stretch_both',scroll=True)
+
+        # Setup Footer Buttons
+        self.confirm_btn = pn.widgets.Button(name="Confirm Storyline", button_type='success', sizing_mode='stretch_width',visible=False)
+        self.confirm_btn.on_click(partial(self.on_storyline_confirm))
+        
+        self.back_btn = pn.widgets.Button(name="Back to Episodes", sizing_mode='stretch_width',visible=False)
+        self.back_btn.on_click(partial(self.back_to_stage1))
+
+        self.graph_ctrls_display = pn.pane.HTML("", sizing_mode='stretch_width',margin=(5,0,5,0))
+
+        self.sl_btns_row = pn.Row(self.confirm_btn, self.back_btn, sizing_mode='stretch_width')
+        self.graph_ctrls_container = pn.Column(self.graph_ctrls_display, self.sl_btns_row, sizing_mode='stretch_width')
         
         self.card2_content = pn.Column(
-            self.graph_container,
+            self.graph_desc_container,
+            self.graph_ctrls_container,sizing_mode='stretch_both'
         )
-        self.card2 = pn.Card(self.card2_content, title='Stage 2: Storyline', sizing_mode='stretch_width', collapsed=True,margin=(0, 10, 0, 0))
+        self.card2 = pn.Card(self.card2_content, title='Stage 2: Storyline', sizing_mode='stretch_both', collapsed=True,margin=(0, 10, 0, 0))
 
         # --- STAGE 3: CAST ---
-        self.cast_container = pn.Column("Please confirm storyline in Stage 2.")
-        
-        self.card3_content = pn.Column(
-            self.cast_container
+        self.cast_loading = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), "Casting Agents & Observers...", visible=False)
+
+        # 1. 类别选择器 (互斥按钮组)
+        self.category_selector = pn.widgets.RadioButtonGroup(
+            name='Perspective Type',
+            options=['Protagonists', 'Observers'], 
+            value='Protagonists',
+            button_type='default',
+            button_style='solid',
+            sizing_mode='stretch_width',
+            visible=False
         )
-        self.card3 = pn.Card(self.card3_content, title='Stage 3: Cast & Perspective', sizing_mode='stretch_width', collapsed=True)
+
+        # 2. 角色列表选择器 (RadioBoxGroup)
+        self.cast_selector = pn.widgets.RadioButtonGroup(
+            name='Select Character',
+            button_type='primary',
+            button_style='outline',
+            orientation='vertical', # 垂直排列名字
+            sizing_mode='stretch_both',
+            visible=False
+        )
+
+        # 3. 详情展示区域
+        self.cast_detail_view = pn.pane.Markdown(
+            "",
+            sizing_mode='stretch_width',
+            visible=False
+        )
+
+        # 5. 按钮组
+        self.cast_confirm_btn = pn.widgets.Button(name='Confirm Character & Launch', button_type='success', sizing_mode='stretch_width',visible=False)
+        self.cast_confirm_btn.on_click(self.on_cast_confirm_click)
+
+        self.cast_back_btn = pn.widgets.Button(name="Back to Storyline", button_type='default', sizing_mode='stretch_width',visible=False)
+        self.cast_back_btn.on_click(self.back_to_stage2)
+
+        self.cast_reselect_btn = pn.widgets.Button(name='Reselect Character', button_type='warning', sizing_mode='stretch_width', visible=False)
+        self.cast_reselect_btn.on_click(self.on_cast_reselect_click)
+
+
+        cast_ctrl_row=pn.Row(self.cast_confirm_btn, self.cast_back_btn, self.cast_reselect_btn, sizing_mode='stretch_width')
+
+        self.card3_content = pn.Column(
+            self.cast_loading,
+            self.category_selector,
+            self.cast_selector,
+            self.cast_detail_view,
+            cast_ctrl_row,
+            sizing_mode='stretch_both'
+        )
+
+        self.card3 = pn.Card(self.card3_content, title='Stage 3: Cast & Perspective', sizing_mode='stretch_both', collapsed=True)
 
         # Layout
         self._layout = pn.GridBox(
@@ -141,7 +199,7 @@ class ConfigPage(pn.viewable.Viewer):
             self.card2,
             self.card3,
             ncols=3,  # 指定3列
-            sizing_mode='stretch_width'
+            sizing_mode='stretch_both'
         )
 
     def __panel__(self):
@@ -187,34 +245,31 @@ Important: title must be concise and descriptive.
         options_labels = list(self.episode_map.keys())
 
         # 2. 单选组件
-        self.episode_selector = pn.widgets.RadioBoxGroup(
+        self.episode_selector = pn.widgets.RadioButtonGroup(
             name='Select Episode',
             options=options_labels,
             value=options_labels[0],
-            inline=False,
-            sizing_mode='stretch_width'
+            button_type='primary',
+            button_style='outline',
+            orientation='vertical', # 垂直排列名字
+            sizing_mode='stretch_both',
         )
 
         # 3. 详情展示区域 (初始状态)
         first_ep = self.episode_map[options_labels[0]]
-        self.episode_detail_view = pn.pane.Markdown(
-            f"**Description:**\n\n{first_ep.get('desc', '')}",
-            styles=description_style,
+        self.episode_detail_view = pn.pane.Markdown('',
             sizing_mode='stretch_width'
         )
+        self.refresh_episode_list(options_labels[0])
 
         # 监听切换
         def update_details(event):
             selected_label = event.new
-            ep_data = self.episode_map[selected_label]
-            self.episode_detail_view.object = f"**Description:**\n\n{ep_data.get('desc', '')}"
-            # 恢复灰色背景（防止之前被改成了绿色）
-            self.episode_detail_view.styles = description_style
-        
+            self.refresh_episode_list(selected_label)
         self.episode_selector.param.watch(update_details, 'value')
 
         # 4. 按钮组 (Confirm 和 Redo)
-        self.ep_confirm_btn = pn.widgets.Button(name='Confirm Selection', button_type='primary', sizing_mode='stretch_width')
+        self.ep_confirm_btn = pn.widgets.Button(name='Confirm Selection', button_type='success', sizing_mode='stretch_width')
         self.ep_confirm_btn.on_click(self.on_episode_confirm_click)
 
         self.ep_redo_btn = pn.widgets.Button(name='Back to Theme', sizing_mode='stretch_width')
@@ -230,6 +285,14 @@ Important: title must be concise and descriptive.
             self.ep_buttons_row
         ])
 
+    def refresh_episode_list(self,selected_label):
+        ep_data = self.episode_map[selected_label]
+        self.episode_detail_view.object = f'''
+    <div style="background-color: #f5f5f5; border: 2px solid #C5C5C7; padding: 15px; border-radius: 8px;">
+        <h3 style="margin-top:0;">{selected_label}:</h3>
+        <p style="margin-bottom:0;font-size:1em;">{ep_data.get('desc', '')}</p>
+    </div>'''
+        
     # 新增：重置按钮逻辑
     def on_reset_theme_click(self, event):
         # 1. 清空 Episode 选择区
@@ -256,14 +319,12 @@ Important: title must be concise and descriptive.
         # 2. 将详情区域更新为高亮样式 (Green Highlight)
         highlight_html = f"""
         <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px;">
-            <h3 style="margin-top:0; color: #28a745;">✅ Episode Selected</h3>
-            <p><strong>{selected_label}</strong></p>
+            <h3 style="margin-top:0; color: #28a745;">✅ Selected: {selected_label}</h3>
             <p style="color: #666; margin-bottom:0; ">{episode_data.get('desc')}</p>
         </div>
         """
         # 替换 Markdown 内容为 HTML 样式
         self.episode_detail_view.object = highlight_html
-        self.episode_detail_view.styles = {} # 清除之前的灰色背景style，使用HTML内部的style
         
         # 4. 激活 Stage 2
         self.selected_episode = episode_data
@@ -276,7 +337,8 @@ Important: title must be concise and descriptive.
     # STAGE 2 LOGIC: EPISODE -> STORYLINE
     # ==========================================
     async def generate_storyline(self):
-        self.graph_container[:] = [pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), "Constructing Story Graph...")]
+        self.loading_spinner.visible = True
+        self.graph_desc.object = ""
         
         prompt = f"""Create a historically grounded, linear Storyline as a JSON array of 4–6 nodes for the episode:
 "{self.selected_episode['title']}"
@@ -292,7 +354,7 @@ OUTPUT FORMAT (ONLY valid JSON, no extra text):"""+"""
 FIELD REQUIREMENTS
 - title: a concise dilemma/question for the Decision Checkpoint (< 10 words). Node 1 title MUST be the first checkpoint. The last node may be "Resolution: ..." (also concise).
 - choice: the REAL-HISTORY canonical choice made for PREVIOUS checkpoint (very short, < 6 words, "None" for the first node), for visualization.
-- desc: 3–5 sentences, historically coherent, multi-perspective, character-rich. Be concise and easy to read. NO MORE THAN 5 SENTENCES.
+- desc: 2–4 sentences, historically coherent, multi-perspective, character-rich. Be concise and easy to read. NO MORE THAN 4 SENTENCES.
 
 DESC RULES (cause → effect → next)
 - Node 1 desc: background only (time/place/context + key figures/factions), ending by setting up Node 1 title. Do NOT reveal Node 1 choice here.
@@ -310,10 +372,11 @@ Return ONLY JSON."""
             self.storyline_data = nodes
             self.render_story_graph(nodes)
         except Exception as e:
-            self.graph_container[:] = [f"Error: {str(e)}"]
+            self.loading_spinner.visible = False
+            self.graph_desc.object = f"Error: {str(e)}"
 
     def render_story_graph(self, nodes):
-        self.graph_container.clear()
+        self.loading_spinner.visible = False
         html_content = '<div style="padding: 10px;">'
         
         scenario_title = self.selected_episode.get('title', 'Scenario')
@@ -364,42 +427,36 @@ Return ONLY JSON."""
             
         html_content += '</div>'
         
-        self.graph_container.append(pn.pane.HTML(html_content, sizing_mode='stretch_width'))
-        
-        # Setup Footer Buttons
-        self.confirm_btn = pn.widgets.Button(name="Confirm Storyline", button_type='success', sizing_mode='stretch_width')
-        self.confirm_btn.on_click(partial(self.on_storyline_confirm))
-        
-        self.back_btn = pn.widgets.Button(name="Back to Episodes", sizing_mode='stretch_width')
-        self.back_btn.on_click(partial(self.back_to_stage1))
-        
-        self.graph_container.append(pn.Row(self.confirm_btn, self.back_btn, sizing_mode='stretch_width'))
+        self.graph_desc.object=html_content
+        self.confirm_btn.visible = True
+        self.back_btn.visible = True
 
     async def on_storyline_confirm(self, event):
         self.confirm_btn.disabled = True
         self.back_btn.disabled = True
-        self.graph_container.append(pn.pane.HTML(f"""
-        <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px;">
+        self.graph_ctrls_display.visible = True
+        self.graph_ctrls_display.object = f"""
+        <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px; margin-left:5px; margin-right:5px;">
             <h3 style="margin-top:0; color: #28a745;">✅ Storyline Confirmed</h3>
             <p style="color: #666; margin-bottom:0;">With {len(self.storyline_data)} storyline nodes</p>
         </div>
-        """, sizing_mode='stretch_width'))
+        """
         # Activate Stage 3
         self.card3.collapsed = False
         await self.generate_cast()
         
-    async def back_to_stage1(self, event):
+    def back_to_stage1(self, event):
         self.card2.collapsed = True
         self.card1.collapsed = False
         # Reset Stage 1 UI to selection mode (simple reload of list or regeneration)
         # For simplicity, we just re-enable the theme button to allow restart or re-render list
-        await self.render_episodes(self.episode_list) # Re-trigger list generation logic or cached list
+        self.render_episodes(self.episode_list) # Re-trigger list generation logic or cached list
 
     # ==========================================
     # STAGE 3 LOGIC: STORYLINE -> CAST
     # ==========================================
     async def generate_cast(self):
-        self.cast_container[:] = [pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), "Casting Agents & Observers...")]
+        self.cast_loading.visible = True
         
         storyline_str = json.dumps(self.storyline_data, ensure_ascii=False)
 
@@ -437,39 +494,18 @@ Output ONLY JSON format:"""+"""
             self.cast_data=cast_data.get('protagonists',[])
             self.render_cast(cast_data)
         except Exception as e:
-            self.cast_container[:] = [f"Error: {str(e)}", pn.widgets.Button(name="Retry", on_click=lambda e: asyncio.create_task(self.generate_cast()))]
+            self.cast_desc.object = f"Error: {str(e)}"
 
     # ==========================================
     # STAGE 3 UI: CAST SELECTION
     # ==========================================
     def render_cast(self, cast_data):
-        self.cast_container.clear()
-        
-        # 1. 类别选择器 (互斥按钮组)
-        self.category_selector = pn.widgets.RadioButtonGroup(
-            name='Perspective Type',
-            options=['Protagonists', 'Observers'], 
-            value='Protagonists',
-            button_type='primary',
-            button_style='outline',
-            sizing_mode='stretch_width'
-        )
-
-        # 2. 角色列表选择器 (RadioBoxGroup)
-        self.cast_selector = pn.widgets.RadioBoxGroup(
-            name='Select Character',
-            inline=False,
-            sizing_mode='stretch_width'
-        )
-
-        # 3. 详情展示区域
-        self.cast_detail_view = pn.pane.Markdown(
-            "",
-            styles=description_style,
-            sizing_mode='stretch_width'
-        )
-
-        # --- 内部逻辑方法 ---
+        self.cast_loading.visible = False
+        self.category_selector.visible = True
+        self.cast_selector.visible = True
+        self.cast_detail_view.visible = True
+        self.cast_confirm_btn.visible = True
+        self.cast_back_btn.visible = True
 
         # A. 根据当前选中的类别，刷新下方的角色列表
         def update_list_by_category(category_name):
@@ -485,6 +521,12 @@ Output ONLY JSON format:"""+"""
             self.cast_selector.options = new_options
             if new_options:
                 self.cast_selector.value = new_options[0] # 默认选中第一个
+                if category_name=='Protagonists':
+                    self.cast_selector.name='Select Decision Maker'
+                    self.cast_selector.button_type='primary'
+                else:
+                    self.cast_selector.name='Select Historical Witness'
+                    self.cast_selector.button_type='warning'
             
         # B. 监听类别切换
         def on_category_change(event):
@@ -495,43 +537,33 @@ Output ONLY JSON format:"""+"""
         # C. 监听角色切换 (更新详情)
         def on_character_change(event):
             selected_label = event.new
-            if selected_label and selected_label in self.cast_map:
-                char_data = self.cast_map[selected_label]
-                # 区分显示不同类别的提示语
-                role_type = self.category_selector.value
-                prefix = "🎯 Decision Maker" if role_type == 'Protagonists' else "👁️ Historical Witness"
-                
-                self.cast_detail_view.object = f"**{prefix} Description:**\n\n{char_data.get('desc', '')}"
-                self.cast_detail_view.styles = description_style # 恢复灰底
-
+            self.refresh_cast_list(selected_label)
         self.cast_selector.param.watch(on_character_change, 'value')
 
         # 4. 初始化一次界面 (默认加载 Protagonists)
         update_list_by_category('Protagonists')
 
-        # 5. 按钮组
-        self.cast_confirm_btn = pn.widgets.Button(name='Confirm Character & Launch', button_type='success', sizing_mode='stretch_width')
-        self.cast_confirm_btn.on_click(self.on_cast_confirm_click)
+    def refresh_cast_list(self,selected_label):
+        if selected_label in self.cast_map:
+            char_data = self.cast_map[selected_label]
+            # 区分显示不同类别的提示语
+            role_type = self.category_selector.value
+            prefix = "🎯 Decision Maker" if role_type == 'Protagonists' else "👁️ Historical Witness"
+            self.cast_detail_view.object = f'''
+        <div style="background-color: #f5f5f5; border: 2px solid #C5C5C7; padding: 15px; border-radius: 8px;">
+            <h3 style="margin-top:0;">{char_data.get('avatar','👤')} {char_data.get('name','Character')}:</h3>
+            <p style="font-size:1.1em;"><strong>Type:</strong> {prefix}</p>
+            <p style="font-size:1.1em;"><strong>Title:</strong> {char_data.get('title','Character')}</p>
+            <p style="color: #666; margin-bottom:0;font-size:1em;">{char_data.get('desc')}</p>
+        </div>'''
 
-        self.cast_back_btn = pn.widgets.Button(name="Back to Storyline", button_type='default', sizing_mode='stretch_width')
-        self.cast_back_btn.on_click(self.back_to_stage2)
 
-        self.cast_reselect_btn = pn.widgets.Button(name='Reselect Character', button_type='warning', sizing_mode='stretch_width', visible=False)
-        self.cast_reselect_btn.on_click(self.on_cast_reselect_click)
-
-        # 6. 组装 UI
-        self.cast_container.extend([
-            pn.pane.Markdown("### Choose your Perspective:"),
-            self.category_selector, 
-            self.cast_selector,
-            self.cast_detail_view,
-            pn.Row(self.cast_confirm_btn, self.cast_back_btn, self.cast_reselect_btn, sizing_mode='stretch_width')
-        ])
 
     def back_to_stage2(self, event):
         self.card3.collapsed = True
         self.card2.collapsed = False
-        self.graph_actions.visible = True
+        self.confirm_btn.disabled = False
+        self.back_btn.disabled = False
 
     async def on_cast_confirm_click(self, event):
         selected_label = self.cast_selector.value
@@ -549,14 +581,12 @@ Output ONLY JSON format:"""+"""
         # 2. 高亮展示
         highlight_html = f"""
         <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px;">
-            <h3 style="margin-top:0; color: #28a745;">✅ Role Selected</h3>
+            <h3 style="margin-top:0; color: #28a745;">✅ Selected: {selected_label}</h3>
             <p><strong>Type:</strong> {role_category}</p>
-            <p><strong>Name:</strong> {selected_label}</p>
             <p style="color: #666; margin-bottom:0;">{character_data.get('desc')}</p>
         </div>
         """
         self.cast_detail_view.object = highlight_html
-        self.cast_detail_view.styles = {} 
 
         # 3. 准备 JSON (保存完整的 prompt output 以便系统后续使用其他 NPC)
         config_data = {
@@ -597,9 +627,7 @@ Output ONLY JSON format:"""+"""
         # 3. 恢复详情描述 (触发一次手动更新)
         selected_label = self.cast_selector.value
         if selected_label:
-            char_data = self.cast_map[selected_label]
-            self.cast_detail_view.object = f"**Role Description:**\n\n{char_data.get('desc', '')}"
-            self.cast_detail_view.styles = description_style
+            self.refresh_cast_list(selected_label)
 
     # ==========================================
     # HELPER: LLM CALL (Based on your snippet)
@@ -611,7 +639,7 @@ Output ONLY JSON format:"""+"""
             {"role": "user", "content": user_prompt}
         ]
 
-        content = await cached_chat_create("gpt-5.2", messages, stream=False)
+        content = await cached_chat_create("gpt-5.1", messages, stream=False)
         
         # ... (后续解析 JSON 的逻辑保持不变) ...
         json_pattern = re.compile(r'```json\n(.*?)```', re.DOTALL)

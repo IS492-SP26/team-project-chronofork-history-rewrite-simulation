@@ -45,26 +45,44 @@ async def websocket_endpoint(websocket: WebSocket):
     # --- 2. 初始化 CastEngine (含 StoryEngine) ---
     config = load_latest_config()
     cast_engine = CastEngine(config)
+    print("CastEngine initialized.")
+
+    init_payload = {
+        "type": "system_init",
+        "data": {
+            "config": config if config else {},
+            "status": "ready" if config else "error_no_config"
+        }
+    }
+    await manager.send_json(websocket, init_payload)
+    
+    if cast_engine.initial_graph_snapshot:
+        await manager.send_json(websocket, {
+            "type": "graph_update",
+            "data": cast_engine.initial_graph_snapshot
+        })
     
     cast_task = None
     try:
         while True:
             data = await websocket.receive_text()
             request = json.loads(data)
+            print(f"Received WS request: {request}")
             func_name = request.get("type")
             params = request.get("data", {})
 
             if func_name == "start_experience":
-                # 1. 启动 CastEngine 状态
+                if manager.active_connections.get(websocket):
+                    manager.active_connections[websocket].cancel()
+                    print("Cancelled existing CastEngine task for this connection.")
+                # 1. 启动 CastEngine
                 cast_engine.start()
-                
-                # 2. 启动后台 Loop 任务，并绑定到该 WebSocket
-                # 这个 Loop 会源源不断地 yield 数据 (Token, Status)
-                async def loop_worker():
-                    async for msg in cast_engine.run_loop():
-                        await websocket.send_json(msg)
-                
-                cast_task = asyncio.create_task(loop_worker())
+                # 2. 消费者任务：从 Engine Queue 读取并发送给 WS
+                async def output_worker():
+                    async for msg in cast_engine.output_generator():
+                        await manager.send_json(websocket, msg)
+                        
+                cast_task = asyncio.create_task(output_worker())
                 manager.active_connections[websocket] = cast_task
 
             elif func_name == "user_message":
@@ -73,6 +91,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 content = params.get("content")
                 target = params.get("target")
                 await cast_engine.push_user_message(content, target)
+            
 
             elif func_name == "backtrack_to":
                 target_id = params.get("target_id")
@@ -82,6 +101,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+        cast_engine.running = False
+        if cast_engine.main_logic_task: cast_engine.main_logic_task.cancel()
+        if cast_task: cast_task.cancel()
     except Exception as e:
         print(f"WS Error: {e}")
         if cast_task: cast_task.cancel()

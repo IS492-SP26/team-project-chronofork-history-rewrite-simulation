@@ -73,7 +73,6 @@ class StoryEngine:
 
         # 解析初始 JSON 加载到图中
         self._init_graph_from_json(initial_json)
-        self._push_graph_visualization()
 
     # ============================
     # Internal Helpers (Private)
@@ -139,7 +138,7 @@ class StoryEngine:
                        hover_desc=data['desc'], 
                        status=status)
             
-            pos[nid] = (depth, -variant)
+            pos[nid] = (variant, -depth)
 
         for src, dst in self._graph.edges:
             G.add_edge(src, dst)
@@ -149,47 +148,6 @@ class StoryEngine:
                 edge_label_data.append({'x': (x1+x2)/2, 'y': (y1+y2)/2, 'text': lbl})
                 
         return G, pos, edge_label_data, self._current_node_id, self._current_path
-  
-    def _push_graph_visualization(self):
-        """
-        主动向前端推送图可视化数据。
-        需要将 NetworkX 对象和 Tuple Key 转换为 JSON 友好的格式。
-        """
-        if not self._notifier:
-            return
-
-        # 获取快照数据
-        G, pos, edge_label_data, active_id, current_path = self._get_graph_snapshot()
-        
-        # 序列化 Nodes
-        nodes_data = []
-        for nid, data in G.nodes(data=True):
-            # pos 是 {nid: (depth, -variant)}
-            x, y = pos.get(nid, (0, 0))
-            nodes_data.append({
-                "id": nid,
-                "x": x,
-                "y": y,
-                "label_id": data['label_id'],
-                "hover_title": data['hover_title'],
-                "hover_desc": data['hover_desc'],
-                "status": data['status']
-            })
-
-        # 序列化 Edges
-        edges_data = []
-        for src, dst in G.edges():
-            edges_data.append({"source": src, "target": dst})
-
-        payload = {
-            "nodes": nodes_data,
-            "edges": edges_data,
-            "edge_labels": edge_label_data,
-            "active_node_id": active_id,
-            "current_path": current_path
-        }
-        
-        self._notifier("graph_update", payload)
 
     # ============================
     # Operational API (Write)
@@ -210,7 +168,7 @@ class StoryEngine:
         self.log("start_story", None)
         if "1.0" in self._graph.nodes:
             self._move_state("1.0")
-            self._push_graph_visualization()
+            self._push_graph_snapshot()
 
     def move_next(self):
         """
@@ -237,7 +195,7 @@ class StoryEngine:
             target = children[0]
             
         self._move_state(target)
-        self._push_graph_visualization()
+        self._push_graph_snapshot()
 
     def alternative_branch(self, branch_json_list: List[Dict]):
         """
@@ -301,7 +259,7 @@ class StoryEngine:
             
         # 5. 移动到分支头
         self._move_state(branch_head_id)
-        self._push_graph_visualization()
+        self._push_graph_snapshot()
 
     def backtrack_to(self, target_node_id):
         """回溯到指定节点"""
@@ -320,7 +278,7 @@ class StoryEngine:
         # 激活目标
         self._current_node_id = target_node_id
         self._node_statuses[target_node_id] = "IN_PROGRESS"
-        self._push_graph_visualization()
+        self._push_graph_snapshot()
 
     def add_message(self, from_name, to_name, content):
         """记录边上的消息"""
@@ -346,7 +304,37 @@ class StoryEngine:
     # Retrieval API (Read)
     # ============================
 
-    def get_story_context(self) -> str:
+    def _push_graph_snapshot(self,no_push=False):
+        """将图数据编码为JSON字符串返回"""
+        # 1. 获取原始对象数据
+        G, pos, edge_label_data, active_id, current_path = self._get_graph_snapshot()
+
+        # 2. 序列化 NetworkX 图节点 (将 label_id, hover_title 等属性解包)
+        # NetworkX 的 G 无法直接 JSON 化，需转换为列表结构
+        nodes_data = []
+        for nid, attributes in G.nodes(data=True):
+            node_item = attributes.copy()
+            node_item['id'] = nid  # 将节点ID存入字典
+            nodes_data.append(node_item)
+
+        # 3. 序列化边
+        edges_data = list(G.edges())
+
+        # 4. 组装并返回 JSON
+        payload = {
+            "nodes": nodes_data,
+            "edges": edges_data,
+            "pos": pos,  # JSON 会将 tuple (x,y) 转换为 list [x,y]，前端需兼容或还原
+            "edge_label_data": edge_label_data,
+            "active_id": active_id,
+            "current_path": current_path
+        }
+        if not no_push and self._notifier:
+            self._notifier("graph_update", payload)
+        
+        return payload
+
+    def get_story_context(self) -> List[Dict]:
         """
         返回当前路径的 JSON String。
         包含：从 Root 到 Current 的完整路径，以及 Current 的所有直接子节点（作为未来的可能性）。
@@ -378,7 +366,7 @@ class StoryEngine:
                 "status": "Future/Option"
             })
             
-        return json.dumps(path_nodes[-3:], ensure_ascii=False, indent=2)
+        return path_nodes[-3:]
 
     def get_context_messages(self) -> List[Dict]:
         msgs = []

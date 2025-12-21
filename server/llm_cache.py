@@ -50,7 +50,7 @@ async def cached_chat_create(model: str, messages: List[Dict], stream: bool = Fa
     
     if stream:
         response_stream = await client.chat.completions.create(
-            model=model, messages=messages, stream=True, temperature=0.7
+            model=model, messages=messages, stream=True, temperature=1
         )
 
         async def caching_generator():
