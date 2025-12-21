@@ -1,87 +1,171 @@
-import asyncio
 import json
-import websockets
+import asyncio
+import aiohttp
 import panel as pn
-import global_vars
-from pages.execute_page.components.websocket_manager import WebSocketManager
-from pages.execute_page.execute_page import ExecutePage
 
+from panel.viewable import Viewer
 
-ws_url="ws://localhost:8000/ws"
+from components.chat_interface import ChatInterface
+from components.episode_cast import EpisodeCastInfo
+from components.story_graph import StoryGraph
 
-
+# CSS 保持不变
 css = """
 #input{
   font-size: 120%;
 }
+
+.bk-btn {
+    font-size: 1.1em !important;
 """
-
-async def send_to_server_listener(ws_manager: WebSocketManager):
-    while True:
-        msg_to_send = await ws_manager.send_to_server_queue.get()
-        await ws_manager.websocket.send(msg_to_send)
-
-async def recv_from_server_listener(ws_manager: WebSocketManager):
-    while True:
-        raw_input = await ws_manager.websocket.recv()
-        try:
-            json_input = json.loads(raw_input)
-            type = json_input.get("type")
-            data = json_input.get("data")
-            try:
-                json_data = json.loads(data)
-            except:
-                json_data=data
-        except Exception as e:
-            print("raw_data decode ERROR: "+str(e))
-        
-        if type == "config/info":
-            task_name = json_data.get("task_name")
-            task_req = json_data.get("task_req")
-            agent_list = json_data.get("agent_list")
-            step_list = json_data.get("step_list")
-            
-            global_vars.execute_page = ExecutePage(task_name=task_name,task_req=task_req,agents=agent_list,steps=step_list,ws_manager=ws_manager)
-            global_vars.app_layout[:] = [global_vars.execute_page]
-
-        elif type == "agent/talk":
-            sender_name = json_data.get("from")
-            recipient_name = json_data.get("to")
-            chat_content = json_data.get("chat")
-            global_vars.execute_page.chat_interface.add_message(content=chat_content,source_name=sender_name,recipient_name=recipient_name)
-        
-        elif type == "agent/req_ans":
-                req_agent_name = json_data.get("from")
-                global_vars.execute_page.chat_interface.agent_req_answer(req_agent_name)
-
-        elif type == "process/update":
-            current_step = json_data.get("current_step")
-            global_vars.execute_page.progress_indicator.refresh_process_list(current_step)
-
-async def websocket_connection():
-    async with websockets.connect(ws_url) as websocket:
-        ws_manager = WebSocketManager(websocket=websocket)
-        try:
-            global_vars.app_layout[:] = ['# 欢迎来到 VELVET', f'### 已连接！等待任务信息...']
-            # Start listeners as tasks
-            send_task = asyncio.create_task(send_to_server_listener(ws_manager))
-            recv_task = asyncio.create_task(recv_from_server_listener(ws_manager))
-            
-            # Wait for both listeners and chat to complete
-            await asyncio.gather(send_task, recv_task)
-        except Exception as e:
-            print("ERROR:", str(e))
-
 pn.extension(raw_css=[css])
 
-asyncio.create_task(websocket_connection())
-# 创建 Panel 服务器
-global_vars.app = pn.template.VanillaTemplate(title='MAS (Multi-Agent Synergy)')
-global_vars.app.main.append(global_vars.app_layout)
-global_vars.app.modal.append(global_vars.modal_content)
+class GameController(Viewer):
+    def __init__(self, **params):
+        super().__init__(**params)
+        
+        # --- Loading View (Same as before) ---
+        self.loading_spinner = pn.indicators.LoadingSpinner(value=True, size=50, color='warning')
+        self.status_text = pn.widgets.StaticText(value="Connecting to Server...", align='center')
+        self.loading_view = pn.Column(
+            pn.layout.VSpacer(),
+            pn.Row(self.loading_spinner, self.status_text),
+            pn.layout.VSpacer(),
+            sizing_mode='stretch_both', align='center'
+        )
 
-# 运行 Panel 服务器
-global_vars.app.servable()
+        # --- Main View (3 Columns) ---
+        self.main_view = pn.Row(sizing_mode='stretch_both', visible=False)
+        self._layout = pn.Column(self.loading_view, self.main_view, sizing_mode='stretch_both')
 
-global_vars.app_layout[:] = ['# 欢迎来到 VELVET', f'### 正在连接至: {ws_url}...']
-    
+        # State
+        self.ws = None
+        self.config = None
+        
+        # Components
+        self.chat_ui = None
+        self.graph_ui = None
+        self.cast_ui = None
+
+    def __panel__(self):
+        pn.state.onload(self.connect_websocket)
+        return self._layout
+
+    # --- WebSocket Logic (Same as before) ---
+    async def connect_websocket(self):
+        url = "ws://localhost:8000/ws"
+        try:
+            session = aiohttp.ClientSession()
+            self.ws = await session.ws_connect(url)
+            self.status_text.value = "Connected! Waiting for config..."
+            await self.listen_loop()
+        except Exception as e:
+            self.status_text.value = f"Connection Failed: {e}"
+            self.loading_spinner.color = 'danger'
+
+    async def listen_loop(self):
+        async for msg in self.ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                data = json.loads(msg.data)
+                if data.get("type") == "system_init":
+                    self.handle_system_init(data.get("data", {}))
+                else:
+                    self.dispatch_message(data)
+            elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                break
+
+    def handle_system_init(self, data):
+        """收到配置，初始化所有组件"""
+        config = data.get("config")
+        status = data.get("status")
+
+        if status == "error_no_config":
+            self.status_text.value = "Error: No config file found."
+            self.loading_spinner.color = 'danger'
+            return
+
+        self.config = config
+        self.status_text.value = "Config Loaded. Initializing UI..."
+        user_role_dict = self.config.get('user_role', {})
+        user_role_name = user_role_dict.get('name', 'User')
+
+        # 1. Initialize Cast/Episode Info (New Component)
+        self.cast_ui = EpisodeCastInfo(
+            episode_data=self.config.get('episode', {}),
+            cast_data=self.config.get('cast_data', []),
+            user_role_name=user_role_name
+        )
+
+        # 2. Initialize Graph (With select callback)
+        self.graph_ui = StoryGraph(
+            send_callback=self.send_to_backend,
+            on_select_callback=self.on_graph_selection_change # Bind callback
+        )
+
+        # 3. Initialize Chat
+        self.chat_ui = ChatInterface(
+            agents=self.config.get('cast_data', []),
+            user_role_name=user_role_name,
+            send_callback=self.send_to_backend
+        )
+
+        # 4. Final Layout: 3 Columns
+        # Left: Info (Fixed width-ish), Center: Graph, Right: Chat
+        self.main_view.objects = [
+            pn.Column(self.cast_ui, width=350, sizing_mode='stretch_height',margin=(0,10,0,0)),
+            pn.Column(self.graph_ui, max_width=500, sizing_mode='stretch_both',margin=(0,10,0,0)),
+            pn.Column(self.chat_ui, min_width=500, sizing_mode='stretch_both')
+        ]
+        
+        self.loading_view.visible = False
+        self.main_view.visible = True
+
+    # --- Interaction Logic ---
+
+    def on_graph_selection_change(self, is_selected: bool):
+        """当 StoryGraph 选中或取消选中节点时触发"""
+        if self.cast_ui:
+            self.cast_ui.enable_perspective_selection( is_selected)
+
+    def dispatch_message(self, message):
+        """分发消息"""
+        if not self.chat_ui: return
+        
+        msg_type = message.get("type")
+        data = message.get("data", {})
+
+        if msg_type == "graph_update":
+            self.graph_ui.update_graph(data)
+        elif msg_type == "stream_token":
+            self.chat_ui.handle_stream_token(data.get("agent"), data.get("target"), data.get("token"))
+        elif msg_type == "input_request":
+            self.chat_ui.handle_input_request(data.get("msg"), data.get("from_name"))
+        elif msg_type == "agent_thinking":
+            self.chat_ui.handle_agent_thinking(data.get("agent"))
+        elif msg_type == "facilitator_stream":
+             self.chat_ui.handle_facilitator_stream(data.get("token", ""))
+        elif msg_type == "error":
+            pn.state.notifications.error(f"Error: {data}", duration=5000)
+
+    def send_to_backend(self, msg_type, data):
+        """
+        发送中心，负责拦截和注入数据
+        """
+        if self.ws and not self.ws.closed:
+            if msg_type == "backtrack_to":
+                if self.cast_ui:
+                    # 获取当前面板上合法的切换目标
+                    target_agent = self.cast_ui.get_selected_perspective_candidate()
+                    if target_agent:
+                        data["perspective_agent"] = target_agent
+                        print(f"Requesting backtrack with perspective switch: {target_agent}")
+            payload = json.dumps({"type": msg_type, "data": data})
+            asyncio.create_task(self.ws.send_str(payload))
+        else:
+            pn.state.notifications.warning("WebSocket Disconnected!", duration=3000)
+
+# App Entry
+app = pn.template.VanillaTemplate(title='ChronoFork · WebUI')
+config_component = GameController()
+app.main.append(config_component)
+app.servable()
