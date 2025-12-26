@@ -12,16 +12,23 @@ class EpisodeCastInfo(Viewer):
         
         # 内部状态：记录外部 StoryGraph 是否处于选中模式
         self._is_graph_selected = False
+        self.current_stage = 0  # 0=Init, 1=Stage1, 2=Stage2
         
         # --- 1. Episode Info Section (UI Optimization) ---
         title = self.episode_data.get("title", "Unknown Episode")
         desc = self.episode_data.get("desc", "No description available.")
         emoji = self.episode_data.get("emoji", "🎬") # 假设数据中有emoji字段，没有则默认
-        
+
+        self.stage1_pane = pn.pane.HTML(sizing_mode='stretch_width', styles={'margin-top': '5px'})
+        self.stage2_pane = pn.pane.HTML(sizing_mode='stretch_width', styles={'margin-top': '5px'})
+        self._refresh_stage_indicators()
+
         # 使用 HTML/CSS 进行简单美化
         episode_pane = pn.Column(
             pn.pane.Markdown(f"## {emoji} {title}", margin=(0, 10, 0, 10)),
             pn.pane.Markdown(f"{desc}", margin=(-5, 10, -5, 10), styles={'color': '#555', 'font-size': '1em'}),
+            self.stage1_pane,
+            self.stage2_pane,
             styles={
                 'border-left': '5px solid #ffaa00', 
                 'border-radius': '4px',
@@ -80,21 +87,34 @@ class EpisodeCastInfo(Viewer):
             "",
             sizing_mode='stretch_width',
         )
-        
-        # D. 切换按钮
-        self.switch_btn = pn.widgets.Button(
-            name="🚫 Select Node to Switch", 
-            button_type='primary', 
-            disabled=True, 
-            sizing_mode='stretch_width'
+
+        self.backtrack_tip = pn.pane.Markdown(
+            "🚫 Select Node to Switch",
+            styles={"font-size": "1.1em"},
+            sizing_mode="stretch_width",
+            align="center",
+            margin=(0, 0, 0, 10),  # 统一一点边距
+        )
+
+        self.backtrack_group = pn.Row(
+            self.backtrack_tip,
+            sizing_mode="stretch_width",
+            styles={
+                "background": "#f0f0f5",
+                "margin": "5px 10px 5px 10px",  # 简写 margin (上 右 下 左)
+                "border-radius": "5px",
+                "border-left": "5px solid #6c757d",
+                "align-items": "center",  # 【CSS关键】确保 Row 内部元素垂直居中
+            },
+            visible=False,
         )
         
 
         cast_card = pn.Card(
             pn.Column(
+                self.backtrack_group,
                 self.cast_selector,
                 self.cast_detail_view,
-                self.switch_btn
             ),
             title="🎭 Cast & Perspective",
             sizing_mode='stretch_both',
@@ -111,6 +131,100 @@ class EpisodeCastInfo(Viewer):
         # 初始化视图
         if default_val:
             self._update_detail_view()
+
+    def _generate_stage_html(self, title, desc, icon, theme_color, bg_color, state):
+        """
+        State: 'inactive', 'active', 'completed'
+        """
+        # 默认样式 (Inactive)
+        opacity = "0.4"
+        border = "1px dashed #ccc"
+        background = "#f0f0f5"
+        text_color = "#888"
+        box_shadow = "none"
+        indicator = ""
+
+        if state == 'active':
+            opacity = "1.0"
+            border = f"2px solid {theme_color}"
+            background = bg_color
+            text_color = theme_color
+            box_shadow = "0 2px 5px rgba(0,0,0,0.1)"
+            indicator = f"<div style='float:right; font-size:0.8em; background:{theme_color}; color:white; padding:2px 6px; border-radius:4px;'>CURRENT</div>"
+        
+        elif state == 'completed':
+            opacity = "0.7"
+            border = f"1px solid {theme_color}"
+            background = bg_color
+            text_color = theme_color
+            box_shadow = "none"
+            indicator = f"<div style='float:right; font-size:1.2em;'>✅</div>"
+
+        return f"""
+        <div style="
+            opacity: {opacity};
+            background-color: {background};
+            color: {text_color};
+            border: {border};
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: {box_shadow};
+            transition: all 0.3s ease;
+        ">
+            {indicator}
+            <div style="font-weight: bold; font-size: 1em; margin-bottom: 2px;">
+                {icon} {title}
+            </div>
+            <div style="font-size: 0.8em; opacity: 0.9;">
+                {desc}
+            </div>
+        </div>
+        """
+        
+
+    def update_stage_display(self, stage):
+        """外部调用：更新 Stage 状态"""
+        self.current_stage = stage
+        self.set_stage_mode(stage) # 处理按钮显隐
+        self._refresh_stage_indicators()
+
+    def _refresh_stage_indicators(self):
+        """根据 current_stage 渲染两个 HTML 卡片"""
+        
+        # 定义状态样式
+        # 0: Inactive (Gray), 1: Active (Bright), 2: Completed (Dimmed)
+        
+        # Logic for Stage 1 Card
+        if self.current_stage == 0:
+            s1_state = 'inactive'
+        elif self.current_stage == 1:
+            s1_state = 'active'
+        else: # stage >= 2
+            s1_state = 'completed'
+
+        # Logic for Stage 2 Card
+        if self.current_stage < 2:
+            s2_state = 'inactive'
+        else:
+            s2_state = 'active'
+
+        self.stage1_pane.object = self._generate_stage_html(
+            title="Stage 1: Observation",
+            desc="Observe the canonical history flow from the User's perspective.",
+            icon="🧐",
+            theme_color="#155724", # Green
+            bg_color="#d4edda",
+            state=s1_state
+        )
+
+        self.stage2_pane.object = self._generate_stage_html(
+            title="Stage 2: Intervention",
+            desc="Backtrack, rewrite decisions, and create divergent timelines.",
+            icon="🙌",
+            theme_color="#721c24", # Red
+            bg_color="#f8d7da",
+            state=s2_state
+        )
 
     def _get_real_name_from_selection(self, selection):
         """根据显示名(带User后缀)反查真实名字"""
@@ -138,25 +252,11 @@ class EpisodeCastInfo(Viewer):
             <p style="color: #666; margin-bottom:0;font-size:1em;">{agent.get('desc')}</p>
         </div>
         """
-
-        # 2. 更新按钮状态
-        is_me = (real_name == self.user_role_name)
         
-        if is_me:
-            # Case A: 是我自己
-            self.switch_btn.name = "🚫 Cannot Switch Perspective to Yourself"
-            self.switch_btn.disabled = True
-            self.switch_btn.button_type = 'danger'
-        elif not self._is_graph_selected:
-            # Case B: 是别人，但没选节点
-            self.switch_btn.name = "🚫 Select a Graph Node to Switch Perspective"
-            self.switch_btn.disabled = True
-            self.switch_btn.button_type = 'danger'
+        if self._is_graph_selected:
+            self.backtrack_tip.object = f"✅ Backtrack as {real_name}"
         else:
-            # Case C: 是别人，且已选节点 -> 允许切换
-            self.switch_btn.name = f"🔀 Switch Perspective to {real_name}"
-            self.switch_btn.disabled = False
-            self.switch_btn.button_type = 'success'
+            self.backtrack_tip.object = "🚫 Select Valid Node to Switch Perspective"
 
     def __panel__(self):
         return self._layout
@@ -166,6 +266,11 @@ class EpisodeCastInfo(Viewer):
     def enable_perspective_selection(self, is_active: bool):
         """外部控制器调用：通知图谱选中状态改变"""
         self._is_graph_selected = is_active
+        if self._is_graph_selected:
+            real_name = self._get_real_name_from_selection(self.cast_selector.value)
+            self.backtrack_tip.object = f"✅ Backtrack as {real_name}"
+        else:
+            self.backtrack_tip.object = "🚫 Select Valid Node to Switch Perspective"
         # 重新运行一次状态检查来更新按钮
         self._update_detail_view()
 
@@ -174,8 +279,33 @@ class EpisodeCastInfo(Viewer):
         selection = self.cast_selector.value
         real_name = self._get_real_name_from_selection(selection)
         
-        # 如果选的是自己，或者当前图谱没选中，则返回 None (表示不切换)
-        if real_name == self.user_role_name or not self._is_graph_selected:
-            return None
-            
         return real_name
+    
+    def update_user_role(self, new_role_name):
+        """Backtrack 后更新当前用户角色"""
+        print(f"Updating user role from {self.user_role_name} to {new_role_name}")
+        self.user_role_name = new_role_name
+        # 重新生成 options 以更新 (😉 User) 标记
+        options = []
+        for name, agent in self.cast_map.items():
+            display_name = f"{agent.get('avatar','👤')} {name}"
+            if name == self.user_role_name:
+                display_name += " (😉 User)"
+            display_name += f" - {agent.get('title','')}"
+            options.append(display_name)
+            agent['_display_name'] = display_name
+        
+        self.cast_selector.options = options
+        # 尝试保持选中
+        for opt in options:
+            if new_role_name in opt:
+                self.cast_selector.value = opt
+                break
+    
+    def set_stage_mode(self, stage):
+        self.current_stage = stage
+        if stage == 1:
+            self.backtrack_group.visible = False
+        elif stage == 2:
+            self.backtrack_tip.object = "🚀 Select a Valid Node to Backtrack Perspective"
+            self.backtrack_group.visible = True

@@ -24,13 +24,15 @@ def graph_hover_hook(plot, element):
 
 
 class StoryGraph(Viewer):
-    def __init__(self, send_callback, on_select_callback=None, **params):
+    def __init__(self, send_callback, on_select_callback, **params):
         """
         :param send_callback: function(msg_type, msg_data) 用于向后端发送请求
         """
         super().__init__(**params)
         self.send_callback = send_callback
         self.on_select_callback = on_select_callback
+
+        self.stage = 1  # 当前阶段，默认1
         # 1. 初始化 Stream
         self.tap_stream = streams.Tap(x=None, y=None)
 
@@ -58,7 +60,7 @@ class StoryGraph(Viewer):
             visible=True,
             width=80,  # 给定一个合适的固定宽度
             align="center",  # 【关键】垂直方向居中
-            margin=(0, 25, 0, 3),  # 统一边距
+            margin=(0, 30, 0, 3),  # 统一边距
         )
 
         self.backtrack_btn.on_click(self.on_backtrack)
@@ -74,6 +76,7 @@ class StoryGraph(Viewer):
                 "border-left": "5px solid #6c757d",
                 "align-items": "center",  # 【CSS关键】确保 Row 内部元素垂直居中
             },
+            visible=False,
         )
 
         self._layout = pn.Card(
@@ -89,6 +92,14 @@ class StoryGraph(Viewer):
 
     def __panel__(self):
         return self._layout
+    
+
+    def set_stage_mode(self, stage):
+        self.current_stage = stage
+        if stage == 1:
+            self.backtrack_group.visible = False
+        elif stage == 2:
+            self.backtrack_group.visible = True
 
     def update_graph(self, payload):
         """接收后端 Graph 数据并刷新视图"""
@@ -104,8 +115,7 @@ class StoryGraph(Viewer):
 
         self._change_backtrack_button_state(None)
 
-        if self.on_select_callback:
-            self.on_select_callback(False)
+        self.on_select_callback(False)
         self._render(self.cached_payload)
 
     def _fetch_and_decode_graph(self, data):
@@ -145,7 +155,7 @@ class StoryGraph(Viewer):
             self.backtrack_btn.disabled = True
             self.user_selected_node = "None"
         else:
-            self.backtrack_btn.name = f"🔄 Backtrack ➜ {nodeid}"
+            self.backtrack_btn.name = f"🔄 Backtrack"
             self.backtrack_btn.button_type = "success"
             self.backtrack_btn.disabled = False
             self.user_selected_node = nodeid
@@ -292,13 +302,13 @@ class StoryGraph(Viewer):
                 "x": [i["x"] for i in edge_label_data],
                 "y": [i["y"] for i in edge_label_data],
                 "text": [
-                    f"{i['text']}\n" if i["text"] != "None" else ""
+                    f"{i['text']}" if i["text"] != "None" else ""
                     for i in edge_label_data
                 ],
             },
             ["x", "y"],
             "text",
-        ).opts(text_color="#222", text_alpha=0.8, text_font_size="7.5pt")
+        ).opts(text_color="#222", text_alpha=0.8, text_font_size="7.5pt",background_fill_color="white", background_fill_alpha=0.8)
 
         # 2. 绑定事件：必须在这里重新绑定 Source
         self.tap_stream.source = graph
@@ -344,28 +354,42 @@ class StoryGraph(Viewer):
                     )
                     self._change_backtrack_button_state(None)
                     self._render(self.cached_payload)  # 重绘以取消高亮
+                    self.on_select_callback(False)
                 elif closest == "0.0":
                     self.backtrack_tip.object = "⚠️ Cannot backtrack to the Start node."
                     self._change_backtrack_button_state(None)
                     self._render(self.cached_payload)  # 重绘以取消高亮
+                    self.on_select_callback(False)
                 else:
                     self.user_selected_node = closest
                     self.backtrack_tip.object = (
                         f"✅ Selected Node {closest} for Backtracking."
                     )
                     self._change_backtrack_button_state(closest)
-                    if self.on_select_callback:
-                        self.on_select_callback(True)
+                    self.on_select_callback(True)
                     self._render(self.cached_payload, draw_select=True)
         else:
             # 点击空白处，取消选中
             self._change_backtrack_button_state(None)
-            if self.on_select_callback:
-                self.on_select_callback(False)
+            self.on_select_callback(False)
             self._render(self.cached_payload)
 
     def on_backtrack(self, event):
+        """点击 Backtrack 按钮触发"""
         if self.user_selected_node != "None":
-            # 5. 调用回调发送请求
-            self.backtrack_tip.object = f"ℹ️ You can select a completed or suspended node to backtrack the decision to that point."
-            self._change_backtrack_button_state(None)
+            # 1. 准备数据
+            target_node = self.user_selected_node
+            
+            # 2. 调用回调发送请求给 WebApp -> Server
+            if self.send_callback:
+                print(f"Graph requesting backtrack to {target_node}")
+                # 注意：perspective_agent 的逻辑已经在 web_app.py 的 send_to_backend 中处理了
+                # 这里只需要发送目标节点 ID
+                self.send_callback("backtrack_to", {"target_id": target_node})
+
+            # 3. UI 立即反馈 (让按钮变灰，提示已发送)
+            self.backtrack_btn.name = "⏳ Requested..."
+            self.backtrack_btn.disabled = True
+            
+            # 提示语更新
+            self.backtrack_tip.object = f"⏳ Sending request to backtrack to Node {target_node}..."

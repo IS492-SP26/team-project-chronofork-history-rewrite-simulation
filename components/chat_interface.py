@@ -1,7 +1,7 @@
-import param
-import time
+import textwrap
 import panel as pn
 from panel.viewable import Viewer
+import param
 
 
 class ChatInterface(Viewer):
@@ -15,6 +15,12 @@ class ChatInterface(Viewer):
         self.history_log = "" # 存储已经完成的历史对话 (倒序积累)
         self.current_stream_buffer = "" # 当前正在流式传输的文本
         self.current_stream_meta = {} # 当前流的元数据 (speaker, target)
+        self.current_stage = 1
+        self.is_diverging = False # 标记是否正在计算分歧
+
+        # 维护选项映射
+        self.selected_target_name = None 
+        self.label_to_name_map = {}
         
         # --- UI Resources ---
         self.avatars = {agent["name"]: agent["avatar"] for agent in self.agents}
@@ -35,24 +41,16 @@ class ChatInterface(Viewer):
             sizing_mode='stretch_height', width=50
         )
         self.send_button.on_click(self.chat_send)
-        
-        self.start_stop_button = pn.widgets.Button(
-            button_type='success', icon="microphone", icon_size="25px", 
-            sizing_mode='stretch_height', width=50, disabled=True
-        )
 
-        # 3. Agent Selector (Filter out User)
-        self.target_options = [
-            {'name': agent['name'], 'label': f"{agent['avatar']} {agent['name']}"}
-            for agent in self.agents if agent['name'] != self.user_role_name
-        ]
-        
+        # 初始化 Agent Selector
         self.radio_group = pn.widgets.RadioButtonGroup(
-            options=[opt['label'] for opt in self.target_options], 
+            options=[], # 初始化为空，由 _update_target_options 填充
             button_type='primary', button_style='outline', 
             sizing_mode='stretch_width', height=30, disabled=True, value=None,
         )
-        # 关键修改2: 使用 Row 包裹并开启滚动，这个 Row 负责撑满宽度
+        self._update_target_options() # 初始化选项
+
+        # 使用 Row 包裹并开启滚动
         radio_scroll_container = pn.Row(
             self.radio_group, 
             scroll=True, 
@@ -65,7 +63,7 @@ class ChatInterface(Viewer):
         self.radio_group.param.watch(self.on_radio_group_change, "value")
 
         self.facilitator_markdown = pn.pane.Markdown(
-            "👀 **Facilitator**: Observing...", 
+            "👀 **Facilitator**: Select a Node and a Perspective then 🔄 Backtrack!", 
             sizing_mode='stretch_width',
             styles={'font-size': '1.1em'}
         )
@@ -83,6 +81,7 @@ class ChatInterface(Viewer):
                 'border-radius': '5px', 
                 'border-left': '5px solid #6c757d' # 加个左边框装饰，突出Facilitator
             },
+            visible=False
         )
         self.facilitator_buffer = ""
         self.facilitator_streaming_active = False
@@ -90,7 +89,7 @@ class ChatInterface(Viewer):
         # Layout
         button_row = pn.Column(
             self.send_button,
-            self.start_stop_button,
+            # TODO: Add more buttons here if needed
             sizing_mode='stretch_height'
         )
         input_area = pn.Column(
@@ -112,6 +111,44 @@ class ChatInterface(Viewer):
 
     def __panel__(self):
         return self._layout
+    
+    # --- [New Helper] 统一管理目标列表 ---
+    def _update_target_options(self, waiting_agent_name=None):
+        """
+        重新生成 RadioGroup 的选项，并更新 label->name 映射。
+        :param waiting_agent_name: 如果有 Agent 正在等待回复，给它加 ⏳
+        """
+        new_options = []
+        self.label_to_name_map = {}
+        
+        # 1. 生成选项
+        for agent in self.agents:
+            if agent['name'] == self.user_role_name:
+                continue
+                
+            label = f"{agent['avatar']} {agent['name']}"
+            if agent['name'] == waiting_agent_name:
+                label += " ⏳" # 添加等待标识
+            
+            new_options.append(label)
+            self.label_to_name_map[label] = agent['name']
+
+        # 2. 更新 UI
+        self.radio_group.options = new_options
+        
+        target_to_select = None
+        
+        if waiting_agent_name:
+            # 优先选中等待的人
+            target_to_select = next((lbl for lbl, name in self.label_to_name_map.items() if name == waiting_agent_name), None)
+        
+        if target_to_select:
+            self.radio_group.value = target_to_select
+        else:
+            self.radio_group.value = None
+            self.selected_target_name = None
+
+    
 
     # --- Formatting Helpers ---
     def _format_name_display(self, name):
@@ -132,6 +169,11 @@ class ChatInterface(Viewer):
     def _render_full_log(self):
         """Combine current stream + history log (Newest at Top)"""
         content = ""
+        # 1. Divergence Loading (Always on top if active, since we are reverse order)
+        if self.is_diverging:
+            content += """<div style="text-align: center; margin: 10px; color: #007bff;">
+                <div class="small-loader" style="margin-right: 10px;"></div> Analyzing Divergented History Resulted from Your Actions...
+            </div>\n\n"""
         # 1. Render Current Stream (if any)
         if self.current_stream_buffer and self.current_stream_meta:
             src = self.current_stream_meta.get('agent', 'Unknown')
@@ -144,7 +186,98 @@ class ChatInterface(Viewer):
         content += self.history_log
         self.chat_container.object = content
 
+    def update_user_role(self, new_role_name):
+        self.user_role_name = new_role_name
+        self._update_target_options() # 使用新逻辑刷新列表
+
     # --- Event Handlers ---
+
+    def add_node_divider(self, from_id, to_id):
+        """插入节点流转提示"""
+        
+        if from_id == 'start':
+            html = f"""<div style="text-align: center; color: #28a745; margin: 20px 0; font-weight: bold;">
+            🌱 Story Begins at Node {to_id}</div>"""
+        elif to_id == 'end':
+            html = f"""<div style="text-align: center; color: #dc3545; margin: 20px 0; font-weight: bold;">
+            🏁 Reached Ending (Node {from_id})</div>"""
+        else:
+            html = f"""<div style="text-align: center; color: #888; font-size: 0.9em; margin: 15px 0;">
+            ── 📍 Moving: {from_id} ➔ {to_id} ──</div>"""
+        
+        self.history_log = html + "\n\n" + self.history_log 
+        self._render_full_log()
+    
+    def add_history_divider(self):
+        self._flush_current_stream()
+        html = f"""<div style="text-align: center; color: #888; font-size: 0.9em; margin: 15px 0;">
+            ── 📝 Previous Interaction Context ──</div>"""
+        
+        self.history_log = html + "\n\n" + self.history_log 
+        self._render_full_log()
+
+    def start_backtrack_loading(self, target_node, role):
+        """进入 Backtrack 加载状态 (清空屏幕)"""
+        self._flush_current_stream()
+        # 清空状态
+        self.history_log = ""
+        self.current_stream_buffer = ""
+        self.current_stream_meta = {}
+        
+        # 居中显示 Loading
+        loading_html = f"""
+        <div style="text-align: center; padding-top: 50px; color: #666;">
+            <div class="big-loader" style="margin: 0 auto; display: block;"></div>
+            <p>Backtracking to Node <b>{target_node}</b> as <b>{role}</b></p>
+        </div>
+        """
+        self.chat_container.object = loading_html
+
+    def finish_backtrack(self, new_role, new_node_id):
+        """Backtrack 完成，显示结果"""
+        # 构造系统提示消息作为第一条
+        sys_msg = f"""<div style="background: #e2e3e5; padding: 10px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #ffaa00;">
+            <b>🔄 Backtrack Complete</b><br>
+            Backtracked to Node <b>{new_node_id}</b> as <b>{new_role}</b>.
+        </div>
+        """
+        self.history_log = sys_msg + "\n\n"
+        self._render_full_log()
+
+    def start_divergence_loading(self):
+        """显示分歧计算 Loading"""
+        self.is_diverging = True
+        self._render_full_log() # Trigger render which will check flag
+
+    def finish_divergence(self, report_html_content):
+        """移除 Loading，显示 Report"""
+        self.is_diverging = False
+        
+        # 外层容器：使用 Panel Pane 的 HTML 样式，或者直接写 style
+        # 这里模拟一个漂亮的卡片容器
+        wrapper_html = f"""<div style="
+            background: #fff3cd; 
+            border: 1px solid #ffeeba; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 15px 0; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        ">
+            <div style="
+                display: flex; align-items: center; gap: 8px;
+                font-weight: bold; color: #856404; font-size: 1.1em; margin-bottom: 10px;
+                border-bottom: 2px solid #eecbaeb0; padding-bottom: 8px;
+            ">
+                ⚡ Divergence Analysis
+            </div>
+            <div style="font-size: 0.95em; line-height: 1.5;">
+                {report_html_content}
+            </div>
+        </div>"""
+        
+        # 插入历史 (倒序)
+        self.history_log = wrapper_html + "\n\n" + self.history_log
+        self._render_full_log()
 
     def chat_send(self, event):
         # 1. Start Experience
@@ -152,21 +285,21 @@ class ChatInterface(Viewer):
             self.send_button.disabled = True
             self.send_callback("start_experience", {})
             self.text_input.placeholder = "Starting engine..."
-            # Remove init view, show markdown
             self.chat_container.object = ""
             return
 
         # 2. User Message
         msg = self.text_input.value.strip()
-        if not msg: return
+        if not msg: 
+            pn.state.notifications.warning("Please enter a message.", duration=2000)
+            return
         
-        # Get target name from label
-        selected_label = self.radio_group.value
-        target_name = next(
-            (opt['name'] for opt in self.target_options if opt['label'] == selected_label), 
-            self.target_options[0]['name'] # Fallback
-        )
-
+        if not self.selected_target_name:
+             pn.state.notifications.error("Please select a target character.", duration=3000)
+             return
+        
+        target_name = self.selected_target_name
+        
         # Send to backend
         self.send_callback("user_message", {
             "content": msg,
@@ -182,9 +315,7 @@ class ChatInterface(Viewer):
         
         # Freeze for 1s then unlock (Allow interrupt)
         self.send_button.disabled = True
-        # 先查看是否已经有任务在运行，避免重复调度
-        if not pn.state.tasks.get("unlock"):
-            pn.state.schedule_task("unlock", self.unlock_input, period='1s')
+        pn.state.schedule_task("unlock", self.unlock_input, period='1s')
 
     def _commit_user_message(self, content, target):
         """Commit user message to history immediately (Newest at Top)"""
@@ -197,10 +328,23 @@ class ChatInterface(Viewer):
         self._render_full_log()
 
     def on_radio_group_change(self, event):
-        val = event.new
-        if val:
-             name = next((o['name'] for o in self.target_options if o['label'] == val), val)
-             self.text_input.placeholder = f"Message {name}..."
+        """当用户点击 Radio Button 时触发"""
+        selected_label = event.new
+        if not selected_label: return
+        
+        # [核心] 通过 Map 安全获取 Name
+        real_name = self.label_to_name_map.get(selected_label)
+        
+        if real_name:
+            self.selected_target_name = real_name
+            self.text_input.placeholder = f"Message {real_name}..."
+            
+            # 如果是 Stage 2 且不在 Start 状态，确保发送按钮可用
+            if self.current_stage == 2 and self.send_button.icon == 'send':
+                self.send_button.disabled = False
+                self.text_input.disabled = False
+        else:
+            print(f"Warning: Selected label '{selected_label}' not found in map.")
 
     def _flush_current_stream(self):
         """
@@ -219,27 +363,38 @@ class ChatInterface(Viewer):
             self.current_stream_meta = {}
     # --- Backend Callbacks ---
 
+    def set_stage_mode(self, stage):
+        self.current_stage = stage
+        if stage == 1:
+            # 隐藏输入，只读模式
+            self.text_input.disabled = True
+            self.text_input.placeholder = "Stage 1: Observing Canonical History..."
+            self.send_button.disabled = True
+            self.radio_group.disabled = True
+            # Card 标题更新
+            self._layout[1].visible = False # 隐藏 Input Area 整个 Card
+            
+        elif stage == 2:
+            # 显示输入（虽然可能先要 Backtrack）
+            self.facilitator_view.visible = True
+            self._layout[1].visible = True
+            self.text_input.disabled = True # 等待 Backtrack Briefing 结束后解锁
+            self.text_input.placeholder = "Select a node in the graph to Backtrack..."
+
     def handle_input_request(self, msg_text, from_name):
         """
         Backend requests input. 
         from_name: The agent waiting for answer.
         """
+        if self.current_stage == 1:
+            print("Input request received at Stage 1. Ignoring.")
+            return
         self.unlock_input()
         self.text_input.placeholder = msg_text
+
+        print(f"Input requested by {from_name}")
         
-        # Update labels to show who is waiting
-        new_options = []
-        for opt in self.target_options:
-            label = opt['label']
-            if opt['name'] == from_name:
-                label = f"{label} ⏳" # Add Emoji to the requester
-            new_options.append(label)
-        self.radio_group.options = new_options
-        
-        # Auto-select the requester if possible
-        target_label = next((o for o in new_options if from_name in o), None)
-        if target_label:
-            self.radio_group.value = target_label
+        self._update_target_options(waiting_agent_name=from_name)
 
     
     def handle_stream_token(self, agent_name, target_name, token):
@@ -269,7 +424,7 @@ class ChatInterface(Viewer):
     def handle_agent_thinking(self, agent_name):
         self.text_input.placeholder = f"{agent_name} is thinking..."
         # Reset labels (remove hourglass)
-        self.radio_group.options = [opt['label'] for opt in self.target_options]
+        self._update_target_options(waiting_agent_name=None)
 
     def handle_facilitator_stream(self, token):
         # 1. 检查是否是结束标记
@@ -292,7 +447,7 @@ class ChatInterface(Viewer):
             self.send_button.icon = 'send'
             self.send_button.button_type = 'primary'
         
-        self.send_button.disabled = False
-        self.text_input.disabled = False
-        self.start_stop_button.disabled = False
+        # 只有在选择了目标的情况下才启用发送按钮
+        self.send_button.disabled = True if not self.selected_target_name else False
+        self.text_input.disabled = True if not self.selected_target_name else False
         self.radio_group.disabled = False
