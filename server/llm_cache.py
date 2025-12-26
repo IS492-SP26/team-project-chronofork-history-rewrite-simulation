@@ -1,5 +1,6 @@
 import json
 import hashlib
+import re
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -74,3 +75,23 @@ async def cached_chat_create(model: str, messages: List[Dict], stream: bool = Fa
         # 存入缓存
         cache[cache_key] = content
         return content
+    
+
+async def call_llm(user_prompt):
+    messages = [
+        {"role": "system", "content": "You are a helpful historical assistant. Output strictly in JSON format."},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    content = await cached_chat_create("gpt-5.1", messages, stream=False)
+    
+    # ... (后续解析 JSON 的逻辑保持不变) ...
+    json_pattern = re.compile(r'```json\n(.*?)```', re.DOTALL)
+    json_match = json_pattern.search(content)
+    
+    if json_match:
+        json_str = json_match.group(1)
+    else:
+        json_str = content
+        
+    return json.loads(json_str)

@@ -1,10 +1,6 @@
 from collections import defaultdict
 import networkx as nx
 from typing import List, Dict, Tuple
-import json
-import datetime
-import csv
-import os
 
 class StoryGraph:
     """
@@ -20,6 +16,36 @@ class StoryGraph:
         
         # 根节点初始化
         self.nodes["0.0"] = {'title': "ROOT", 'desc': "System Start", 'choice': "Start", 'parent_id': None}
+
+    def to_dict(self):
+        """序列化图数据"""
+        # 将 tuple key 转为 string key "u|v"
+        serialized_contexts = {f"{k[0]}|{k[1]}": v for k, v in self.edge_contexts.items()}
+        serialized_choices = {f"{k[0]}|{k[1]}": v for k, v in self.edge_choices.items()}
+        
+        return {
+            "nodes": self.nodes,
+            "edges": self.edges,
+            "max_variant": self.max_variant,
+            "edge_contexts": serialized_contexts,
+            "edge_choices": serialized_choices
+        }
+    
+    def load_from_dict(self, data):
+        """反序列化"""
+        self.nodes = data["nodes"]
+        self.edges = [tuple(e) for e in data["edges"]] # list -> tuple
+        self.max_variant = data["max_variant"]
+        
+        self.edge_contexts = {}
+        for k, v in data["edge_contexts"].items():
+            u, target = k.split("|")
+            self.edge_contexts[(u, target)] = v
+            
+        self.edge_choices = {}
+        for k, v in data["edge_choices"].items():
+            u, target = k.split("|")
+            self.edge_choices[(u, target)] = v
 
     def add_node(self, title, desc, choice, parent_id=None, specific_id=None):
         new_id = specific_id
@@ -40,24 +66,21 @@ class StoryGraph:
         return new_id
 
     def get_children(self, node_id):
+        if not node_id: return []
         return [target for source, target in self.edges if source == node_id]
 
 # --- 2. StoryEngine (对外唯一接口) ---
 
 class StoryEngine:
-    def __init__(self, initial_json: List[Dict], update_notifier=None):
+    def __init__(self, initial_json: List[Dict], logger, update_notifier=None):
         """
         初始化引擎
         :param initial_json: 定义故事初始路径的 JSON List
         :param log_file: 日志文件路径
         """
         self._notifier = update_notifier
+        self.logger = logger
         self._graph = StoryGraph()
-        if not os.path.exists('history'):
-            os.makedirs('history')
-        now = datetime.datetime.now()
-        date_str = now.strftime("%m-%d@%H_%M")
-        self._log_file = f'history/log_{date_str}.tsv'
 
         # 状态管理
         self._node_statuses = {nid: "UNFINISHED" for nid in self._graph.nodes}
@@ -65,14 +88,10 @@ class StoryEngine:
         self._current_path = ["0.0"]
         self._current_node_id = "0.0"
         
-        # 初始化日志文件头
-        if not os.path.exists(self._log_file):
-            with open(self._log_file, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f, delimiter='\t')
-                writer.writerow(['Timestamp', 'Function', 'Params'])
 
         # 解析初始 JSON 加载到图中
         self._init_graph_from_json(initial_json)
+        self.logger.log("StoryEngine", "Init", "Engine Initialized", {"initial_nodes": len(initial_json)})
 
     # ============================
     # Internal Helpers (Private)
@@ -94,6 +113,26 @@ class StoryEngine:
             )
             self._node_statuses[specific_id] = "UNFINISHED"
             prev_id = specific_id
+
+    # --- 新增：完整状态导出 ---
+    def export_state(self):
+        """导出引擎完整快照"""
+        return {
+            "graph": self._graph.to_dict(),
+            "node_statuses": dict(self._node_statuses),
+            "current_path": self._current_path,
+            "current_node_id": self._current_node_id
+        }
+    
+    def restore_state(self, state_data):
+        """恢复状态"""
+        self._graph = StoryGraph()
+        self._graph.load_from_dict(state_data["graph"])
+        self._node_statuses = defaultdict(lambda: "UNFINISHED", state_data["node_statuses"])
+        self._current_path = state_data["current_path"]
+        self._current_node_id = state_data["current_node_id"]
+        if self.logger:
+             self.logger.log("StoryEngine", "Restore", "State Restored", {"current_node": self._current_node_id})
 
     def _reconstruct_path(self, target_node_id):
         """根据 parent_id 回溯路径"""
@@ -153,19 +192,9 @@ class StoryEngine:
     # Operational API (Write)
     # ============================
 
-    def log(self, func_name, params):
-        """记录操作日志到 TSV"""
-        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-        # 将 params 转换为字符串以防包含复杂对象
-        param_str = json.dumps(params, ensure_ascii=False) if params else ""
-        
-        with open(self._log_file, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f, delimiter='\t')
-            writer.writerow([timestamp, func_name, param_str])
-
     def start_story(self):
         """开始故事，激活 1.0"""
-        self.log("start_story", None)
+        self.logger.log("StoryEngine", "StartStory", "Story started", {"start_node": "1.0"})
         if "1.0" in self._graph.nodes:
             self._move_state("1.0")
             self._push_graph_snapshot()
@@ -178,21 +207,26 @@ class StoryEngine:
         
         current_id = self._current_node_id
         children = self._graph.get_children(current_id)
-
-        self.log("move_next", {"finished": current_id, "next_is": children})
         
         if not children:
-            self.log("move_next", {"info": "No children to move to."})
-            return # 无路可走
+            # 标记当前节点为完成状态 (这是关键，否则前端显示的还是 IN_PROGRESS)
+            self._node_statuses[current_id] = "COMPLETED"
+            self._push_graph_snapshot() # 通知前端更新颜色
+            
+            self.logger.log("StoryEngine", "MoveState", f"Reached end at {current_id}", {"result": "reached_end"})
+            return "end"
             
         # 策略：优先找同 Variant 的子节点 (e.g., 2.1 -> 3.1)
         curr_variant = current_id.split('.')[1]
         target = next((c for c in children if c.split('.')[1] == curr_variant), None)
+
+        self.logger.log("StoryEngine", "MoveState", f"Moved to {target}", {"from": current_id, "to": target})
         
         # 兜底：如果没有同 Variant (比如刚分叉?)，取第一个子节点
         if not target:
-            self.log("move_next", {"info": f"No same variant child found, defaulting to first child {children[0]}."})
             target = children[0]
+            self.logger.log("StoryEngine", "MoveState", f"No same variant child found, defaulting to first child {children[0]}.", {"children": children})
+            print(f"No same variant child found for {current_id}, defaulting to {children[0]}.")
             
         self._move_state(target)
         self._push_graph_snapshot()
@@ -204,7 +238,7 @@ class StoryEngine:
                index 0: 导致分叉的那个节点（User Choice Node）。
                index 1..N: 后续的自动推演节点。
         """
-        self.log("alternative_branch", branch_json_list)
+        self.logger.log("StoryEngine", "AlternativeBranch", "Creating alternative branch", {"branch_json_list": branch_json_list})
         
         if not branch_json_list:
             return
@@ -263,13 +297,15 @@ class StoryEngine:
 
     def backtrack_to(self, target_node_id):
         """回溯到指定节点"""
-        self.log("backtrack_to", {"target": target_node_id})
         
         if target_node_id == self._current_node_id or target_node_id not in self._graph.nodes:
             return
             
         # 当前节点挂起
-        if self._node_statuses[self._current_node_id] == "IN_PROGRESS":
+
+        depth, variant = map(int, target_node_id.split('.'))
+        
+        if self._node_statuses[self._current_node_id] == "IN_PROGRESS" and variant != 0:
             self._node_statuses[self._current_node_id] = "SUSPENDED"
             
         # 重建路径
@@ -282,8 +318,6 @@ class StoryEngine:
 
     def add_message(self, from_name, to_name, content):
         """记录边上的消息"""
-        self.log("add_message", {"from": from_name, "to": to_name, "content": content})
-        
         if self._current_node_id == "0.0": return
         
         # 找到当前 Active 的边 (Parent -> Current)
@@ -298,8 +332,81 @@ class StoryEngine:
             "to": to_name,
             "content": content
         })
-        
 
+    def create_divergence_branch(self, divergence_data: dict, context_to_save: List[dict]):
+        """
+        根据推理结果创建新的分支，并将缓存的 Context 写入新边。
+        :param divergence_data: LLM 推理出的 JSON
+        :param context_to_save: 需要固化到新边上的对话历史 (从 pending_messages 转化而来)
+        """
+        target_type = divergence_data.get("target", "child")
+        new_nodes_data = divergence_data.get("branch_storyline", [])
+        
+        if not new_nodes_data: return None
+
+        # 1. 确定 Parent Node
+        if target_type == "sibling":
+            # Sibling: 挂在父节点下 (e.g., 1.0 -> 2.1)
+            parent_id = self._graph.nodes[self._current_node_id]['parent_id']
+            self.logger.log("StoryEngine", "CreateDivergenceBranch", f"Divergence target is sibling; saving full pending messages. {parent_id}", {"parent_id": parent_id})
+            if not parent_id: parent_id = self._current_node_id # Root fallback
+        else:
+            # Child: 挂在当前节点下 (e.g., 2.0 -> 3.1)
+            parent_id = self._current_node_id
+
+        # 2. 计算新 ID
+        try:
+            p_depth, _ = map(int, parent_id.split('.'))
+        except:
+            p_depth = 0
+        
+        next_depth = p_depth + 1
+        self._graph.max_variant += 1
+        new_variant = self._graph.max_variant
+        
+        # 3. 创建分支头节点
+        head_data = new_nodes_data[0]
+        branch_head_id = f"{next_depth}.{new_variant}"
+        
+        self._graph.add_node(
+            title=head_data.get('title', 'Divergence'),
+            desc=head_data.get('desc', ''),
+            choice=head_data.get('choice', 'New Path'),
+            parent_id=parent_id,
+            specific_id=branch_head_id
+        )
+        self._node_statuses[branch_head_id] = "UNFINISHED"
+
+        # 4. 【核心】将 Draft Context 写入新边 (Parent -> NewHead)
+        key = (parent_id, branch_head_id)
+        # 这里直接接收外部清洗好的 list，不做逻辑判断，保证 Engine 只负责存储
+        self._graph.edge_contexts[key] = context_to_save
+
+        # 5. 创建后续自动推演节点
+        prev_auto_id = branch_head_id
+        for i in range(1, len(new_nodes_data)):
+            item = new_nodes_data[i]
+            d, v = map(int, prev_auto_id.split('.'))
+            next_auto_id = f"{d+1}.{v}"
+            
+            self._graph.add_node(
+                title=item.get('title', ''),
+                desc=item.get('desc', ''),
+                choice=item.get('choice', ''),
+                parent_id=prev_auto_id,
+                specific_id=next_auto_id
+            )
+            self._node_statuses[next_auto_id] = "UNFINISHED"
+            prev_auto_id = next_auto_id
+            
+        # 6. 移动状态
+        if target_type == "child":
+            self._node_statuses[self._current_node_id] = "COMPLETED"
+            
+        self._move_state(branch_head_id)
+        self._push_graph_snapshot()
+        
+        return branch_head_id
     # ============================
     # Retrieval API (Read)
     # ============================
@@ -367,11 +474,28 @@ class StoryEngine:
             })
             
         return path_nodes[-3:]
-
-    def get_context_messages(self) -> List[Dict]:
+    
+    def get_context_messages(self, include_current_edge: bool = True) -> List[Dict]:
+        """
+        获取当前路径上的上下文消息。
+        :param include_current_edge: 
+            If True (Stage 1): 返回 0.0 -> ... -> Current 的完整历史。
+            If False (Stage 2): 仅返回 0.0 -> ... -> Parent 的历史。
+                               (当前的边被视为待定/重写中，由 CastEngine 的 pending_messages 替代)
+        """
         msgs = []
         path = self._current_path
-        for i in range(len(path) - 1):
+        
+        # 计算遍历路径的终点
+        # 路径长度为 N，边数为 N-1
+        # 如果包含当前边，遍历到 N-1
+        # 如果不包含当前边，遍历到 N-2
+        limit = len(path) - 1 if include_current_edge else len(path) - 2
+        
+        # 边界检查：防止刚开始时 range 报错（虽然 range 自身能处理负数，但逻辑上保持清晰）
+        if limit < 0: limit = 0
+
+        for i in range(limit):
             u, v = path[i], path[i+1]
             msgs.extend(self._graph.edge_contexts.get((u, v), []))
         return msgs

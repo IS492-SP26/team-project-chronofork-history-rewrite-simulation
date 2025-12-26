@@ -210,6 +210,8 @@ __marimo__/
 history/
 cache/
 config/
+logs/
+saves/
 
 .DS_Store
 .vscode/

@@ -7,7 +7,7 @@ import panel as pn
 import param
 from functools import partial
 
-from server.llm_cache import cached_chat_create
+from server.llm_cache import cached_chat_create, call_llm
 
 # CSS for the Timeline Graph and General Styling
 css = """
@@ -230,7 +230,7 @@ Output ONLY JSON format:"""+"""
 Important: title must be concise and descriptive.
         """
         try:
-            response_data = await self.call_llm(prompt)
+            response_data = await call_llm(prompt)
             self.episode_list=response_data
             self.render_episodes(response_data)
         except Exception as e:
@@ -352,13 +352,13 @@ OUTPUT FORMAT (ONLY valid JSON, no extra text):"""+"""
 ]
 
 FIELD REQUIREMENTS
-- title: a concise dilemma/question for the Decision Checkpoint (< 10 words). Node 1 title MUST be the first checkpoint. The last node may be "Resolution: ..." (also concise).
+- title: a concise dilemma for the Decision Checkpoint (< 10 words). Node 1 title MUST be the first checkpoint. The last node may be "Resolution: ..." (also concise). 严格避免选项（比如是否xxx），必须以开放式问题形式呈现。
 - choice: the REAL-HISTORY canonical choice made for PREVIOUS checkpoint (very short, < 6 words, "None" for the first node), for visualization.
 - desc: 2–4 sentences, historically coherent, multi-perspective, character-rich. Be concise and easy to read. NO MORE THAN 4 SENTENCES.
 
-DESC RULES (cause → effect → next)
+DESC RULES (cause → effect → next)·
 - Node 1 desc: background only (time/place/context + key figures/factions), ending by setting up Node 1 title. Do NOT reveal Node 1 choice here.
-- Node i>1 desc: the FIRST sentence MUST answer the PREVIOUS title’s real-history choice. Then describe canonical consequences (chronology + tensions + named people), ending by setting up the CURRENT node title (or, if Resolution, the outcome).
+- Node i>1 desc: the FIRST sentence MUST answer the PREVIOUS title’s real-history choice. Then describe canonical consequences (chronology + tensions + named people), ending by setting up the CURRENT node title (or, if Resolution, the outcome). 
 
 CONTENT REQUIREMENTS
 - Historical coherence: correct chronology, actors, locations; no anachronisms.
@@ -368,7 +368,7 @@ CONTENT REQUIREMENTS
 
 Return ONLY JSON."""
         try:
-            nodes = await self.call_llm(prompt)
+            nodes = await call_llm(prompt)
             self.storyline_data = nodes
             self.render_story_graph(nodes)
         except Exception as e:
@@ -489,7 +489,7 @@ Output ONLY JSON format:"""+"""
 }}
 """
         try:
-            cast_data = await self.call_llm(prompt)
+            cast_data = await call_llm(prompt)
             self.full_cast_data = cast_data # 保存完整字典
             self.cast_data=cast_data.get('protagonists',[])
             self.render_cast(cast_data)
@@ -590,7 +590,6 @@ Output ONLY JSON format:"""+"""
 
         # 3. 准备 JSON (保存完整的 prompt output 以便系统后续使用其他 NPC)
         config_data = {
-            "theme": self.selected_theme,
             "episode": self.selected_episode,
             "storyline": self.storyline_data,
             "cast_data": self.cast_data,
@@ -628,29 +627,6 @@ Output ONLY JSON format:"""+"""
         selected_label = self.cast_selector.value
         if selected_label:
             self.refresh_cast_list(selected_label)
-
-    # ==========================================
-    # HELPER: LLM CALL (Based on your snippet)
-    # ==========================================
-
-    async def call_llm(self, user_prompt):
-        messages = [
-            {"role": "system", "content": "You are a helpful historical assistant. Output strictly in JSON format."},
-            {"role": "user", "content": user_prompt}
-        ]
-
-        content = await cached_chat_create("gpt-5.1", messages, stream=False)
-        
-        # ... (后续解析 JSON 的逻辑保持不变) ...
-        json_pattern = re.compile(r'```json\n(.*?)```', re.DOTALL)
-        json_match = json_pattern.search(content)
-        
-        if json_match:
-            json_str = json_match.group(1)
-        else:
-            json_str = content
-            
-        return json.loads(json_str)
 
 # Create Panel Server
 app = pn.template.VanillaTemplate(title='ChronoFork · Configuration')

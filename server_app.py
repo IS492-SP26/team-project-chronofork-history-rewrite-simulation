@@ -95,8 +95,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
             elif func_name == "backtrack_to":
                 target_id = params.get("target_id")
+                perspective_agent = params.get("perspective_agent")
                 # 直接操作内部 engine (如果允许) 或通过 cast_engine 代理
-                cast_engine.engine.backtrack_to(target_id)
+                cast_engine.backtrack_to(target_id, perspective_agent)
                 # TODO
 
     except WebSocketDisconnect:
