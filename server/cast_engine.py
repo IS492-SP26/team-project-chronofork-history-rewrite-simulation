@@ -10,6 +10,9 @@ from server.facilitator import Facilitator
 from server.llm_cache import cached_chat_create, call_llm
 from server.story_engine import StoryEngine
 from typing import List, Dict
+# cast_engine.py
+from server.reflection_worker import ReflectionWorker
+from server.html_renderer import  render_reflection_report
 
 
 class Agent:
@@ -60,8 +63,8 @@ class CastEngine:
 
         if not os.path.exists('saves'):
             os.makedirs('saves')
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.cp_file = f'saves/checkpoint_{timestamp}.tsv'
+        timestamp = datetime.datetime.now().strftime("%m-%d_%H-%M")
+        self.cp_file = f'saves/{timestamp}.json'
 
         # --- 2. 引擎初始化 ---
         def _internal_notifier(event_type: str, payload: Any):
@@ -256,6 +259,8 @@ class CastEngine:
                         )
                         self.current_speaker = user_input["target"]
 
+                        self.logger.log("User", "MessageSent", f"Message sent to {user_input['target']}", {"content": user_input["content"]})
+
                     # CASE B: Agent Turn
                     else:
                         agent_name = self.current_speaker
@@ -263,7 +268,18 @@ class CastEngine:
 
                         # 运行 Agent，传入 override context
                         # 注意：_run_agent_turn 需要修改以接受 context
+
+                        prev_node = self.engine._current_node_id
                         next_speaker, meta_status = await self._run_agent_turn(agent_name)
+
+                        curr_node = self.engine._current_node_id
+                        if curr_node != prev_node:
+                            await self.send_node_update(prev_node, curr_node)
+                        if meta_status == "DIVERGENCE_END":
+                            # 结束回溯草稿模式
+                            self.in_backtrack_draft_mode = False
+                            self.pending_messages = []
+                            break
 
                         # 检查打断
                         if self.interruption_event.is_set():
@@ -582,12 +598,18 @@ class CastEngine:
         elif meta_node_id == "end":
             print(f"Info: Reached end of story at node {self.engine._current_node_id}.")
             self.engine.move_next()
-            self.logger.log("StoryEngine", "StateUpdate", f"Moved to next node {self.engine._current_node_id}", {})
             await self.send_node_update(self.engine._current_node_id, "end")
-            tag = "STAGE1_END"
+
+            depth, variant = map(int, self.engine._current_node_id.split('.'))
+            if variant == 0:
+                tag = "STAGE1_END"
+            else:
+                tag = "DIVERGENCE_END"
+                await self.output_queue.put({"type": "enable_reflection", "data": {}})
         else:
             if int(meta_node_id.split(".")[0]) == int(self.engine._current_node_id.split(".")[0]) + 1:
                 self.engine.move_next()
+                self.logger.log("StoryEngine", "StateUpdate", f"Moved to next node {self.engine._current_node_id}", {})
                 if self.in_backtrack_draft_mode:
                     self.pending_messages = []  # 清空 pending，因为我们正式前进了
             else:
@@ -595,8 +617,6 @@ class CastEngine:
 
         
         await self._unified_commit_message(agent_name, target_name, final_body)
-        if agent_name == "Facilitator":
-            self.facilitator.messages.append({"role": "assistant", "content": final_body})
 
         return target_name, tag
 
@@ -687,7 +707,6 @@ class CastEngine:
         包含：图结构、所有对话历史、当前阶段、PendingBuffer 等
         """
         
-        
         # 1. 收集 StoryEngine 状态
         engine_state = self.engine.export_state()
         
@@ -764,6 +783,38 @@ class CastEngine:
     async def send_stage_update(self, stage: str):
         await self.output_queue.put({"type": "stage_update", "data": {"stage": stage}})
 
+
+    async def handle_reflection_request(self):
+        self.logger.log("System", "Reflection", "Start Generating")
+        
+        try:
+            # 实例化 Worker
+            worker = ReflectionWorker(self.engine, self)
+            
+            # 1. 获取完整的 JSON 数据结构
+            report_data = await worker.generate_report()
+
+            # 将report_data写文件用于调试
+            with open('debug_reflection_report.json', 'w', encoding='utf-8') as f:
+                json.dump(report_data, f, indent=2, ensure_ascii=False)
+            
+            # 2. 渲染成 HTML (需要更新 html_renderer 以适配新的 report_data 结构)
+            html_report = render_reflection_report(report_data)
+
+            await self.output_queue.put({
+                "type": "reflection_report",
+                "data": {"html": html_report}
+            })
+            self.logger.log("System", "Reflection", html_report)
+            
+            # 顺便存个档
+            self.save_checkpoint(reason="reflection_generated")
+            
+        except Exception as e:
+            print(f"Reflection Error: {e}")
+            import traceback
+            traceback.print_exc()
+
     def _construct_system_message(self, agent_name: str) -> str:
         agent = self.agents.get(agent_name)
         cast_str = "\n".join([f"“{p['name']}”: {p['title']};" for p in self.raw_cast_data if p["name"] != agent_name])
@@ -804,13 +855,13 @@ class CastEngine:
     - 若其他角色做出违背史实的选择，积极鼓励并允许，并记录为"diverged"；但若遇到荒谬请求，简短拒绝并转向可行行动。
 
 输出（严格，仅1条）
-<meta targetName="..." nodeid="..." /> 角色台词（自然口语，极简1-3句话，中文）
+<meta targetName="..." nodeid="..." /> 角色台词（自然口语，极简1-3句话，语言要求与<cast>一致）
 
 Meta 说明
 - targetName：你正在对话的对象，必须是 <cast> 中的 EXACT 名称或是"Facilitator"。
 - nodeid：
-  - 当前节点仍在进行时：填 {active_node["id"]}。
-  - 当本节点演完时：填 {next_id}。
+  - 当前节点仍在进行时：填 {active_node["id"]}.
+  - 当本节点演完时：填 {next_id}.
   - 遇到有别于史实的分歧时：填 "diverged"。"""
 
         return prompt
@@ -882,58 +933,7 @@ branch_storyline的生成规则
 
 只返回 JSON。"""
 
-#     def _generate_divergence_report(self, data: dict, new_node_id: str) -> str:
-#         """
-#         生成漂亮的 Markdown 分歧报告
-#         """
-#         feasibility = data.get("feasibility", {})
-#         score = feasibility.get("score", 0)
-#         rationale = feasibility.get("rationale", "No rationale provided.")
-#         drivers = feasibility.get("key_drivers", [])
-#         constraints = feasibility.get("key_constraints", [])
-#         outcomes = data.get("outcomes_brief", [])
 
-#         # 1. 计算进度条和颜色
-#         bar_length = 10
-#         filled = int(score / 10 + 0.5)
-#         bar = "▮" * filled + "▯" * (bar_length - filled)
-
-#         score_emoji = "🔴"
-#         if score >= 70:
-#             score_emoji = "🟢"
-#         elif score >= 40:
-#             score_emoji = "🟡"
-
-#         # 2. 格式化列表为 HTML/Markdown 换行 (用于表格内)
-#         drivers_str = "<br>".join([f"• {d}" for d in drivers]) if drivers else "• None"
-#         constraints_str = "<br>".join([f"• {c}" for c in constraints]) if constraints else "• None"
-
-#         # 3. 解析 Outcomes
-#         outcome_map = {"Most likely": "⚖️", "Best-case": "🌟", "Worst-case": "🌩️"}
-#         outcomes_text = ""
-#         for outcome in outcomes:
-#             label = outcome.get("label", "")
-#             icon = outcome_map.get(label, "🔹")
-#             summary = outcome.get("summary", "")
-#             outcomes_text += f"* {icon} **{label}**: {summary}\n"
-
-#         # 4. 组装 Markdown
-#         md = f"""> *"{rationale}"*
-        
-# **🤔 Feasibility**: **{score} / 100** {score_emoji}
-# `[{bar}]`
-
-# | 🚀 Core Drivers | 🚧 Real-world Constraints |
-# | :--- | :--- |
-# | {drivers_str} | {constraints_str} |
-
-# **🔮 Projected Outcomes**
-# {outcomes_text}
-
-# 🔀 **New timeline established**: {new_node_id}
-# """
-#         return md
-    
     def _generate_divergence_report(self, data: dict, new_node_id: str) -> str:
         """
         生成 HTML 格式的高级分歧报告

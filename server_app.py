@@ -10,9 +10,9 @@ app = FastAPI()
 
 def load_latest_config():
     """读取 config/ 目录下最新的 session json"""
-    list_of_files = glob.glob('config/session_*.json')
+    list_of_files = glob.glob('config/*.json')
     if not list_of_files: return {}
-    latest_file = max(list_of_files, key=os.path.getctime)
+    latest_file = max(list_of_files, key=os.path.getmtime)
     try:
         with open(latest_file, 'r', encoding='utf-8') as f:
             return json.load(f)
@@ -98,7 +98,15 @@ async def websocket_endpoint(websocket: WebSocket):
                 perspective_agent = params.get("perspective_agent")
                 # 直接操作内部 engine (如果允许) 或通过 cast_engine 代理
                 cast_engine.backtrack_to(target_id, perspective_agent)
-                # TODO
+            elif func_name == "export_save":
+                cast_engine.save_checkpoint()
+
+            elif func_name == "request_reflection":
+                asyncio.create_task(cast_engine.handle_reflection_request())
+
+            else:
+                print(f"Unknown WS request type: {func_name}")
+                
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

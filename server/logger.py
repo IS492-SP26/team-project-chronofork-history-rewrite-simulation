@@ -10,8 +10,8 @@ class EventLogger:
         if not os.path.exists('logs'):
             os.makedirs('logs')
             
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_file = f'logs/session_{timestamp}.tsv'
+        timestamp = datetime.datetime.now().strftime("%m-%d_%H-%M")
+        self.log_file = f'logs/{timestamp}.tsv'
         
         # 初始化表头
         with open(self.log_file, 'w', newline='', encoding='utf-8') as f:

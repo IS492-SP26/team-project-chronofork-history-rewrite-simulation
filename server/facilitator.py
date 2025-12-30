@@ -79,9 +79,7 @@ class Facilitator:
             future_node = storyline_json[-1]
             next_node_desc = f"{future_node["choice"]}: {future_node["desc"]}"
 
-        
-        # 2. 构造 Task
-        bridge_task = {
+        msg = [self.messages[0],{
             "role": "user",
             "content": f"""Task: 你需要作为导演切换镜头，目标是用最少轮次推进<active_node>节点结束(并进入<next_node>)。
 
@@ -102,14 +100,11 @@ class Facilitator:
 输出格式 (严格)
 <meta targetName="下一个对话的对象，必须是 <cast> 中的 EXACT 名称"/> [旁白：描述镜头切换后的新画面/氛围，引出下一人的行动]
 """
-        }
-        
-        # 暂时 append 到消息历史，或者使用临时列表以节省 token，建议 append 以保持连贯性
-        self.messages.append(bridge_task)
+        }]
 
         stream = await cached_chat_create(
                 "gpt-5-mini", 
-                self.messages, 
+                msg, 
                 stream=True
             )
         return stream

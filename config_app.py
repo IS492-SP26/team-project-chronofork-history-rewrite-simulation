@@ -340,8 +340,7 @@ Important: title must be concise and descriptive.
         self.loading_spinner.visible = True
         self.graph_desc.object = ""
         
-        prompt = f"""Create a historically grounded, linear Storyline as a JSON array of 4–6 nodes for the episode:
-"{self.selected_episode['title']}"
+        prompt = f"""Create a historically grounded, linear Storyline as a JSON array of 4–6 nodes for the episode: {self.selected_episode['title']}
 
 Each node is a Decision Checkpoint (or a final Resolution) in a Storyline used for agent casting and later Scene Script expansion.
 
@@ -352,19 +351,29 @@ OUTPUT FORMAT (ONLY valid JSON, no extra text):"""+"""
 ]
 
 FIELD REQUIREMENTS
-- title: a concise dilemma for the Decision Checkpoint (< 10 words). Node 1 title MUST be the first checkpoint. The last node may be "Resolution: ..." (also concise). 严格避免选项（比如是否xxx），必须以开放式问题形式呈现。
-- choice: the REAL-HISTORY canonical choice made for PREVIOUS checkpoint (very short, < 6 words, "None" for the first node), for visualization.
-- desc: 2–4 sentences, historically coherent, multi-perspective, character-rich. Be concise and easy to read. NO MORE THAN 4 SENTENCES.
+- title: an open-ended dilemma/question for THIS node’s Decision Checkpoint (<= 8–12 words).
+  * MUST be phrased as an OPEN question.
+  * For last node, use "Resolution: (Statement)" (also concise).
 
-DESC RULES (cause → effect → next)·
-- Node 1 desc: background only (time/place/context + key figures/factions), ending by setting up Node 1 title. Do NOT reveal Node 1 choice here.
-- Node i>1 desc: the FIRST sentence MUST answer the PREVIOUS title’s real-history choice. Then describe canonical consequences (chronology + tensions + named people), ending by setting up the CURRENT node title (or, if Resolution, the outcome). 
+- choice: the REAL-HISTORY canonical choice made at the PREVIOUS node’s question.
+  * For Node 1, set choice to "None".
+  * Keep it very short (<= 6 words) for visualization.
+
+- desc: 2–4 sentences, concise and easy to read (NO MORE THAN 4 sentences).
+  * Historically coherent, multi-perspective, character-rich (name key figures).
+  * No dialogue; no scene directions—storyline-level narrative only.
+
+DESC RULES (cause → effect → next)
+- Node 1 desc: background only (time/place/context + key figures/factions + tensions), ending by setting up Node 1 question.
+  * Do NOT reveal any choice here (since choice is "None").
+- Node i>1 desc: the FIRST sentence MUST explicitly state the PREVIOUS node’s real-history choice. Then narrate the canonical consequences (chronology + tensions + named people) that lead to THIS node’s question.
+
 
 CONTENT REQUIREMENTS
-- Historical coherence: correct chronology, actors, locations; no anachronisms.
-- Multi-perspective tension: at least two viewpoints each node (e.g., leaders vs advisors, allies vs opponents).
-- Character richness: each desc names key figures (at least 2 per node; 4–8 across the storyline).
-- No dialogue; no scene directions—only storyline-level narrative.
+- Historical coherence: correct chronology, actors, locations; avoid anachronisms and speculative claims not supported by the canonical record.
+- Multi-perspective tension: at least two viewpoints per node (e.g., leaders vs advisors, allies vs opponents, domestic vs international).
+- Character richness: each desc names at least 2 key figures; across the storyline include 4–6 distinct figures when possible.
+- Keep it linear: each node should naturally lead to the next Decision Checkpoint (or Resolution).
 
 Return ONLY JSON."""
         try:
@@ -600,8 +609,8 @@ Output ONLY JSON format:"""+"""
         if not os.path.exists('config'):
             os.makedirs('config')
         now = datetime.datetime.now()
-        date_str = now.strftime("%m-%d@%H_%M")
-        filename = f'config/session_{date_str}.json'
+        date_str = now.strftime("%m-%d_%H-%M")
+        filename = f'config/{date_str}.json'
         
         try:
             with open(filename, 'w', encoding='utf-8') as f:
