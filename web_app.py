@@ -98,6 +98,7 @@ css = """
 }
 """
 pn.extension(raw_css=[css],notifications=True)
+pn.extension('modal')
 
 class GameController(Viewer):
     def __init__(self, **params):
@@ -249,6 +250,13 @@ class GameController(Viewer):
                 report_md=data.get("report_md", "")
                 self.chat_ui.finish_divergence(report_md)
         
+        elif msg_type == "enable_reflection":
+            self.chat_ui.enable_reflection()
+        elif msg_type == "reflection_report":
+            html = data.get("html")
+            self.chat_ui.render_reflection_report(html)
+
+            
         elif msg_type == "error":
             pn.state.notifications.error(f"Error: {data}", duration=5000)
 

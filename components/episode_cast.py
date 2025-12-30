@@ -172,10 +172,10 @@ class EpisodeCastInfo(Viewer):
             transition: all 0.3s ease;
         ">
             {indicator}
-            <div style="font-weight: bold; font-size: 1em; margin-bottom: 2px;">
+            <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">
                 {icon} {title}
             </div>
-            <div style="font-size: 0.8em; opacity: 0.9;">
+            <div style="font-size: 0.9em; opacity: 0.9;">
                 {desc}
             </div>
         </div>
@@ -210,7 +210,7 @@ class EpisodeCastInfo(Viewer):
 
         self.stage1_pane.object = self._generate_stage_html(
             title="Stage 1: Observation",
-            desc="Observe the canonical history flow from the User's perspective.",
+            desc="Observe the canonical history flow.",
             icon="🧐",
             theme_color="#155724", # Green
             bg_color="#d4edda",

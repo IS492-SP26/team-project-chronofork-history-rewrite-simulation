@@ -1,3 +1,4 @@
+import datetime
 import textwrap
 import panel as pn
 from panel.viewable import Viewer
@@ -21,6 +22,8 @@ class ChatInterface(Viewer):
         # 维护选项映射
         self.selected_target_name = None 
         self.label_to_name_map = {}
+
+        self.cached_report_html = ""
         
         # --- UI Resources ---
         self.avatars = {agent["name"]: agent["avatar"] for agent in self.agents}
@@ -41,6 +44,38 @@ class ChatInterface(Viewer):
             sizing_mode='stretch_height', width=50
         )
         self.send_button.on_click(self.chat_send)
+
+
+        self.tip_button = pn.widgets.Button(
+            button_type='warning', icon="bulb", icon_size="25px",
+            sizing_mode='stretch_height', width=50, visible=False,
+        )
+        self.tip_button.on_click(self.req_tip)
+
+
+        self.reflection_button = pn.widgets.Button(
+            button_type='success', icon="report-analytics", icon_size="25px",
+            sizing_mode='stretch_height', width=50, visible=False,
+        )
+        self.reflection_button.on_click(self.req_reflection)
+
+        self.back_to_chat_button = pn.widgets.Button(
+            button_type='primary', name="💬 Back to Chat",
+            sizing_mode='stretch_both',
+        )
+        self.back_to_chat_button.on_click(self.back_to_chat)
+
+        self.export_save_button = pn.widgets.Button(
+            button_type='success', name="💾 Export Config",
+            sizing_mode='stretch_both',
+        )
+        self.export_save_button.on_click(self.export_save)
+
+        self.download_report_button = pn.widgets.Button(
+            button_type='success', name="📥 Download Report",
+            sizing_mode='stretch_both',
+        )
+        self.download_report_button.on_click(self.download_report)
 
         # 初始化 Agent Selector
         self.radio_group = pn.widgets.RadioButtonGroup(
@@ -89,7 +124,8 @@ class ChatInterface(Viewer):
         # Layout
         button_row = pn.Column(
             self.send_button,
-            # TODO: Add more buttons here if needed
+            self.reflection_button,
+            self.tip_button,
             sizing_mode='stretch_height'
         )
         input_area = pn.Column(
@@ -103,10 +139,21 @@ class ChatInterface(Viewer):
             sizing_mode='stretch_both',
             scroll=True,
         )
+
+        
+        self.chat_display_card = pn.Card(chat_display, title='💭 Chat Stream', sizing_mode='stretch_both',collapsible=False)
+
+        reflection_btn_row = pn.Row(
+            self.back_to_chat_button,
+            self.export_save_button,
+            self.download_report_button,
+            sizing_mode='stretch_both',
+        )
         
         self._layout = pn.Column(
-            pn.Card(chat_display, title='💭 Chat Stream', sizing_mode='stretch_both',collapsible=False),
-            pn.Card(input_area, collapsible=False, hide_header=True, sizing_mode='stretch_width', margin=(10,0,0,0),max_height=200)
+            self.chat_display_card,
+            pn.Card(input_area, collapsible=False, hide_header=True, sizing_mode='stretch_width', margin=(10,0,0,0),height=200),
+            pn.Card(reflection_btn_row, collapsible=False, hide_header=True,sizing_mode='stretch_width', margin=(10,0,0,0),height=50, visible=False),
         )
 
     def __panel__(self):
@@ -194,6 +241,11 @@ class ChatInterface(Viewer):
 
     def add_node_divider(self, from_id, to_id):
         """插入节点流转提示"""
+        if self.reflection_button.visible:
+            self.reflection_button.visible = False
+
+        if from_id == 'start':
+            self._flush_current_stream()
         
         if from_id == 'start':
             html = f"""<div style="text-align: center; color: #28a745; margin: 20px 0; font-weight: bold;">
@@ -282,6 +334,8 @@ class ChatInterface(Viewer):
     def chat_send(self, event):
         # 1. Start Experience
         if self.send_button.icon == 'player-play':
+            self.send_button.icon = 'send'
+            self.send_button.button_type = 'primary'
             self.send_button.disabled = True
             self.send_callback("start_experience", {})
             self.text_input.placeholder = "Starting engine..."
@@ -316,6 +370,107 @@ class ChatInterface(Viewer):
         # Freeze for 1s then unlock (Allow interrupt)
         self.send_button.disabled = True
         pn.state.schedule_task("unlock", self.unlock_input, period='1s')
+
+    
+    def req_tip(self, event):
+        """Request Reflection from backend"""
+        # 触发modal
+        # Send to backend
+        self.send_callback("request_reflection", {})
+
+        self.chat_display_card.title = "💡 Reflection"
+        self._layout[1].visible = False # Hide Input Area
+        self._layout[2].visible = True # Show Reflection Buttons
+        self.facilitator_markdown.object = "👀 **Facilitator**: Check Reflections about Your Decisions and Potential Alternatives!"
+
+        loading_html = f"""
+        <div style="text-align: center; padding-top: 50px; color: #666;">
+            <div class="big-loader" style="margin: 0 auto; display: block;"></div>
+            <p>Loading Reflection...</p>
+        </div>
+        """
+        self.chat_container.object = loading_html
+
+    def enable_reflection(self):
+        """Enable Reflection Button"""
+        self.reflection_button.visible = True
+        self.tip_button.visible = False
+        self.cached_report_html = ""
+
+    def req_reflection(self, event):
+        """Request Reflection from backend"""
+        
+        # Send to backend
+
+        self.chat_display_card.title = "💡 Reflection"
+        self._layout[1].visible = False # Hide Input Area
+        self._layout[2].visible = True # Show Reflection Buttons
+        self.facilitator_markdown.object = "👀 **Facilitator**: Check Reflections about Your Decisions and Potential Alternatives!"
+
+        self.back_to_chat_button.disabled = True
+        self.export_save_button.disabled = True
+        self.download_report_button.disabled = True
+
+        if self.cached_report_html=='':
+            self.send_callback("request_reflection", {})
+            loading_html = f"""<div style="text-align: center; padding-top: 50px; color: #666;">
+                <div class="big-loader" style="margin: 0 auto; display: block;"></div>
+                <p>Loading Reflection...</p>
+            </div>
+            """
+            self.chat_container.object = loading_html
+        else:
+            self.render_reflection_report(self.cached_report_html)
+    
+    def render_reflection_report(self, html_content):
+        """渲染报告"""
+        self.back_to_chat_button.disabled = False
+        self.export_save_button.disabled = False
+        self.download_report_button.disabled = False
+        
+        self.cached_report_html = html_content
+        report_block = f"""<div style="margin: 20px 0;">{html_content}</div>
+        <div style="text-align: center; margin-bottom: 20px;">--- End of Report ---</div>"""
+        
+        self.chat_container.object = html_content
+
+    
+    def back_to_chat(self, event):
+        """Return from Reflection to Chat View"""
+
+        self.chat_display_card.title = "💭 Chat Stream"
+        self._layout[1].visible = True # Show Input Area
+        self._layout[2].visible = False # Hide Reflection Buttons
+        self.facilitator_markdown.object = "👀 **Facilitator**: Select a Node and a Perspective then 🔄 Backtrack!"
+
+        self._render_full_log()
+
+    def export_save(self, event):
+        """Trigger config export"""
+        self.send_callback("export_save", {})
+
+    def download_report(self, event):
+        """Trigger report download"""
+        # 将chat_container.object的内容以html文件形式下载
+        download_content = f"""<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Chrono Chat Report</title>
+        </head>
+        <body>
+            {self.chat_container.object}
+        </body>
+        </html>
+        """
+        timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
+        filename = f"report_{timestamp}.html"
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(download_content)
+        pn.state.notifications.success(f"Report saved as {filename}", duration=4000)
+
+
 
     def _commit_user_message(self, content, target):
         """Commit user message to history immediately (Newest at Top)"""
@@ -390,6 +545,7 @@ class ChatInterface(Viewer):
             print("Input request received at Stage 1. Ignoring.")
             return
         self.unlock_input()
+        self.tip_button.visible = True
         self.text_input.placeholder = msg_text
 
         print(f"Input requested by {from_name}")
@@ -443,10 +599,6 @@ class ChatInterface(Viewer):
 
     def unlock_input(self):
         """Restore input state"""
-        if self.send_button.icon == 'player-play':
-            self.send_button.icon = 'send'
-            self.send_button.button_type = 'primary'
-        
         # 只有在选择了目标的情况下才启用发送按钮
         self.send_button.disabled = True if not self.selected_target_name else False
         self.text_input.disabled = True if not self.selected_target_name else False
