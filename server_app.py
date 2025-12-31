@@ -99,10 +99,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 # 直接操作内部 engine (如果允许) 或通过 cast_engine 代理
                 cast_engine.backtrack_to(target_id, perspective_agent)
             elif func_name == "export_save":
-                cast_engine.save_checkpoint()
+                asyncio.create_task(cast_engine.handle_save_request())
 
             elif func_name == "request_reflection":
                 asyncio.create_task(cast_engine.handle_reflection_request())
+            
+            elif func_name == "request_tip":
+                asyncio.create_task(cast_engine.handle_tip_request())
 
             else:
                 print(f"Unknown WS request type: {func_name}")

@@ -10,7 +10,6 @@ from server.facilitator import Facilitator
 from server.llm_cache import cached_chat_create, call_llm
 from server.story_engine import StoryEngine
 from typing import List, Dict
-# cast_engine.py
 from server.reflection_worker import ReflectionWorker
 from server.html_renderer import  render_reflection_report
 
@@ -61,6 +60,8 @@ class CastEngine:
         self.logger = EventLogger()
         self.logger.log("CastEngine", "Boot", "System Starting", config)
 
+        self.config = config
+
         if not os.path.exists('saves'):
             os.makedirs('saves')
         timestamp = datetime.datetime.now().strftime("%m-%d_%H-%M")
@@ -89,12 +90,12 @@ class CastEngine:
             self.agents[profile["name"]] = Agent(profile)
         self.raw_cast_data = cast_data
 
-        cast_str = "\n".join([f"{p['name']}: {p['title']};" for p in self.raw_cast_data])
+        self.cast_str = "\n".join([f"{p['name']}: {p['title']};" for p in self.raw_cast_data])
 
         # Facilitator 初始化
         self.facilitator = Facilitator(
             self.episode.get("title", ""),
-            cast_str,
+            self.cast_str,
         )
 
         # --- 4. 运行时状态 ---
@@ -717,7 +718,7 @@ class CastEngine:
             "pending_messages": self.pending_messages,
             "current_speaker": self.current_speaker,
             "user_role_name": self.user_role_name,
-            # 也可以保存 config 以便完全重建
+            "config": self.config 
         }
         
         full_state = {
@@ -725,12 +726,23 @@ class CastEngine:
             "engine": engine_state,
             "cast": cast_state
         }
+
+        json_str = json.dumps(full_state, indent=2, ensure_ascii=False)
         
         with open(self.cp_file, 'w', encoding='utf-8') as f:
-            json.dump(full_state, f, indent=2, ensure_ascii=False)
+            f.write(json_str)
             
         self.logger.log("System", "Checkpoint", f"Saved to {self.cp_file}", {"reason": reason})
-        return self.cp_file
+        return json_str
+    
+    async def handle_save_request(self):
+        """处理前端的 Save 请求"""
+        state_json = self.save_checkpoint(reason="user_requested")
+        await self.output_queue.put({
+            "type": "save_complete",
+            "data": {"filename": self.cp_file, "json_content": state_json}
+        })
+
     
     def load_checkpoint(self, filename):
         """从文件恢复状态 (Demo用，通常在 Init 时调用)"""
@@ -795,7 +807,12 @@ class CastEngine:
             report_data = await worker.generate_report()
 
             # 将report_data写文件用于调试
-            with open('debug_reflection_report.json', 'w', encoding='utf-8') as f:
+
+
+            if not os.path.exists('debug'):
+                os.makedirs('debug')
+            timestamp = datetime.datetime.now().strftime("%m-%d_%H-%M")
+            with open(f'debug/reflection_{timestamp}.json', 'w', encoding='utf-8') as f:
                 json.dump(report_data, f, indent=2, ensure_ascii=False)
             
             # 2. 渲染成 HTML (需要更新 html_renderer 以适配新的 report_data 结构)
@@ -805,7 +822,41 @@ class CastEngine:
                 "type": "reflection_report",
                 "data": {"html": html_report}
             })
-            self.logger.log("System", "Reflection", html_report)
+
+            html_file =f"""<!DOCTYPE html><html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoFork Reflection Report - {timestamp}</title>
+    <style>
+        /* 给整个页面一个浅灰背景，这样白色的 Report 卡片会更突出 */
+        body {{ 
+            margin: 0; 
+            padding: 40px 20px; 
+            background-color: #f4f4f9; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }}
+        /* 让 Report 居中显示 */
+        .rf-root {{
+            max-width: 900px;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important; /* 强制增加阴影立体感 */
+        }}
+    </style>
+</head>
+<body>
+    {html_report}
+</body>
+</html>"""
+
+            if not os.path.exists('reflections'):
+                os.makedirs('reflections')
+            timestamp = datetime.datetime.now().strftime("%m-%d_%H-%M")
+            file_path = f'reflections/{timestamp}.html'
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(html_file)
+
+            self.logger.log("System", "Reflection", f"Report saved to {file_path}")
             
             # 顺便存个档
             self.save_checkpoint(reason="reflection_generated")
@@ -814,6 +865,43 @@ class CastEngine:
             print(f"Reflection Error: {e}")
             import traceback
             traceback.print_exc()
+
+    async def handle_tip_request(self):
+        """处理前端的 Tip 请求"""
+        self.logger.log("System", "Tip", "Request Received")
+
+        # 1. 获取上下文
+        if self.in_backtrack_draft_mode:
+            context = self.pending_messages
+            if len(context) < 3 and self.history_msg:
+                context = self.history_msg + context
+        else:
+            context = self.engine.get_context_messages()
+
+        storyline_json = self.engine.get_story_context(only_current=True)
+
+        try:
+            
+            tip_data = await self.facilitator.generate_tips(
+                self.episode.get('title',''),
+                self.user_role_name,
+                storyline_json,
+                context
+            )
+            
+            # 3. 发送回前端
+            await self.output_queue.put({
+                "type": "tip_data",
+                "data": tip_data
+            })
+            
+        except Exception as e:
+            print(f"Handle Tip Error: {e}")
+            # 发送错误状态关闭 loading
+            await self.output_queue.put({
+                "type": "tip_error",
+                "data": {"msg": str(e)}
+            })
 
     def _construct_system_message(self, agent_name: str) -> str:
         agent = self.agents.get(agent_name)
@@ -835,9 +923,7 @@ class CastEngine:
 <active_node>{active_node["title"]}(nodeid={active_node["id"]}): {active_node["desc"]}</active_node>
 <next_node>{'nodeid=end' if not next_node_desc else next_node_desc}</next_node>
 
-<cast>
-{cast_str}
-</cast>
+<cast>{cast_str}</cast>
 
 目标：与 <cast> 共同依据 <active_node> 进行**宏观的历史重演**，并在 3–4 轮内推进到<next_node>。
 
@@ -852,7 +938,7 @@ class CastEngine:
     - 每个节点严格控制在 **3–4 轮**交互。
     - 一上来不要触达 node.title 的 dilemma（先铺垫冲突与动机）；第 2–4 轮再推进到决策/收束。
     - 遇到决策时：立刻做出<next_node>的行动，不要反复拉扯。
-    - 若其他角色做出违背史实的选择，积极鼓励并允许，并记录为"diverged"；但若遇到荒谬请求，简短拒绝并转向可行行动。
+    - 若其他角色做出任意与史实不同的选择，积极鼓励并允许，并记录为"diverged"；只有在极其荒谬的请求下，需要简短拒绝并转向可行行动。
 
 输出（严格，仅1条）
 <meta targetName="..." nodeid="..." /> 角色台词（自然口语，极简1-3句话，语言要求与<cast>一致）
@@ -882,18 +968,14 @@ Meta 说明
         return f"""你是 divergence 历史事件推断器。learner 正在体验「{episode_title}」，参与的Cast见<cast>，learner在<current_node>的行为与<canonical_next>或其他史实发生了分歧，你需要根据当前节点的交互记录<interaction>：
 
 1. 判断该分歧相对于<canonical_next>的关系：若 learner 的分歧动作直接回答/改变了<current_node> title 所描述的决策本身，则 target = "child"，否则 target = "sibling"
-2. 评估该分歧在现实世界中的可行性（plausibility）
+2. 较严厉地评估该分歧在现实世界中的可行性（plausibility）
 2. 用极简方式概括可能的结果走向（most likely / best-case / worst-case）
 3. 以“最可能走向”为主，生成该分歧之后的线性分支 Storyline（2–5 个节点，直到出现明确结局/收束）
 
-<cast>
-{cast_str}
-</cast>
+<cast>{cast_str}</cast>
 <current_node>{active_node["title"]}: {active_node["desc"]}</current_node>
 <canonical_next>{'end'if not next_node_desc else next_node_desc}</canonical_next>
-<interaction>
-{context_str}
-</interaction>
+<interaction>{context_str}</interaction>
 
 你必须严格依据 <interaction> 的实际行为细节 + <Storyline> 的史实约束 + <cast> 的人物动机/权力/资源来推断。
 
@@ -919,19 +1001,19 @@ OUTPUT FORMAT（严格）
 
 branch_storyline的生成规则
 - 严格根据feasibility控制节点数量。
-  - 若 feasibility.score < 50：输出 1–2 节点，并更快收束到失败/坏结局的 Resolution。
-  - 若 50–80：输出 2–3 节点。
-  - 若 >80：输出 3–4 节点，可包含更复杂的谈判/反制/连锁后果。
+  - 若 feasibility.score < 50：严格只能输出 1–2 节点，并更快收束到失败/坏结局的 Resolution。
+  - 若 50–80：严格只能输出 2–3 节点。
+  - 若 >80：可以输出 3–4 节点，可包含更复杂的谈判/反制/连锁后果。
 - 每个节点代表：一个过程中的Decision Checkpoint或最终Resolution。
 
 字段规则
 - title：开放式 dilemma/question（10 词以内），不要写成选项列表；最后一条可用 "Resolution: ..."。
 - choice：用于可视化的极短标签（≤6 词），表示“上一 Decision Checkpoint 最可能的选择/结果”。
   - 对于第 1 条：choice是从 <interaction> 抽取并压缩的 learner 分歧动作。
-- desc：3–5 句；符合史实逻辑与常识；必须体现多方视角冲突（至少 2 方）；必须点名关键人物（每条至少 2 个来自 <cast>的人物）。
-  - 每条 desc 需要以choice开头，然后叙述该choice的后果（因果链、约束、反应），并以“引出当前节点 title 的新困境”为结尾（Resolution 除外）。
+- desc：2–4 句；符合史实逻辑与常识；必须体现多方视角冲突（至少 2 方）；必须点名关键人物（每条至少 2 个来自 <cast>的人物），保持精炼。
+  - desc 的逻辑是由choice开头，叙述该choice的后果（因果链、约束、反应），最后引出当前节点 title 的困境（Resolution 除外）。
 
-只返回 JSON。"""
+只返回 JSON，Use English"""
 
 
     def _generate_divergence_report(self, data: dict, new_node_id: str) -> str:

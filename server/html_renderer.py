@@ -122,9 +122,6 @@ def render_reflection_report(report_data):
                 @media (max-width: 600px) {
                     .rf-fog-grid { grid-template-columns: 1fr; } /* 窄屏 1列 */
                 }
-                @media (min-width: 1100px) {
-                    .rf-fog-grid { grid-template-columns: repeat(4, 1fr); } /* 超宽屏 4列 */
-                }
         .rf-fog-cell {
             background: #fdfdfd;
             border: 1px solid #eee;
@@ -567,7 +564,7 @@ def render_reflection_report(report_data):
                 html += f"""
                 <div style="background:#fff; border:1px solid #b2bec3; border-left:4px solid #f1c40f; border-radius:6px; padding:12px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     <div style="font-size:1.05em; font-weight:600; color:#2d3436; margin-bottom:6px;">
-                        "{r.get('recommendation')}"
+                        📝 "{r.get('recommendation')}"
                     </div>
                     <div style="font-size:0.85em; color:#636e72; background:#f9f9f9; padding:6px; border-radius:4px; margin-top:8px;">
                         <b>Why:</b> {r.get('rationale')}
@@ -661,7 +658,7 @@ def render_reflection_report(report_data):
             for d in disclaimers:
                 html += f"""
                 <div class="rf-card" style="border-left-color:#e17055; background:#fff5f5;">
-                    <div style="font-weight:bold; color:#c0392b; margin-bottom:4px;">{d.get('assumption')}</div>
+                    <div style="font-weight:bold; color:#c0392b; margin-bottom:4px;">❗ {d.get('assumption')}</div>
                     <div style="font-size:0.9em; color:#7f8c8d; line-height:1.4;">{d.get('why_uncertain')}</div>
                 </div>
                 """
@@ -696,9 +693,5 @@ def render_reflection_report(report_data):
     html += "</div>" # End Root
     
     minified_html = re.sub(r'\s+', ' ', html)
-    
-    # 保存html文件供调试
-    with open("type9.html", "w", encoding="utf-8") as f:
-        f.write(html)
     
     return minified_html

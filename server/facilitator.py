@@ -1,11 +1,11 @@
 from typing import List, Dict, AsyncGenerator
 
-from server.llm_cache import cached_chat_create
+from server.llm_cache import cached_chat_create, call_llm
 
 class Facilitator:
     def __init__(self, episode: str, cast_str: str):
         
-        
+        self.cast_str = cast_str
         # 1. System Prompt
         self.messages = [{
             "role": "system", 
@@ -85,6 +85,7 @@ class Facilitator:
 
 <active_node>{active_node["title"]}: {active_node["desc"]}</active_node>
 <next_node>{'end'if not next_node_desc else next_node_desc}</next_node>
+<cast>{self.cast_str}</cast>
 
 角色 “{agent_name}” 请求切换镜头，上下文如下：「{context_str}」。
 
@@ -97,14 +98,56 @@ class Facilitator:
 - 旁白风格：
     - 极简（1-2句），第三人称。
 
-输出格式 (严格)
+输出格式 (严格)，ONLY Use English:
 <meta targetName="下一个对话的对象，必须是 <cast> 中的 EXACT 名称"/> [旁白：描述镜头切换后的新画面/氛围，引出下一人的行动]
 """
         }]
 
         stream = await cached_chat_create(
-                "gpt-5-mini", 
+                "gpt-5.1", 
                 msg, 
                 stream=True
             )
         return stream
+    
+    async def generate_tips(self,episode_title:str,user_role_name:str ,storyline: List[Dict], context_msgs: List[Dict]) -> Dict:
+        """生成战略建议"""
+        history_prefix_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n['id']}): {n['desc']}" for n in storyline])
+
+        recent_logs = []
+        for m in context_msgs:
+            log_entry = {
+                "from": m['from'] if m['from']!=user_role_name else f"{m['from']} (User)",
+                "to": m['to'] if m['to']!=user_role_name else f"{m['to']} (User)",
+                "content": m['content']
+            }
+            recent_logs.append(log_entry)
+
+        recent_logs_str = "\n".join([f"{m['from']} -> {m['to']}: {m['content']}" for m in recent_logs])
+        
+        prompt = f"""你是用户的“历史战略顾问”。Learner 正在进行「{episode_title}」的历史模拟，已进行的故事线是<context>，参与的的角色包括<cast>，最近的对话是<logs>（重点关注最后一句提问），你需要根据当前局势，为用户提供2或4个不同的行动选项`options`，以探索不同的历史可能性或改写历史，要求精炼。目标是培养用户的历史思维（权衡利弊、预判后果）。
+
+<context>{history_prefix_str}</context>
+<cast>{self.cast_str}</cast>
+<logs>{recent_logs_str}</logs>"""+"""
+输出严格 JSON 格式，ONLY Use English：
+{{
+  "situation_analysis": "1句话简述当前尴尬/危机/决策点，点出核心矛盾。",
+  "options": [
+    {{"""+f"""
+      "label": "短标签 (e.g. 强硬拒绝 / 妥协换取时间)",
+      "target_agent": "建议对话的目标角色名 (EXACT name in <cast>, except the user({user_role_name}))",
+      "example_response": "用户可以说的一句具体的台词示例 (自然口语，简短)",
+      "rationale": "为什么要这么做 (收益/动机)",
+      "risks": "潜在风险或代价 (Consequences)",
+      "intent_type": "Escalation | De-escalation | Alliance Building | Info Gathering" """+"""
+    }},
+    ...
+  ]
+}}"""
+        try:
+            response = await call_llm(prompt)
+            return response
+        except Exception as e:
+            print(f"Tip Gen Error: {e}")
+            return {}

@@ -305,8 +305,11 @@ class StoryEngine:
 
         depth, variant = map(int, target_node_id.split('.'))
         
-        if self._node_statuses[self._current_node_id] == "IN_PROGRESS" and variant != 0:
-            self._node_statuses[self._current_node_id] = "SUSPENDED"
+        if self._node_statuses[self._current_node_id] == "IN_PROGRESS":
+            if variant == 0:
+                self._node_statuses[self._current_node_id] = "COMPLETED"
+            else:
+                self._node_statuses[self._current_node_id] = "SUSPENDED"
             
         # 重建路径
         self._current_path = self._reconstruct_path(target_node_id)
@@ -441,7 +444,7 @@ class StoryEngine:
         
         return payload
 
-    def get_story_context(self) -> List[Dict]:
+    def get_story_context(self,only_current=False) -> List[Dict]:
         """
         返回当前路径的 JSON String。
         包含：从 Root 到 Current 的完整路径，以及 Current 的所有直接子节点（作为未来的可能性）。
@@ -460,10 +463,13 @@ class StoryEngine:
                 "desc": node['desc'],
                 "status": "History" if nid != self._current_node_id else "Active"
             })
+        if only_current:
+            return path_nodes
             
         # 2. 获取当前节点的直接子节点 (Future Options)
         children_ids = self._graph.get_children(self._current_node_id)
-        for cid in children_ids:
+        if children_ids:
+            cid = children_ids[0]
             node = self._graph.nodes[cid]
             path_nodes.append({
                 "id": cid,

@@ -212,6 +212,8 @@ cache/
 config/
 logs/
 saves/
+reflections/
+debug/
 
 .DS_Store
 .vscode/
