@@ -96,6 +96,65 @@ css = """
     font-size: 0.9em;
     color: #333;
 }
+
+.tip-root { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+/* 粘性顶部 */
+.sticky-top-bar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(5px);
+    border-bottom: 1px solid #eee; padding: 2px 0; margin-bottom: 3px;
+}
+
+/* 卡片容器：复用 rf-card 风格 */
+.tip-card-wrapper {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-left-width: 5px; /* 左侧色条 */
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    height: 100%;
+    display: flex; flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+}
+.tip-card-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+
+/* 内容区 */
+.tip-body { padding: 6px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+
+/* 头部 */
+.tip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+
+/* 标签：复用 rf-tag */
+.tip-tag { 
+    display: inline-block; padding: 2px 8px; border-radius: 4px; 
+    font-size: 0.85em; font-weight: 700; text-transform: uppercase; 
+    letter-spacing: 0.5px;
+}
+
+/* 标题 */
+.tip-title { font-size: 1.2em; font-weight: 700; color: #2d3436; line-height: 1.3; text-align: center; margin-top: 5px; margin-bottom: 4px; }
+
+/* 对话引用 */
+.tip-quote {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic; color: #555; font-size: 1em;
+    background: #f8f9fa; border-left: 3px solid #dfe6e9;
+    padding: 8px; border-radius: 0 4px 4px 0;
+    margin: 5px 0;
+}
+
+/* 分析块：复用 rf-outcome 风格 */
+.tip-block { font-size: 0.95em; padding: 6px 8px; border-radius: 4px; line-height: 1.4; }
+.tip-block-green { background: #e8f6f3; color: #16a085; border: 1px solid #d4efdf; }
+.tip-block-red { background: #fdedec; color: #c0392b; border: 1px solid #fadbd8; }
+
+/* 按钮修正 */
+.tip-btn button { margin: 0 !important; border-radius: 0 !important; height: 36px; font-weight: 600; }
 """
 pn.extension(raw_css=[css],notifications=True)
 pn.extension('modal')
@@ -217,14 +276,13 @@ class GameController(Viewer):
         elif msg_type == "facilitator_stream":
             self.chat_ui.handle_facilitator_stream(data.get("token", ""))
             
-        # --- New Handlers ---
         elif msg_type == "stage_update":
             stage = data.get("stage")
             self.cast_ui.update_stage_display(stage) # Update Badge
             self.chat_ui.set_stage_mode(stage)       # Enable/Disable Input
             self.graph_ui.set_stage_mode(stage)      # Enable Backtrack Button
             if stage == 2:
-                pn.state.notifications.success("Stage 1 Complete. Please select a node to Backtrack.", duration=5000)
+                pn.state.notifications.success("Stage 1 Complete. Please select a node to Backtrack.", duration=2000)
                 
         elif msg_type == "node_update":
             self.chat_ui.add_node_divider(data.get("from_id"), data.get("to_id"))
@@ -255,6 +313,19 @@ class GameController(Viewer):
         elif msg_type == "reflection_report":
             html = data.get("html")
             self.chat_ui.render_reflection_report(html)
+
+        elif msg_type == "save_complete":
+            filename = data.get("filename")
+            json_content = data.get("json_content")
+            self.chat_ui.handle_save_data(filename, json_content)
+
+        elif msg_type == "tip_data":
+            # 渲染数据
+            self.chat_ui.render_tip_content(data)
+        elif msg_type == "tip_error":
+            # 显示错误并允许关闭
+            self.chat_ui.tip_display.clear()
+            self.chat_ui.tip_display.append(pn.pane.Markdown(f"### Error: {data.get('msg')}"))
 
             
         elif msg_type == "error":
