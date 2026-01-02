@@ -243,10 +243,15 @@ class CastEngine:
 
                         from_name = last_msg.get("from", "System")
 
+                        if from_name == "System":
+                            msg = 'Select an Agent to address your message to.'
+                        else:
+                            msg = f'{from_name} is talking to you. Respond or select another character.'
+
                         await self.output_queue.put(
                             {
                                 "type": "input_request",
-                                "data": {"msg": "Action...", "from_name": from_name},
+                                "data": {"msg": msg, "from_name": from_name},
                             }
                         )
 
