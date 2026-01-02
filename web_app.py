@@ -7,6 +7,8 @@ from panel.viewable import Viewer
 from components.chat_interface import ChatInterface
 from components.episode_cast import EpisodeCastInfo
 from components.story_graph import StoryGraph
+import dotenv
+dotenv.load_dotenv()
 
 css = """
 #input{ font-size: 120%; }

@@ -422,7 +422,7 @@ class ChatInterface(Viewer):
         self.download_save_button.visible = True
         
         # 4. 恢复请求按钮状态 (为下一次做准备)
-        self.export_save_button.name = "💾 Export Config"
+        self.export_save_button.name = "💾 Export Save"
         self.export_save_button.disabled = False
 
     def get_save_stream(self):
@@ -439,7 +439,7 @@ class ChatInterface(Viewer):
         f.seek(0)
         
         # 2. 下载开始后，延时恢复界面状态
-        # 让用户看到下载开始后，按钮变回 "Export Config"
+        # 让用户看到下载开始后，按钮变回 "Export Save"
         def restore_ui():
             self.download_save_button.visible = False
             self.export_save_button.visible = True
