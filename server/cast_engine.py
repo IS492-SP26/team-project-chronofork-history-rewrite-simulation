@@ -243,7 +243,7 @@ class CastEngine:
 
                         from_name = last_msg.get("from", "System")
 
-                        if from_name == "System":
+                        if from_name == "System" or from_name == "Facilitator":
                             msg = 'Select an Agent to address your message to.'
                         else:
                             msg = f'{from_name} is talking to you. Respond or select another character.'
