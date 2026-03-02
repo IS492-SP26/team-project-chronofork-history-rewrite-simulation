@@ -10,6 +10,49 @@ from panel.viewable import Viewer
 pn.extension()
 hv.extension("bokeh")
 
+I18N = {
+    "en": {
+        "waiting_story": "Waiting for Story...",
+        "tip_select_completed": "ℹ️ Select a completed or suspended node to backtrack that decision.",
+        "btn_to_select": "🚫 To Select",
+        "btn_backtrack": "🔄 Backtrack",
+        "title": "🎯 Story Graph",
+        "start": "Start",
+        "warn_only_completed": "⚠️ You can only backtrack to COMPLETED or SUSPENDED decisions.",
+        "warn_start_forbidden": "⚠️ Cannot backtrack to the Start node.",
+        "selected_node": "✅ Selected Node {node} for Backtracking.",
+        "btn_requested": "⏳ Requested...",
+        "sending_request": "⏳ Sending request to backtrack to Node {node}...",
+        "path_prefix": "Path",
+        "status_labels": {
+            "IN_PROGRESS": "In Progress",
+            "COMPLETED": "Completed",
+            "SUSPENDED": "Suspended",
+            "UNFINISHED": "Unfinished",
+        },
+    },
+    "zh": {
+        "waiting_story": "正在等待故事数据...",
+        "tip_select_completed": "ℹ️ 请选择一个已完成或暂停的节点来回溯该决策。",
+        "btn_to_select": "🚫 未选择",
+        "btn_backtrack": "🔄 回溯",
+        "title": "🎯 故事图",
+        "start": "起点",
+        "warn_only_completed": "⚠️ 只能回溯到已完成或暂停的节点。",
+        "warn_start_forbidden": "⚠️ 不能回溯到起点节点。",
+        "selected_node": "✅ 已选择节点 {node} 进行回溯。",
+        "btn_requested": "⏳ 已发送",
+        "sending_request": "⏳ 正在发送回溯请求到节点 {node}...",
+        "path_prefix": "路径",
+        "status_labels": {
+            "IN_PROGRESS": "进行中",
+            "COMPLETED": "已完成",
+            "SUSPENDED": "已暂停",
+            "UNFINISHED": "未完成",
+        },
+    },
+}
+
 
 def graph_hover_hook(plot, element):
     plot_state = plot.state
@@ -24,13 +67,15 @@ def graph_hover_hook(plot, element):
 
 
 class StoryGraph(Viewer):
-    def __init__(self, send_callback, on_select_callback, **params):
+    def __init__(self, send_callback, on_select_callback, lang="en", **params):
         """
         :param send_callback: function(msg_type, msg_data) 用于向后端发送请求
         """
         super().__init__(**params)
         self.send_callback = send_callback
         self.on_select_callback = on_select_callback
+        self.lang = lang if lang in I18N else "en"
+        self.t = I18N[self.lang]
 
         self.stage = 1  # 当前阶段，默认1
         # 1. 初始化 Stream
@@ -40,13 +85,13 @@ class StoryGraph(Viewer):
         self.user_selected_node = "None"
 
         self.graph_pane = pn.pane.HoloViews(
-            hv.Text(0.5, 0.5, "Waiting for Story...").opts(xaxis=None, yaxis=None),
+            hv.Text(0.5, 0.5, self.t["waiting_story"]).opts(xaxis=None, yaxis=None),
             sizing_mode="stretch_both",
             min_width=350,
         )
 
         self.backtrack_tip = pn.pane.Markdown(
-            "ℹ️ Select a completed or suspended node to backtrack that decision.",
+            self.t["tip_select_completed"],
             styles={"font-size": "1.1em"},
             sizing_mode="stretch_width",  # 让文字占满剩余空间
             align="center",  # 【关键】垂直方向居中
@@ -54,7 +99,7 @@ class StoryGraph(Viewer):
         )
 
         self.backtrack_btn = pn.widgets.Button(
-            name="🚫 To Select",
+            name=self.t["btn_to_select"],
             button_type="danger",
             disabled=True,
             visible=True,
@@ -85,7 +130,7 @@ class StoryGraph(Viewer):
                 self.backtrack_group,
                 sizing_mode="stretch_both",
             ),
-            title="🎯 Story Graph",
+            title=self.t["title"],
             collapsible=False,
             sizing_mode="stretch_both",
         )
@@ -150,12 +195,12 @@ class StoryGraph(Viewer):
     
     def _change_backtrack_button_state(self, nodeid=None):
         if nodeid is None:
-            self.backtrack_btn.name = "🚫 To Select"
+            self.backtrack_btn.name = self.t["btn_to_select"]
             self.backtrack_btn.button_type = "danger"
             self.backtrack_btn.disabled = True
             self.user_selected_node = "None"
         else:
-            self.backtrack_btn.name = f"🔄 Backtrack"
+            self.backtrack_btn.name = self.t["btn_backtrack"]
             self.backtrack_btn.button_type = "success"
             self.backtrack_btn.disabled = False
             self.user_selected_node = nodeid
@@ -182,7 +227,7 @@ class StoryGraph(Viewer):
 
             if depth == 0:
                 final_color = "#141414"
-                label_text = "Start"
+                label_text = self.t["start"]
             elif status == "IN_PROGRESS":
                 final_color = base_color
                 line_color = "#FFD700"
@@ -216,7 +261,7 @@ class StoryGraph(Viewer):
             G.nodes[nid].update(
                 {
                     "label_id": label_text,
-                    "status_label": status,
+                    "status_label": self.t["status_labels"].get(status, status),
                     "final_color": final_color,
                     "line_color": line_color,
                     "line_width": line_width,
@@ -256,7 +301,7 @@ class StoryGraph(Viewer):
                 toolbar=None,
                 xaxis=None,
                 yaxis=None,
-                title=f"Path: {' -> '.join(current_path)}",
+                title=f"{self.t['path_prefix']}: {' -> '.join(current_path)}",
                 hooks=[graph_hover_hook],
             )
         )
@@ -281,7 +326,7 @@ class StoryGraph(Viewer):
                 "text": [
                     (
                         f"{G.nodes[n]['hover_title']}\n\n"
-                        if G.nodes[n].get("label_id") != "Start"
+                        if n != "0.0"
                         else ""
                     )
                     for n in G
@@ -350,20 +395,20 @@ class StoryGraph(Viewer):
 
                 if status in ["UNFINISHED", "IN_PROGRESS"]:
                     self.backtrack_tip.object = (
-                        "⚠️ You can only backtrack to COMPLETED or SUSPENDED decisions."
+                        self.t["warn_only_completed"]
                     )
                     self._change_backtrack_button_state(None)
                     self._render(self.cached_payload)  # 重绘以取消高亮
                     self.on_select_callback(False)
                 elif closest == "0.0":
-                    self.backtrack_tip.object = "⚠️ Cannot backtrack to the Start node."
+                    self.backtrack_tip.object = self.t["warn_start_forbidden"]
                     self._change_backtrack_button_state(None)
                     self._render(self.cached_payload)  # 重绘以取消高亮
                     self.on_select_callback(False)
                 else:
                     self.user_selected_node = closest
                     self.backtrack_tip.object = (
-                        f"✅ Selected Node {closest} for Backtracking."
+                        self.t["selected_node"].format(node=closest)
                     )
                     self._change_backtrack_button_state(closest)
                     self.on_select_callback(True)
@@ -388,8 +433,8 @@ class StoryGraph(Viewer):
                 self.send_callback("backtrack_to", {"target_id": target_node})
 
             # 3. UI 立即反馈 (让按钮变灰，提示已发送)
-            self.backtrack_btn.name = "⏳ Requested..."
+            self.backtrack_btn.name = self.t["btn_requested"]
             self.backtrack_btn.disabled = True
             
             # 提示语更新
-            self.backtrack_tip.object = f"⏳ Sending request to backtrack to Node {target_node}..."
+            self.backtrack_tip.object = self.t["sending_request"].format(node=target_node)

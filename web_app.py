@@ -1,6 +1,7 @@
 # web_app.py
 import json
 import asyncio
+import argparse
 import aiohttp
 import panel as pn
 from panel.viewable import Viewer
@@ -159,15 +160,65 @@ css = """
 .tip-btn button { margin: 0 !important; border-radius: 0 !important; height: 36px; font-weight: 600; }
 """
 pn.extension(raw_css=[css],notifications=True)
-pn.extension('modal')
+
+
+I18N = {
+    "en": {
+        "app_title": "ChronoFork · WebUI",
+        "connecting": "Connecting to Server...",
+        "connected_waiting_config": "Connected! Waiting for config...",
+        "connection_failed": "Connection Failed: {error}",
+        "error_no_config": "Error: No config file found.",
+        "config_loaded": "Config Loaded. Initializing UI...",
+        "stage1_complete": "Stage 1 Complete. Please select a node to Backtrack.",
+        "tip_error": "### Error: {msg}",
+        "error_prefix": "Error: {data}",
+        "ws_disconnected": "WebSocket Disconnected!",
+    },
+    "zh": {
+        "app_title": "ChronoFork · 网页界面",
+        "connecting": "正在连接服务器...",
+        "connected_waiting_config": "已连接，等待配置...",
+        "connection_failed": "连接失败: {error}",
+        "error_no_config": "错误：未找到配置文件。",
+        "config_loaded": "配置已加载，正在初始化界面...",
+        "stage1_complete": "第一阶段完成，请选择一个节点进行回溯。",
+        "tip_error": "### 错误：{msg}",
+        "error_prefix": "错误：{data}",
+        "ws_disconnected": "WebSocket 已断开！",
+    },
+}
+
+
+def resolve_lang() -> str:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--lang")
+    args, _ = parser.parse_known_args()
+    if not args.lang:
+        print(
+            "[Startup Error] Missing required '--lang'. "
+            "Use: panel serve web_app.py --args --lang zh|en"
+        )
+        raise SystemExit(2)
+    if args.lang not in {"zh", "en"}:
+        print(
+            f"[Startup Error] Invalid --lang='{args.lang}'. "
+            "Allowed values: zh, en. "
+            "Use: panel serve web_app.py --args --lang zh|en"
+        )
+        raise SystemExit(2)
+    return args.lang
+
 
 class GameController(Viewer):
-    def __init__(self, **params):
+    def __init__(self, lang="en", **params):
         super().__init__(**params)
+        self.lang = lang if lang in I18N else "en"
+        self.t = I18N[self.lang]
         
         # Loading View
         self.loading_spinner = pn.indicators.LoadingSpinner(value=True, size=50, color='warning')
-        self.status_text = pn.widgets.StaticText(value="Connecting to Server...", align='center')
+        self.status_text = pn.widgets.StaticText(value=self.t["connecting"], align='center')
         self.loading_view = pn.Column(
             pn.layout.VSpacer(),
             pn.Row(self.loading_spinner, self.status_text),
@@ -197,10 +248,10 @@ class GameController(Viewer):
         try:
             session = aiohttp.ClientSession()
             self.ws = await session.ws_connect(url)
-            self.status_text.value = "Connected! Waiting for config..."
+            self.status_text.value = self.t["connected_waiting_config"]
             await self.listen_loop()
         except Exception as e:
-            self.status_text.value = f"Connection Failed: {e}"
+            self.status_text.value = self.t["connection_failed"].format(error=e)
             self.loading_spinner.color = 'danger'
 
     async def listen_loop(self):
@@ -219,32 +270,35 @@ class GameController(Viewer):
         status = data.get("status")
 
         if status == "error_no_config":
-            self.status_text.value = "Error: No config file found."
+            self.status_text.value = self.t["error_no_config"]
             self.loading_spinner.color = 'danger'
             return
 
         self.config = config
-        self.status_text.value = "Config Loaded. Initializing UI..."
+        self.status_text.value = self.t["config_loaded"]
         self.user_role_name = self.config.get('user_role', {}).get('name', 'User')
 
         # 1. Cast UI
         self.cast_ui = EpisodeCastInfo(
             episode_data=self.config.get('episode', {}),
             cast_data=self.config.get('cast_data', []),
-            user_role_name=self.user_role_name
+            user_role_name=self.user_role_name,
+            lang=self.lang,
         )
 
         # 2. Graph UI
         self.graph_ui = StoryGraph(
             send_callback=self.send_to_backend,
-            on_select_callback=self.on_graph_selection_change
+            on_select_callback=self.on_graph_selection_change,
+            lang=self.lang,
         )
 
         # 3. Chat UI
         self.chat_ui = ChatInterface(
             agents=self.config.get('cast_data', []),
             user_role_name=self.user_role_name,
-            send_callback=self.send_to_backend
+            send_callback=self.send_to_backend,
+            lang=self.lang,
         )
 
         # Layout
@@ -284,7 +338,7 @@ class GameController(Viewer):
             self.chat_ui.set_stage_mode(stage)       # Enable/Disable Input
             self.graph_ui.set_stage_mode(stage)      # Enable Backtrack Button
             if stage == 2:
-                pn.state.notifications.success("Stage 1 Complete. Please select a node to Backtrack.", duration=2000)
+                pn.state.notifications.success(self.t["stage1_complete"], duration=2000)
                 
         elif msg_type == "node_update":
             self.chat_ui.add_node_divider(data.get("from_id"), data.get("to_id"))
@@ -307,13 +361,13 @@ class GameController(Viewer):
                 self.chat_ui.start_divergence_loading()
                 
             elif action == 'divergence_complete':
-                report_md=data.get("report_md", "")
-                self.chat_ui.finish_divergence(report_md)
+                report = data.get("report", data.get("report_md", ""))
+                self.chat_ui.finish_divergence(report)
         
         elif msg_type == "enable_reflection":
             self.chat_ui.enable_reflection()
         elif msg_type == "reflection_report":
-            html = data.get("html")
+            html = data.get("report", data.get("html"))
             self.chat_ui.render_reflection_report(html)
 
         elif msg_type == "save_complete":
@@ -327,11 +381,13 @@ class GameController(Viewer):
         elif msg_type == "tip_error":
             # 显示错误并允许关闭
             self.chat_ui.tip_display.clear()
-            self.chat_ui.tip_display.append(pn.pane.Markdown(f"### Error: {data.get('msg')}"))
+            self.chat_ui.tip_display.append(
+                pn.pane.Markdown(self.t["tip_error"].format(msg=data.get("msg")))
+            )
 
             
         elif msg_type == "error":
-            pn.state.notifications.error(f"Error: {data}", duration=5000)
+            pn.state.notifications.error(self.t["error_prefix"].format(data=data), duration=5000)
 
     def send_to_backend(self, msg_type, data):
         if self.ws and not self.ws.closed:
@@ -354,9 +410,13 @@ class GameController(Viewer):
             payload = json.dumps({"type": msg_type, "data": data})
             asyncio.create_task(self.ws.send_str(payload))
         else:
-            pn.state.notifications.warning("WebSocket Disconnected!", duration=3000)
+            pn.state.notifications.warning(self.t["ws_disconnected"], duration=3000)
 
-app = pn.template.VanillaTemplate(title='ChronoFork · WebUI')
-config_component = GameController()
+
+LANG = resolve_lang()
+print(f"[Startup] config_app prompt language: {LANG}")
+
+app = pn.template.VanillaTemplate(title=I18N[LANG]["app_title"])
+config_component = GameController(lang=LANG)
 app.main.append(config_component)
 app.servable()

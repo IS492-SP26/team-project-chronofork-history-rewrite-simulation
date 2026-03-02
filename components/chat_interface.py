@@ -5,11 +5,142 @@ import textwrap
 import panel as pn
 from panel.viewable import Viewer
 
+I18N = {
+    "en": {
+        "default_save_filename": "save.json",
+        "user_name": "User",
+        "facilitator_name": "Facilitator",
+        "system_name": "System",
+        "chat_init": "### ⚙️ {system} ➜ 😉 {user}\nPress Play Button to Start\n\n---\n\n",
+        "placeholder_initializing": "System initializing...",
+        "facilitator_stage2": "👀 **Facilitator**: Select a Node and a Perspective then 🔄 Backtrack!",
+        "chat_stream_title": "💭 Chat Stream",
+        "btn_back_to_chat": "💬 Back to Chat",
+        "btn_export_save": "💾 Export Save",
+        "btn_download_save": "📥 Download Save",
+        "btn_download_report": "📥 Download Report",
+        "report_default_filename": "report.html",
+        "display_user_suffix": "(😉 User)",
+        "unknown_name": "Unknown",
+        "divergence_loading": "Analyzing Divergented History Resulted from Your Actions...",
+        "story_begins": "🌱 Story Begins at Node {to_id}",
+        "story_ending": "🏁 Reached Ending (Node {from_id})",
+        "story_moving": "── 📍 Moving: {from_id} ➔ {to_id} ──",
+        "history_context": "── 📝 Previous Interaction Context ──",
+        "backtracking_loading": "Backtracking to Node <b>{target_node}</b> as <b>{role}</b>",
+        "backtrack_complete_title": "🔄 Backtrack Complete",
+        "backtrack_complete_desc": "Backtracked to Node <b>{new_node_id}</b> as <b>{new_role}</b>.",
+        "divergence_title": "⚡ Divergence Analysis",
+        "placeholder_starting_engine": "Starting engine...",
+        "warn_enter_message": "Please enter a message.",
+        "warn_select_target": "Please select a target character.",
+        "btn_generating": "⏳ Generating...",
+        "tip_loading": "Analyzing Strategic Landscape... May take ~20 seconds",
+        "tip_empty": "### ⚠️ No tips available.",
+        "btn_back": "🔙 Back",
+        "strategic_advisor": "### 💡 Strategic Advisor",
+        "btn_close": "✕ Close",
+        "situation_analysis": "Situation Analysis",
+        "situation_default": "Analyze current situation.",
+        "tip_to": "To",
+        "tip_why": "✅ Why",
+        "tip_risk": "⚠️ Risk",
+        "btn_select_option": "✨ Select Option",
+        "intent_default": "Action",
+        "reflection_title": "💡 Reflection",
+        "facilitator_reflection": "👀 **Facilitator**: Check Reflections about Your Decisions and Potential Alternatives!",
+        "reflection_loading": "Loading Reflection... It may take ~1 minute",
+        "report_saved": "Report saved as {filename}",
+        "download_report_title": "ChronoFork Reflection Report - {timestamp}",
+        "chat_report_title": "Chrono Chat Report",
+        "placeholder_message_to": "Message {name}...",
+        "placeholder_stage1": "Stage 1: Observing Canonical History...",
+        "placeholder_select_backtrack": "Select a node in the graph to Backtrack...",
+        "placeholder_agent_thinking": "{agent_name} is thinking...",
+        "warning_selected_label_not_found": "Warning: Selected label '{selected_label}' not found in map.",
+        "warning_input_request_ignored": "Input request received at Stage 1. Ignoring.",
+        "log_input_requested_by": "Input requested by {from_name}",
+        "facilitator_prefix": "👀 **Facilitator**: ",
+        "intent_labels": {
+            "Escalation": "Escalation",
+            "De-escalation": "De-escalation",
+            "Alliance Building": "Alliance Building",
+            "Info Gathering": "Info Gathering",
+            "Action": "Action",
+        },
+    },
+    "zh": {
+        "default_save_filename": "save.json",
+        "user_name": "用户",
+        "facilitator_name": "引导者",
+        "system_name": "系统",
+        "chat_init": "### ⚙️ {system} ➜ 😉 {user}\n点击播放按钮开始\n\n---\n\n",
+        "placeholder_initializing": "系统初始化中...",
+        "facilitator_stage2": "👀 **引导者**：请选择一个节点和视角，然后点击 🔄 回溯！",
+        "chat_stream_title": "💭 聊天流",
+        "btn_back_to_chat": "💬 返回聊天",
+        "btn_export_save": "💾 导出存档",
+        "btn_download_save": "📥 下载存档",
+        "btn_download_report": "📥 下载报告",
+        "report_default_filename": "report.html",
+        "display_user_suffix": "(😉 用户)",
+        "unknown_name": "未知",
+        "divergence_loading": "正在分析你行为导致的分歧历史结果...",
+        "story_begins": "🌱 故事从节点 {to_id} 开始",
+        "story_ending": "🏁 到达结局（节点 {from_id}）",
+        "story_moving": "── 📍 流转：{from_id} ➔ {to_id} ──",
+        "history_context": "── 📝 之前的交互上下文 ──",
+        "backtracking_loading": "正在以 <b>{role}</b> 身份回溯到节点 <b>{target_node}</b>",
+        "backtrack_complete_title": "🔄 回溯完成",
+        "backtrack_complete_desc": "已以 <b>{new_role}</b> 身份回溯到节点 <b>{new_node_id}</b>。",
+        "divergence_title": "⚡ 分歧分析",
+        "placeholder_starting_engine": "正在启动引擎...",
+        "warn_enter_message": "请输入消息。",
+        "warn_select_target": "请选择目标角色。",
+        "btn_generating": "⏳ 生成中...",
+        "tip_loading": "正在分析策略局势... 约需 20 秒",
+        "tip_empty": "### ⚠️ 暂无建议。",
+        "btn_back": "🔙 返回",
+        "strategic_advisor": "### 💡 策略顾问",
+        "btn_close": "✕ 关闭",
+        "situation_analysis": "局势分析",
+        "situation_default": "分析当前局势。",
+        "tip_to": "目标",
+        "tip_why": "✅ 原因",
+        "tip_risk": "⚠️ 风险",
+        "btn_select_option": "✨ 选择此方案",
+        "intent_default": "行动",
+        "reflection_title": "💡 复盘",
+        "facilitator_reflection": "👀 **引导者**：查看你决策带来的反思和备选方案！",
+        "reflection_loading": "正在生成复盘... 约需 1 分钟",
+        "report_saved": "报告已保存为 {filename}",
+        "download_report_title": "ChronoFork 复盘报告 - {timestamp}",
+        "chat_report_title": "Chrono 聊天报告",
+        "placeholder_message_to": "发送给 {name}...",
+        "placeholder_stage1": "阶段一：观察正史流程...",
+        "placeholder_select_backtrack": "请先在图中选择要回溯的节点...",
+        "placeholder_agent_thinking": "{agent_name} 正在思考...",
+        "warning_selected_label_not_found": "警告：未在映射中找到选中标签 '{selected_label}'。",
+        "warning_input_request_ignored": "在阶段一收到输入请求，已忽略。",
+        "log_input_requested_by": "{from_name} 请求你的输入",
+        "facilitator_prefix": "👀 **引导者**：",
+        "intent_labels": {
+            "Escalation": "升级施压",
+            "De-escalation": "降温缓和",
+            "Alliance Building": "联盟构建",
+            "Info Gathering": "信息收集",
+            "Action": "行动",
+        },
+    },
+}
+
 
 class ChatInterface(Viewer):
 
-    def __init__(self, agents, send_callback, user_role_name, **params):
+    def __init__(self, agents, send_callback, user_role_name, lang="en", **params):
         super().__init__(**params)
+        self.lang = lang if lang in I18N else "en"
+        self.t = I18N[self.lang]
         self.send_callback = send_callback
         self.user_role_name = user_role_name
         self.agents = agents
@@ -26,20 +157,26 @@ class ChatInterface(Viewer):
 
         self.cached_report_html = ""
         self._temp_export_content = ""
-        self._temp_export_filename = "save.json"
+        self._temp_export_filename = self.t["default_save_filename"]
         
         # --- UI Resources ---
         self.avatars = {agent["name"]: agent["avatar"] for agent in self.agents}
-        self.avatars["User"] = "😉" # Ensure User avatar exists
+        self.avatars["User"] = "😉" # Ensure User avatar exists for backend key
+        self.avatars[self.t["user_name"]] = "😉"
         self.avatars["Facilitator"] = "👀" # System avatar
+        self.avatars[self.t["facilitator_name"]] = "👀"
         
 
         # The main chat area
-        self.chat_container = pn.pane.Markdown("### ⚙️ System ➜ 😉 User\nPress Play Button to Start\n\n---\n\n", sizing_mode='stretch_both', styles={'font-size': '1.1em'})
+        self.chat_container = pn.pane.Markdown(
+            self.t["chat_init"].format(system=self.t["system_name"], user=self.t["user_name"]),
+            sizing_mode='stretch_both',
+            styles={'font-size': '1.1em'},
+        )
 
         # 2. Input Area
         self.text_input = pn.widgets.TextAreaInput(
-            placeholder="System initializing...", disabled=True, 
+            placeholder=self.t["placeholder_initializing"], disabled=True, 
             sizing_mode='stretch_both', resizable='width', min_height=50,styles={'margin-right': '-3px'}
         )
         self.send_button = pn.widgets.Button(
@@ -83,7 +220,7 @@ class ChatInterface(Viewer):
         self.radio_group.param.watch(self.on_radio_group_change, "value")
 
         self.facilitator_markdown = pn.pane.Markdown(
-            "👀 **Facilitator**: Select a Node and a Perspective then 🔄 Backtrack!", 
+            self.t["facilitator_stage2"],
             sizing_mode='stretch_width',
             styles={'font-size': '1.1em'}
         )
@@ -126,17 +263,17 @@ class ChatInterface(Viewer):
         )
 
         
-        self.chat_display_card = pn.Card(chat_display, title='💭 Chat Stream', sizing_mode='stretch_both',collapsible=False)
+        self.chat_display_card = pn.Card(chat_display, title=self.t["chat_stream_title"], sizing_mode='stretch_both',collapsible=False)
 
 
         self.back_to_chat_button = pn.widgets.Button(
-            button_type='primary', name="💬 Back to Chat",
+            button_type='primary', name=self.t["btn_back_to_chat"],
             sizing_mode='stretch_both',
         )
         self.back_to_chat_button.on_click(self.back_to_chat)
 
         self.export_save_button = pn.widgets.Button(
-            button_type='warning', name="💾 Export Save",
+            button_type='warning', name=self.t["btn_export_save"],
             sizing_mode='stretch_both',
         )
 
@@ -144,7 +281,7 @@ class ChatInterface(Viewer):
         self.download_save_button = pn.widgets.FileDownload(
             callback=self.get_save_stream, # 点击时触发的回调
             button_type='success',           # 用不同颜色区分状态
-            label='📥 Download Save',
+            label=self.t["btn_download_save"],
             sizing_mode='stretch_both',
             visible=False                    # 初始不可见
         )
@@ -152,9 +289,9 @@ class ChatInterface(Viewer):
 
         self.download_report_button = pn.widgets.FileDownload(
             callback=self.get_report_stream,  # 绑定回调函数，点击时才生成
-            filename="report.html",           # 默认文件名
+            filename=self.t["report_default_filename"],           # 默认文件名
             button_type='success',
-            label='📥 Download Report',
+            label=self.t["btn_download_report"],
             sizing_mode='stretch_both'       # 或者你之前的布局参数
         )
 
@@ -186,6 +323,9 @@ class ChatInterface(Viewer):
 
     def __panel__(self):
         return self._layout
+
+    def _localize_intent(self, intent):
+        return self.t["intent_labels"].get(intent, intent)
     
     # --- [New Helper] 统一管理目标列表 ---
     def _update_target_options(self, waiting_agent_name=None):
@@ -229,13 +369,19 @@ class ChatInterface(Viewer):
     def _format_name_display(self, name):
         """Append (User) if the name matches user role"""
         if name == self.user_role_name:
-            return f"{name} (😉 User)"
+            return f"{name} {self.t['display_user_suffix']}"
+        if name == "User":
+            return self.t["user_name"]
+        if name == "Facilitator":
+            return self.t["facilitator_name"]
+        if name == "System":
+            return self.t["system_name"]
         return name
 
     def _header_for_chat(self, agent_name, target_name):
         """Generate header for current streaming block"""
         src_display = self._format_name_display(agent_name)
-        tgt_display = "User" if target_name == "User" else self._format_name_display(target_name)
+        tgt_display = self.t["user_name"] if target_name == "User" else self._format_name_display(target_name)
         src_av = self.avatars.get(agent_name, "🤖")
         tgt_av = self.avatars.get(target_name, "🤔")
         header = f"### {src_av} {src_display} ➜ {tgt_av} {tgt_display}"
@@ -247,12 +393,12 @@ class ChatInterface(Viewer):
         # 1. Divergence Loading (Always on top if active, since we are reverse order)
         if self.is_diverging:
             content += """<div style="text-align: center; margin: 10px; color: #007bff;">
-                <div class="small-loader" style="margin-right: 10px;"></div> Analyzing Divergented History Resulted from Your Actions...
-            </div>\n\n"""
+                <div class="small-loader" style="margin-right: 10px;"></div> {text}
+            </div>\n\n""".format(text=self.t["divergence_loading"])
         # 1. Render Current Stream (if any)
         if self.current_stream_buffer and self.current_stream_meta:
-            src = self.current_stream_meta.get('agent', 'Unknown')
-            tgt = self.current_stream_meta.get('target', 'Unknown')
+            src = self.current_stream_meta.get('agent', self.t["unknown_name"])
+            tgt = self.current_stream_meta.get('target', self.t["unknown_name"])
 
             header = self._header_for_chat(src, tgt)
             content += f"{header}\n{self.current_stream_buffer}\n\n---\n\n"
@@ -275,13 +421,13 @@ class ChatInterface(Viewer):
         
         if from_id == 'start':
             html = f"""<div style="text-align: center; color: #28a745; margin: 20px 0; font-weight: bold;">
-            🌱 Story Begins at Node {to_id}</div>"""
+            {self.t["story_begins"].format(to_id=to_id)}</div>"""
         elif to_id == 'end':
             html = f"""<div style="text-align: center; color: #dc3545; margin: 20px 0; font-weight: bold;">
-            🏁 Reached Ending (Node {from_id})</div>"""
+            {self.t["story_ending"].format(from_id=from_id)}</div>"""
         else:
             html = f"""<div style="text-align: center; color: #888; font-size: 0.9em; margin: 15px 0;">
-            ── 📍 Moving: {from_id} ➔ {to_id} ──</div>"""
+            {self.t["story_moving"].format(from_id=from_id, to_id=to_id)}</div>"""
         
         self.history_log = html + "\n\n" + self.history_log 
         self._render_full_log()
@@ -289,7 +435,7 @@ class ChatInterface(Viewer):
     def add_history_divider(self):
         self._flush_current_stream()
         html = f"""<div style="text-align: center; color: #888; font-size: 0.9em; margin: 15px 0;">
-            ── 📝 Previous Interaction Context ──</div>"""
+            {self.t["history_context"]}</div>"""
         
         self.history_log = html + "\n\n" + self.history_log 
         self._render_full_log()
@@ -308,7 +454,7 @@ class ChatInterface(Viewer):
         loading_html = f"""
         <div style="text-align: center; padding-top: 50px; color: #666;">
             <div class="big-loader" style="margin: 0 auto; display: block;"></div>
-            <div style="margin-top: 10px;">Backtracking to Node <b>{target_node}</b> as <b>{role}</b></div>
+            <div style="margin-top: 10px;">{self.t["backtracking_loading"].format(target_node=target_node, role=role)}</div>
         </div>
         """
         self.chat_container.object = loading_html
@@ -317,8 +463,8 @@ class ChatInterface(Viewer):
         """Backtrack 完成，显示结果"""
         # 构造系统提示消息作为第一条
         sys_msg = f"""<div style="background: #e2e3e5; padding: 10px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #ffaa00;">
-            <b>🔄 Backtrack Complete</b><br>
-            Backtracked to Node <b>{new_node_id}</b> as <b>{new_role}</b>.
+            <b>{self.t["backtrack_complete_title"]}</b><br>
+            {self.t["backtrack_complete_desc"].format(new_node_id=new_node_id, new_role=new_role)}
         </div>
         """
         self.history_log = sys_msg + "\n\n"
@@ -348,7 +494,7 @@ class ChatInterface(Viewer):
                 font-weight: bold; color: #856404; font-size: 1.1em; margin-bottom: 10px;
                 border-bottom: 2px solid #eecbaeb0; padding-bottom: 8px;
             ">
-                ⚡ Divergence Analysis
+                {self.t["divergence_title"]}
             </div>
             <div style="font-size: 0.95em; line-height: 1.5;">
                 {report_html_content}
@@ -366,18 +512,18 @@ class ChatInterface(Viewer):
             self.send_button.button_type = 'primary'
             self.send_button.disabled = True
             self.send_callback("start_experience", {})
-            self.text_input.placeholder = "Starting engine..."
+            self.text_input.placeholder = self.t["placeholder_starting_engine"]
             self.chat_container.object = ""
             return
 
         # 2. User Message
         msg = self.text_input.value.strip()
         if not msg: 
-            pn.state.notifications.warning("Please enter a message.", duration=2000)
+            pn.state.notifications.warning(self.t["warn_enter_message"], duration=2000)
             return
         
         if not self.selected_target_name:
-             pn.state.notifications.error("Please select a target character.", duration=3000)
+             pn.state.notifications.error(self.t["warn_select_target"], duration=3000)
              return
         
         target_name = self.selected_target_name
@@ -402,7 +548,7 @@ class ChatInterface(Viewer):
     def req_export_save(self, event):
         """用户点击 'Export Config'"""
         # 1. 改变 UI 状态提示加载
-        self.export_save_button.name = "⏳ Generating..."
+        self.export_save_button.name = self.t["btn_generating"]
         self.export_save_button.disabled = True
         
         # 2. 发送请求
@@ -422,7 +568,7 @@ class ChatInterface(Viewer):
         self.download_save_button.visible = True
         
         # 4. 恢复请求按钮状态 (为下一次做准备)
-        self.export_save_button.name = "💾 Export Save"
+        self.export_save_button.name = self.t["btn_export_save"]
         self.export_save_button.disabled = False
 
     def get_save_stream(self):
@@ -462,7 +608,7 @@ class ChatInterface(Viewer):
 
         loading_html = f"""<div style="text-align: center; padding-top: 50px; color: #666;">
             <div class="big-loader" style="margin: 0 auto; display: block;"></div>
-            <div style="margin-top: 20px;">Analyzing Strategic Landscape... May take ~20 seconds</div>
+            <div style="margin-top: 20px;">{self.t["tip_loading"]}</div>
         </div>"""
         self.tip_display.append(pn.pane.Markdown(loading_html, sizing_mode='stretch_width'))
         self.tip_card.visible = True # Show Tip Area
@@ -501,19 +647,19 @@ class ChatInterface(Viewer):
         self.tip_button.disabled = False 
 
         if not tip_data:
-            self.tip_display.append(pn.pane.Markdown("### ⚠️ No tips available."))
-            back_btn = pn.widgets.Button(name="🔙 Back", button_type='light')
+            self.tip_display.append(pn.pane.Markdown(self.t["tip_empty"]))
+            back_btn = pn.widgets.Button(name=self.t["btn_back"], button_type='light')
             back_btn.on_click(self._close_tip_view)
             self.tip_display.append(back_btn)
             return
 
-        situation = tip_data.get('situation_analysis', 'Analyze current situation.')
+        situation = tip_data.get('situation_analysis', self.t["situation_default"])
         options = tip_data.get('options', [])
 
         # --- 1. Sticky Top Bar ---
         top_bar = pn.Row(
-            pn.pane.Markdown("### 💡 Strategic Advisor", sizing_mode='stretch_width', styles={'margin': '2px 0 0 5px'}),
-            pn.widgets.Button(name="✕ Close", width=70, button_type='light', on_click=self._close_tip_view, margin=(2, 10, 0, 5)),
+            pn.pane.Markdown(self.t["strategic_advisor"], sizing_mode='stretch_width', styles={'margin': '2px 0 0 5px'}),
+            pn.widgets.Button(name=self.t["btn_close"], width=70, button_type='light', on_click=self._close_tip_view, margin=(2, 10, 0, 5)),
             sizing_mode='stretch_width',
             css_classes=['sticky-top-bar']
         )
@@ -525,7 +671,7 @@ class ChatInterface(Viewer):
             <div class="tip-root" style="margin-top:2px; margin-bottom:-3px;">
                 <div style="background:#e3f2fd; padding:8px; border-radius:6px; border-left:5px solid #2196f3; color:#0d47a1; font-size:1em; line-height:1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                     <div style="font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-                        <span>📊</span> Situation Analysis
+                        <span>📊</span> {self.t["situation_analysis"]}
                     </div>
                     <div style="opacity:0.9;">{situation}</div>
                 </div>
@@ -539,7 +685,8 @@ class ChatInterface(Viewer):
         grid = pn.GridBox(ncols=2, sizing_mode='stretch_width', styles={'align-items': 'stretch', 'gap': '10px','margin': '10px'})
 
         for opt in options:
-            intent = opt.get('intent_type', 'Action')
+            intent = opt.get('intent_type', self.t["intent_default"])
+            intent_display = self._localize_intent(intent)
             target_name = opt.get('target_agent')
             avatar = self.avatars.get(target_name, "👤")
             
@@ -563,10 +710,10 @@ class ChatInterface(Viewer):
             <div class="tip-root" style="height: 100%;">
                 <div class="tip-header">
                     <span class="tip-tag" style="background:{badge_bg}; color:{badge_txt};">
-                        {intent}
+                        {intent_display}
                     </span>
                     <span style="font-size:0.85em; color:#999; font-weight:600;">
-                        To: {avatar} {target_name}
+                        {self.t["tip_to"]}: {avatar} {target_name}
                     </span>
                 </div>
                 
@@ -576,10 +723,10 @@ class ChatInterface(Viewer):
                 
                 <div style="margin-top:auto; display:flex; flex-direction:column; gap:5px;">
                     <div class="tip-block tip-block-green">
-                        <b>✅ Why:</b> {opt.get('rationale')}
+                        <b>{self.t["tip_why"]}:</b> {opt.get('rationale')}
                     </div>
                     <div class="tip-block tip-block-red">
-                        <b>⚠️ Risk:</b> {opt.get('risks')}
+                        <b>{self.t["tip_risk"]}:</b> {opt.get('risks')}
                     </div>
                 </div>
             </div>
@@ -591,7 +738,7 @@ class ChatInterface(Viewer):
 
             # 按钮 (Full Width Bottom)
             btn = pn.widgets.Button(
-                name="✨ Select Option", 
+                name=self.t["btn_select_option"], 
                 button_type='primary', 
                 sizing_mode='stretch_width',
                 css_classes=['tip-btn'],
@@ -625,10 +772,10 @@ class ChatInterface(Viewer):
         
         # Send to backend
 
-        self.chat_display_card.title = "💡 Reflection"
+        self.chat_display_card.title = self.t["reflection_title"]
         self.input_card.visible = False # Hide Input Area
         self.reflection_button_card.visible = True # Show Reflection Buttons
-        self.facilitator_markdown.object = "👀 **Facilitator**: Check Reflections about Your Decisions and Potential Alternatives!"
+        self.facilitator_markdown.object = self.t["facilitator_reflection"]
 
         self.back_to_chat_button.disabled = True
         self.export_save_button.disabled = True
@@ -638,7 +785,7 @@ class ChatInterface(Viewer):
             self.send_callback("request_reflection", {})
             loading_html = f"""<div style="text-align: center; padding-top: 50px; color: #666;">
                 <div class="big-loader" style="margin: 0 auto; display: block;"></div>
-                <div style="margin-top: 20px;">Loading Reflection... It may take ~1 minute</div>
+                <div style="margin-top: 20px;">{self.t["reflection_loading"]}</div>
             </div>
             """
             self.chat_container.object = loading_html
@@ -661,10 +808,10 @@ class ChatInterface(Viewer):
     def back_to_chat(self, event):
         """Return from Reflection to Chat View"""
 
-        self.chat_display_card.title = "💭 Chat Stream"
+        self.chat_display_card.title = self.t["chat_stream_title"]
         self.input_card.visible = True # Show Input Area
         self.reflection_button_card.visible = False # Hide Reflection Buttons
-        self.facilitator_markdown.object = "👀 **Facilitator**: Select a Node and a Perspective then 🔄 Backtrack!"
+        self.facilitator_markdown.object = self.t["facilitator_stage2"]
 
         self._render_full_log()
 
@@ -680,7 +827,7 @@ class ChatInterface(Viewer):
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Chrono Chat Report</title>
+            <title>{self.t["chat_report_title"]}</title>
         </head>
         <body>
             {self.chat_container.object}
@@ -691,7 +838,7 @@ class ChatInterface(Viewer):
         filename = f"report_{timestamp}.html"
         with open(filename, "w", encoding="utf-8") as f:
             f.write(download_content)
-        pn.state.notifications.success(f"Report saved as {filename}", duration=4000)
+        pn.state.notifications.success(self.t["report_saved"].format(filename=filename), duration=4000)
 
     def get_report_stream(self):
         """
@@ -707,7 +854,7 @@ class ChatInterface(Viewer):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChronoFork Reflection Report - {timestamp}</title>
+    <title>{self.t["download_report_title"].format(timestamp=timestamp)}</title>
     <style>
         /* 给整个页面一个浅灰背景，这样白色的 Report 卡片会更突出 */
         body {{ 
@@ -761,14 +908,14 @@ class ChatInterface(Viewer):
         
         if real_name:
             self.selected_target_name = real_name
-            self.text_input.placeholder = f"Message {real_name}..."
+            self.text_input.placeholder = self.t["placeholder_message_to"].format(name=real_name)
             
             # 如果是 Stage 2 且不在 Start 状态，确保发送按钮可用
             if self.current_stage == 2 and self.send_button.icon == 'send':
                 self.send_button.disabled = False
                 self.text_input.disabled = False
         else:
-            print(f"Warning: Selected label '{selected_label}' not found in map.")
+            print(self.t["warning_selected_label_not_found"].format(selected_label=selected_label))
 
     def _flush_current_stream(self):
         """
@@ -792,7 +939,7 @@ class ChatInterface(Viewer):
         if stage == 1:
             # 隐藏输入，只读模式
             self.text_input.disabled = True
-            self.text_input.placeholder = "Stage 1: Observing Canonical History..."
+            self.text_input.placeholder = self.t["placeholder_stage1"]
             self.send_button.disabled = True
             self.radio_group.disabled = True
             # Card 标题更新
@@ -803,7 +950,7 @@ class ChatInterface(Viewer):
             self.facilitator_view.visible = True
             self.input_card.visible = True
             self.text_input.disabled = True # 等待 Backtrack Briefing 结束后解锁
-            self.text_input.placeholder = "Select a node in the graph to Backtrack..."
+            self.text_input.placeholder = self.t["placeholder_select_backtrack"]
 
     def handle_input_request(self, msg_text, from_name):
         """
@@ -811,13 +958,13 @@ class ChatInterface(Viewer):
         from_name: The agent waiting for answer.
         """
         if self.current_stage == 1:
-            print("Input request received at Stage 1. Ignoring.")
+            print(self.t["warning_input_request_ignored"])
             return
         self.unlock_input()
         self.tip_button.visible = True
         self.text_input.placeholder = msg_text
 
-        print(f"Input requested by {from_name}")
+        print(self.t["log_input_requested_by"].format(from_name=from_name))
         
         self._update_target_options(waiting_agent_name=from_name)
 
@@ -847,7 +994,7 @@ class ChatInterface(Viewer):
             print(f"Error handling stream token: {e}")
     
     def handle_agent_thinking(self, agent_name):
-        self.text_input.placeholder = f"{agent_name} is thinking..."
+        self.text_input.placeholder = self.t["placeholder_agent_thinking"].format(agent_name=agent_name)
         # Reset labels (remove hourglass)
         self._update_target_options(waiting_agent_name=None)
 
@@ -859,7 +1006,7 @@ class ChatInterface(Viewer):
 
         # 2. 如果是新的一轮对话开始（上一轮已结束），先清空旧内容
         if not self.facilitator_streaming_active:
-            self.facilitator_buffer = "👀 **Facilitator**: " # 重置 Buffer
+            self.facilitator_buffer = self.t["facilitator_prefix"] # 重置 Buffer
             self.facilitator_streaming_active = True        # 标记为活跃
 
         # 3. 追加 Token 并更新 UI
