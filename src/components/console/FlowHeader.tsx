@@ -4,7 +4,8 @@ import { useChronoFork } from "@/src/lib/state/context"
 import { useTheme } from "@/src/lib/theme"
 import { episode } from "@/src/lib/mock/mockData"
 import type { FlowPhase } from "@/src/lib/state/types"
-import { HelpCircle, Eye, Swords, BookOpen, Check, Lock, Sun, Moon } from "lucide-react"
+import type { ConnectionStatus } from "@/src/lib/state/types"
+import { HelpCircle, Eye, Swords, BookOpen, Check, Lock, Sun, Moon, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 type SegId = "observe" | "intervene" | "reflection"
@@ -28,12 +29,23 @@ function segColor(id: SegId): string {
   return "var(--chrono-violet)"
 }
 
+function wsStatusInfo(status: ConnectionStatus): { color: string; label: string; pulsing: boolean } {
+  switch (status) {
+    case "connected": return { color: "var(--chrono-teal)", label: "WS: Connected", pulsing: false }
+    case "connecting": return { color: "var(--chrono-amber)", label: "WS: Connecting", pulsing: true }
+    case "mock": return { color: "var(--chrono-violet)", label: "WS: Mock", pulsing: false }
+    default: return { color: "var(--chrono-red)", label: "WS: Disconnected", pulsing: false }
+  }
+}
+
 export function FlowHeader() {
   const { state, dispatch } = useChronoFork()
   const { theme, toggle: toggleTheme } = useTheme()
-  const { phase } = state
+  const { phase, connectionStatus, serverConfig } = state
   const isIdle = phase === "observe_idle"
   const isObsPlaying = phase === "observe_playing"
+  const wsInfo = wsStatusInfo(connectionStatus)
+  const displayTitle = serverConfig?.episode?.title ?? episode.title
 
   return (
     <header className="flex items-center px-5 py-3 gap-4 glass-panel border-b border-border/30 relative z-40" style={{ minHeight: 56 }}>
@@ -46,7 +58,7 @@ export function FlowHeader() {
         </svg>
         <div className="flex flex-col leading-tight">
           <span className="font-mono text-[10px] font-bold tracking-widest text-muted-foreground uppercase">ChronoFork</span>
-          <span className="text-sm text-foreground font-semibold hidden sm:block">{episode.title}</span>
+          <span className="text-sm text-foreground font-semibold hidden sm:block">{displayTitle}</span>
         </div>
       </div>
 
@@ -104,6 +116,16 @@ export function FlowHeader() {
 
       {/* Right utils */}
       <div className="flex items-center gap-1.5 shrink-0">
+        {/* WS connection status indicator */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono tracking-wider"
+          style={{ backgroundColor: `color-mix(in oklch, ${wsInfo.color} 10%, transparent)`, color: wsInfo.color }}>
+          {connectionStatus === "connecting" ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: wsInfo.color }} />
+          )}
+          <span className="hidden lg:inline">{wsInfo.label}</span>
+        </div>
         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={toggleTheme} aria-label="Toggle theme">
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>

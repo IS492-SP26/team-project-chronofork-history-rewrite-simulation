@@ -53,17 +53,8 @@ function TranscriptPanel() {
                     </>
                   )}
                 </div>
-                {/* Timeline position marker */}
-                {group.sceneLabel && (
-                  <div className="flex justify-center mb-2">
-                    <span className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full inline-block animate-node-breathe" style={{ backgroundColor: "var(--chrono-teal)" }} />
-                      {group.sceneLabel}
-                    </span>
-                  </div>
-                )}
                 {/* Messages */}
-                <div className="flex flex-col gap-1.5 pl-3 border-l-2 border-border/15 ml-1">
+                <div className="flex flex-col gap-1 pl-2.5 border-l-2 border-border/15 ml-1">
                   {group.messages.map((msg) => (
                     <TranscriptLine key={msg.id} message={msg} />
                   ))}
@@ -79,7 +70,7 @@ function TranscriptPanel() {
 
 function SpeakerPill({ name, color }: { name: string; color: string }) {
   return (
-    <span className="text-sm font-bold px-2.5 py-0.5 rounded-md"
+    <span className="text-xs font-bold px-2 py-0.5 rounded-md"
       style={{ backgroundColor: `color-mix(in oklch, ${color} 12%, transparent)`, color }}>
       {name}
     </span>
@@ -139,13 +130,13 @@ function groupBySpeakerPair(messages: ChatMessage[]): MessageGroup[] {
 function TranscriptLine({ message }: { message: ChatMessage }) {
   const isDiverge = message.type === "user_diverge"
   const isSystem = message.type === "system"
-  if (isSystem) return <div className="text-center py-1"><span className="text-sm text-muted-foreground font-mono">{message.text}</span></div>
+  if (isSystem) return <div className="text-center py-1"><span className="text-xs text-muted-foreground font-mono">{message.text}</span></div>
 
   return (
-    <div className={`py-1.5 ${isDiverge ? "rounded-lg px-3 -mx-1" : ""}`}
+    <div className={`py-1 ${isDiverge ? "rounded-lg px-2.5 -mx-1" : ""}`}
       style={isDiverge ? { backgroundColor: "color-mix(in oklch, var(--chrono-amber) 8%, transparent)" } : undefined}>
-      <p className="text-sm text-foreground/90 leading-relaxed">
-        {isDiverge && <Badge variant="outline" className="text-[11px] font-mono mr-1.5 py-0" style={{ color: "var(--chrono-amber)", borderColor: "color-mix(in oklch, var(--chrono-amber) 30%, transparent)" }}>DIVERGE</Badge>}
+      <p className="text-xs text-foreground/90 leading-relaxed">
+        {isDiverge && <Badge variant="outline" className="text-[10px] font-mono mr-1 py-0" style={{ color: "var(--chrono-amber)", borderColor: "color-mix(in oklch, var(--chrono-amber) 30%, transparent)" }}>DIVERGE</Badge>}
         {message.text}
       </p>
     </div>
@@ -179,45 +170,45 @@ function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: ()
 
   return (
     <div className="flex flex-col rounded-xl border border-border/30 bg-card/60 overflow-hidden">
-      <div className="p-4 flex flex-col gap-3 flex-1">
+      <div className="p-3 flex flex-col gap-2.5 flex-1">
         {/* Intent badge */}
         <div className="flex items-center gap-2">
-          <Badge className="text-[11px] font-mono gap-1 py-0.5 px-2 border-0" style={{ backgroundColor: ic.bg, color: ic.text }}>
+          <Badge className="text-[10px] font-mono gap-1 py-0.5 px-2 border-0" style={{ backgroundColor: ic.bg, color: ic.text }}>
             {intentIcon(option.intentType)} {ic.label}
           </Badge>
         </div>
         {/* Target */}
         {targetRole && (
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground font-mono">TO:</span>
-            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground font-mono">TO:</span>
+            <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
               style={{ backgroundColor: `color-mix(in oklch, ${targetRole.portrait} 20%, transparent)`, color: targetRole.portrait }}>
               {targetRole.shortName.slice(0, 2)}
             </div>
-            <span className="text-sm font-medium text-foreground">{targetRole.shortName}</span>
+            <span className="text-xs font-medium text-foreground">{targetRole.shortName}</span>
           </div>
         )}
         {/* Label */}
-        <p className="text-sm font-semibold text-foreground leading-snug">{option.label}</p>
+        <p className="text-xs font-semibold text-foreground leading-snug">{option.label}</p>
         {/* Example response quote */}
-        <blockquote className="border-l-2 border-border/30 pl-3 text-sm text-muted-foreground italic leading-relaxed">
+        <blockquote className="border-l-2 border-border/30 pl-2.5 text-xs text-muted-foreground italic leading-relaxed">
           {option.exampleResponse}
         </blockquote>
         {/* Why / Risk blocks */}
-        <div className="flex flex-col gap-2">
-          <div className="rounded-lg px-3 py-2.5" style={{ backgroundColor: "color-mix(in oklch, var(--chrono-teal) 6%, transparent)" }}>
-            <p className="text-[11px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-teal)" }}>Why</p>
-            <p className="text-sm text-foreground/80 leading-relaxed">{option.why}</p>
+        <div className="flex flex-col gap-1.5">
+          <div className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "color-mix(in oklch, var(--chrono-teal) 6%, transparent)" }}>
+            <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-teal)" }}>Why</p>
+            <p className="text-xs text-foreground/80 leading-relaxed">{option.why}</p>
           </div>
-          <div className="rounded-lg px-3 py-2.5" style={{ backgroundColor: "color-mix(in oklch, var(--chrono-red) 6%, transparent)" }}>
-            <p className="text-[11px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-red)" }}>Risk</p>
-            <p className="text-sm text-foreground/80 leading-relaxed">{option.risk}</p>
+          <div className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "color-mix(in oklch, var(--chrono-red) 6%, transparent)" }}>
+            <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-red)" }}>Risk</p>
+            <p className="text-xs text-foreground/80 leading-relaxed">{option.risk}</p>
           </div>
         </div>
       </div>
       {/* Select button */}
       <button onClick={onSelect}
-        className="w-full py-2.5 text-sm font-semibold transition-colors hover:opacity-90 text-primary-foreground"
+        className="w-full py-2 text-xs font-semibold transition-colors hover:opacity-90 text-primary-foreground"
         style={{ backgroundColor: ic.text }}>
         Select Option
       </button>
@@ -226,21 +217,69 @@ function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: ()
 }
 
 function TipsPanelContent({ onSelectOption }: { onSelectOption: (opt: StrategyOption) => void }) {
+  const { state } = useChronoFork()
+
+  /* Use server-driven tips if available, otherwise fall back to mock */
+  const serverTips = state.tipData
   const tips = structuredTips
+
+  /* Map server tip options to StrategyOption format */
+  const serverOptions: StrategyOption[] | null = serverTips ? serverTips.options.map((o, i) => {
+    const intentMap: Record<string, StrategyOption["intentType"]> = {
+      "Escalation": "escalation",
+      "De-escalation": "de-escalation",
+      "Alliance Building": "alliance_building",
+      "Info Gathering": "info_gathering",
+    }
+    const targetRole = roles.find((r) => r.name === o.target_agent || r.shortName === o.target_agent)
+    return {
+      id: `server-opt-${i}`,
+      label: o.label,
+      intentType: intentMap[o.intent_type] ?? "info_gathering",
+      targetAgentId: targetRole?.id ?? o.target_agent,
+      exampleResponse: o.example_response,
+      why: o.rationale,
+      risk: o.risks,
+    }
+  }) : null
+
+  const displaySituation = serverTips?.situation_analysis ?? tips.situationAnalysis
+  const displayOptions = serverOptions ?? tips.options
+
+  /* Show error if tip request failed */
+  if (state.tipError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-3 px-4">
+        <AlertTriangle className="w-7 h-7" style={{ color: "var(--chrono-red)" }} />
+        <p className="text-sm text-center text-foreground/80">{state.tipError}</p>
+      </div>
+    )
+  }
+
+  /* Show loading if tips are being fetched */
+  if (state.tipLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-3">
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: "var(--chrono-amber)" }} />
+        <p className="text-sm font-mono" style={{ color: "var(--chrono-amber)" }}>Generating strategic advice...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4 p-4">
       {/* Situation Analysis */}
-      <div className="rounded-xl p-4 border-l-4 flex gap-3"
+      <div className="rounded-xl p-3 border-l-4 flex gap-2.5"
         style={{ borderLeftColor: "var(--faction-us)", backgroundColor: "color-mix(in oklch, var(--faction-us) 5%, transparent)" }}>
-        <Info className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "var(--faction-us)" }} />
+        <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--faction-us)" }} />
         <div>
-          <p className="text-[11px] font-mono uppercase tracking-wider mb-1.5" style={{ color: "var(--faction-us)" }}>Situation Analysis</p>
-          <p className="text-sm text-foreground/80 leading-relaxed">{tips.situationAnalysis}</p>
+          <p className="text-[10px] font-mono uppercase tracking-wider mb-1" style={{ color: "var(--faction-us)" }}>Situation Analysis</p>
+          <p className="text-xs text-foreground/80 leading-relaxed">{displaySituation}</p>
         </div>
       </div>
-      {/* Options grid -- 2 col desktop, 1 col mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {tips.options.map((opt) => (
+      {/* Options -- single column */}
+      <div className="flex flex-col gap-3">
+        {displayOptions.map((opt) => (
           <OptionCard key={opt.id} option={opt} onSelect={() => onSelectOption(opt)} />
         ))}
       </div>
@@ -253,6 +292,10 @@ function TipsPanelContent({ onSelectOption }: { onSelectOption: (opt: StrategyOp
    ════════════════════════════════════════════════════════════════ */
 
 function AnalysisPanelContent() {
+  const { state } = useChronoFork()
+  /* Use server-provided HTML if available, otherwise fall back to mock */
+  const html = state.analysisHtml ?? mockAnalysisHtml
+
   return (
     <div className="p-4">
       <div className="rounded-xl border p-5 shadow-sm"
@@ -260,8 +303,7 @@ function AnalysisPanelContent() {
           backgroundColor: "color-mix(in oklch, var(--chrono-amber) 4%, var(--card))",
           borderColor: "color-mix(in oklch, var(--chrono-amber) 20%, transparent)",
         }}>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <div dangerouslySetInnerHTML={{ __html: mockAnalysisHtml }} />
+        <div dangerouslySetInnerHTML={{ __html: html }} />
       </div>
     </div>
   )
@@ -299,7 +341,7 @@ function FloatingCard({ children, className = "", style }: { children: React.Rea
 export function TacticalHUDDock() {
   const { state, dispatch } = useChronoFork()
   const { phase } = state
-  const isTranscriptOpen = state.ui.docks.rightOpen
+  const [transcriptOpen, setTranscriptOpen] = useState(true)
   const showDivergenceLoader = phase === "divergence_running"
   const pc = phaseColor(phase)
 
@@ -314,36 +356,25 @@ export function TacticalHUDDock() {
   }
 
   return (
-    <div className="absolute right-3 top-3 bottom-3 z-30 flex flex-col gap-2.5 pointer-events-none" style={{ maxWidth: 340, width: 320 }}>
-      {/* Transcript Card -- takes 50% when bottom panel open, 100% otherwise */}
+    <div className="absolute right-3 top-3 bottom-3 z-30 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 320, width: 300 }}>
+      {/* Transcript Card -- shrinks to header when collapsed, grows to fill otherwise */}
       <FloatingCard
         className="pointer-events-auto flex flex-col min-h-0"
-        style={{ flex: hasBottomPanel ? "1 1 50%" : "1 1 100%", minHeight: 0 }}
+        style={{ flex: transcriptOpen ? (hasBottomPanel ? "1 1 50%" : "1 1 100%") : "0 0 auto", minHeight: 0 }}
       >
         <button
-          onClick={() => dispatch({ type: "TOGGLE_DOCK", data: { dock: "right" } })}
-          className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-secondary/20 transition-colors shrink-0"
-          aria-label={isTranscriptOpen ? "Collapse transcript" : "Expand transcript"}
+          onClick={() => setTranscriptOpen(!transcriptOpen)}
+          className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-secondary/20 transition-colors shrink-0"
+          aria-label={transcriptOpen ? "Collapse transcript" : "Expand transcript"}
         >
-          <h3 className="text-sm font-mono font-bold uppercase tracking-widest text-muted-foreground flex-1">Transcript</h3>
-          {isTranscriptOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground flex-1">Transcript</h3>
+          {transcriptOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
         </button>
-        <AnimatePresence initial={false}>
-          {isTranscriptOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="flex-1 min-h-0 overflow-hidden flex flex-col"
-            >
-              <div className="border-t border-border/20" />
-              <div className="flex-1 min-h-0">
-                <TranscriptPanel />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {transcriptOpen && (
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col border-t border-border/20">
+            <TranscriptPanel />
+          </div>
+        )}
       </FloatingCard>
 
       {/* Tips Card -- 50% of space */}
@@ -358,11 +389,11 @@ export function TacticalHUDDock() {
             style={{ flex: "1 1 50%", minHeight: 0 }}
           >
             <FloatingCard className="flex flex-col h-full min-h-0">
-              <div className="flex items-center gap-2 px-4 py-3 shrink-0">
-                <Target className="w-4 h-4" style={{ color: pc }} />
-                <h3 className="text-sm font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>Strategic Advisor</h3>
+              <div className="flex items-center gap-2 px-3 py-2.5 shrink-0">
+                <Target className="w-3.5 h-3.5" style={{ color: pc }} />
+                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>Strategic Advisor</h3>
                 <button onClick={() => dispatch({ type: "CLOSE_TIPS" })} className="text-muted-foreground hover:text-foreground" aria-label="Close tips">
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
               <div className="border-t border-border/20" />
@@ -386,12 +417,12 @@ export function TacticalHUDDock() {
             style={{ flex: "1 1 50%", minHeight: 0 }}
           >
             <FloatingCard className="flex flex-col h-full min-h-0">
-              <div className="flex items-center gap-2 px-4 py-3 shrink-0">
-                <Zap className="w-4 h-4" style={{ color: pc }} />
-                <h3 className="text-sm font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>Analysis</h3>
+              <div className="flex items-center gap-2 px-3 py-2.5 shrink-0">
+                <Zap className="w-3.5 h-3.5" style={{ color: pc }} />
+                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>Analysis</h3>
                 {!showDivergenceLoader && (
                   <button onClick={() => dispatch({ type: "CLOSE_ANALYSIS" })} className="text-muted-foreground hover:text-foreground" aria-label="Close analysis">
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>

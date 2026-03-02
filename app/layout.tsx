@@ -34,8 +34,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground overflow-hidden">
         {children}
-        <Toaster position="bottom-center" toastOptions={{
-          style: { background: "var(--card)", border: "1px solid var(--border)", color: "var(--foreground)" },
+        <Toaster position="bottom-left" toastOptions={{
+          classNames: {
+            toast: "!rounded-xl !shadow-lg !border !border-border/30 !backdrop-blur-lg",
+            title: "!text-xs !font-semibold",
+            description: "!text-xs",
+            success: "!bg-[color-mix(in_oklch,var(--chrono-teal)_12%,var(--card))] !text-foreground !border-[color-mix(in_oklch,var(--chrono-teal)_25%,transparent)]",
+            info: "!bg-[color-mix(in_oklch,var(--faction-us)_12%,var(--card))] !text-foreground !border-[color-mix(in_oklch,var(--faction-us)_25%,transparent)]",
+            error: "!bg-[color-mix(in_oklch,var(--chrono-red)_12%,var(--card))] !text-foreground !border-[color-mix(in_oklch,var(--chrono-red)_25%,transparent)]",
+            warning: "!bg-[color-mix(in_oklch,var(--chrono-amber)_12%,var(--card))] !text-foreground !border-[color-mix(in_oklch,var(--chrono-amber)_25%,transparent)]",
+          },
         }} />
         <Analytics />
       </body>

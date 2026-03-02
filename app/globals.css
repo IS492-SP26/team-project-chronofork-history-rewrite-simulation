@@ -247,10 +247,17 @@
   animation: progress-stripe 0.6s linear infinite;
 }
 
+@keyframes pulse-halo-violet {
+  0%, 100% { box-shadow: 0 0 0 0 var(--chrono-violet); }
+  50% { box-shadow: 0 0 30px 8px color-mix(in oklch, var(--chrono-violet) 25%, transparent); }
+}
+.animate-pulse-halo-violet { animation: pulse-halo-violet 2s ease-in-out infinite; }
+
 /* ─── Reduced motion ─── */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-halo,
   .animate-pulse-halo-amber,
+  .animate-pulse-halo-violet,
   .animate-breathe,
   .animate-glow-cta,
   .animate-node-breathe { animation: none; }

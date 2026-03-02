@@ -19,18 +19,49 @@ function makeDialogueChatMessage(beatIdx: number, sceneId: string): ChatMessage 
 }
 
 export const initialState: RunState = {
+  /* ── Connection ── */
+  connectionStatus: "disconnected",
+  serverConfig: null,
+  stage: 1,
+
+  /* ── Core flow ── */
   phase: "observe_idle",
   selectedNodeId: null,
   activeNodeId: "node-1",
   currentPath: timelineNodes.filter((n) => !n.branchId).map((n) => n.id),
   activeRoleId: null,
+  activeRoleName: null,
   currentSceneIndex: 0,
   currentDialogueIndex: 0,
   observeProgress: 0,
   chatHistory: [],
   decisionPointReached: false,
+
+  /* ── Server graph data ── */
+  serverGraph: null,
+
+  /* ── Streaming state ── */
+  currentStreamKey: null,
+  facilitatorBlocks: [],
+
+  /* ── Divergence ── */
   divergence: { exists: false, inProgress: false },
+
+  /* ── Analysis / reflection ── */
   analysis: { available: false },
+  analysisHtml: null,
+  reflectionHtml: null,
+  canReflect: false,
+
+  /* ── Tips ── */
+  tipData: null,
+  tipLoading: false,
+  tipError: null,
+
+  /* ── Input request ── */
+  inputRequest: null,
+
+  /* ── UI ── */
   ui: {
     docks: { leftOpen: false, rightOpen: false },
     reducedMotion: false,
@@ -45,6 +76,160 @@ export const initialState: RunState = {
 
 export function runReducer(state: RunState, action: RunAction): RunState {
   switch (action.type) {
+    /* ═══════════════════════════════════════════════
+       WebSocket / Server-driven actions
+       ═══════════════════════════════════════════════ */
+
+    case "SET_CONNECTION_STATUS":
+      return { ...state, connectionStatus: action.data.status }
+
+    case "SET_SERVER_CONFIG":
+      return { ...state, serverConfig: action.data.config }
+
+    case "SET_STAGE": {
+      const newStage = action.data.stage
+      if (newStage === 2 && state.stage === 1) {
+        // Transition to intervene phase
+        return {
+          ...state,
+          stage: 2,
+          phase: "observe_complete",
+          observeProgress: 100,
+          decisionPointReached: true,
+          ui: { ...state.ui, docks: { leftOpen: true, rightOpen: true } },
+        }
+      }
+      return { ...state, stage: newStage }
+    }
+
+    case "SET_SERVER_GRAPH":
+      return {
+        ...state,
+        serverGraph: action.data.graph,
+        activeNodeId: action.data.graph.active_id,
+        currentPath: action.data.graph.current_path,
+      }
+
+    case "STREAM_TOKEN": {
+      const { agent, token, target } = action.data
+      const streamKey = `${agent}::${target}`
+      const history = [...state.chatHistory]
+
+      // If this is a continuation of the same stream, append to last message
+      if (state.currentStreamKey === streamKey && history.length > 0) {
+        const last = { ...history[history.length - 1] }
+        last.text = last.text + token
+        history[history.length - 1] = last
+        return { ...state, chatHistory: history }
+      }
+
+      // New stream -- create a new message
+      const speakerRole = roles.find((r) => r.name === agent || r.shortName === agent)
+      const newMsg: ChatMessage = {
+        id: `stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: "dialogue",
+        speakerId: speakerRole?.id,
+        speakerName: agent,
+        targetName: target,
+        text: token,
+        timestamp: Date.now(),
+      }
+      return {
+        ...state,
+        chatHistory: [...history, newMsg],
+        currentStreamKey: streamKey,
+      }
+    }
+
+    case "FACILITATOR_STREAM": {
+      const { token } = action.data
+      const blocks = [...state.facilitatorBlocks]
+
+      if (token === "<END>") {
+        // Mark current block as complete
+        if (blocks.length > 0) {
+          blocks[blocks.length - 1] = { ...blocks[blocks.length - 1], complete: true }
+        }
+        return { ...state, facilitatorBlocks: blocks }
+      }
+
+      // Append to current block or create new one
+      if (blocks.length === 0 || blocks[blocks.length - 1].complete) {
+        blocks.push({ text: token, complete: false })
+      } else {
+        blocks[blocks.length - 1] = {
+          ...blocks[blocks.length - 1],
+          text: blocks[blocks.length - 1].text + token,
+        }
+      }
+      return { ...state, facilitatorBlocks: blocks }
+    }
+
+    case "NODE_UPDATE": {
+      // Update active node on node transition
+      const { to_id } = action.data
+      if (to_id === "end") {
+        return { ...state, phase: "observe_complete", observeProgress: 100, decisionPointReached: true }
+      }
+      return { ...state, activeNodeId: to_id }
+    }
+
+    case "ACTION_UPDATE_BACKTRACK":
+      return {
+        ...state,
+        phase: "intervene_active",
+        activeNodeId: action.data.new_node_id,
+        activeRoleName: action.data.new_role,
+        divergence: { ...state.divergence, backtrackedNodeId: action.data.new_node_id },
+        ui: { ...state.ui, showNodeDetail: false, rightDockTab: "transcript", showTips: false, showAnalysis: false },
+      }
+
+    case "ACTION_UPDATE_DIVERGENCE_IN_PROGRESS":
+      return {
+        ...state,
+        phase: "divergence_running",
+        divergence: { ...state.divergence, inProgress: true },
+        ui: { ...state.ui, showAnalysis: true },
+      }
+
+    case "ACTION_UPDATE_DIVERGENCE_COMPLETE":
+      return {
+        ...state,
+        phase: "branch_complete",
+        divergence: { ...state.divergence, exists: true, inProgress: false },
+        analysisHtml: action.data.report,
+        ui: { ...state.ui, showAnalysis: true, analysisViewed: true },
+      }
+
+    case "SET_ANALYSIS_HTML":
+      return { ...state, analysisHtml: action.data.html }
+
+    case "SET_REFLECTION_HTML":
+      return { ...state, reflectionHtml: action.data.html }
+
+    case "ENABLE_REFLECTION":
+      return { ...state, canReflect: true }
+
+    case "SET_TIP_DATA":
+      return { ...state, tipData: action.data, tipLoading: false, tipError: null, ui: { ...state.ui, showTips: true } }
+
+    case "SET_TIP_ERROR":
+      return { ...state, tipError: action.data.msg, tipLoading: false }
+
+    case "SET_TIP_LOADING":
+      return { ...state, tipLoading: action.data.loading }
+
+    case "SET_INPUT_REQUEST":
+      return { ...state, inputRequest: action.data }
+
+    case "COMPLETE_HISTORY_REVIEW":
+      // Stage2 history replay ended -- enable interaction
+      return { ...state, phase: "intervene_active" }
+
+    /* ═══════════════════════════════════════════════
+       Local / mock-driven actions (preserved from R1)
+       ═══════════════════════════════════════════════ */
+
     case "START_OBSERVE":
       if (state.phase !== "observe_idle") return state
       return { ...state, phase: "observe_playing", ui: { ...state.ui, docks: { leftOpen: true, rightOpen: true } } }
@@ -62,8 +247,6 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       const progress = Math.min(100, Math.round(((beatsBeforeCurrent + 1) / totalBeats) * 100))
       const chatMsg = makeDialogueChatMessage(state.currentDialogueIndex, currentScene.id)
       const newHistory = chatMsg ? [...state.chatHistory, chatMsg] : state.chatHistory
-
-      // Mark decision point reached halfway through
       const decisionPointReached = state.decisionPointReached || progress > 50
 
       if (nextIdx < sceneBeats.length) {
@@ -90,7 +273,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
     }
 
     case "SET_ROLE":
-      return { ...state, activeRoleId: action.data.roleId }
+      return { ...state, activeRoleId: action.data.roleId, activeRoleName: action.data.roleName ?? state.activeRoleName }
 
     case "BACKTRACK_AND_INTERVENE": {
       const canBacktrack = ["observe_complete", "intervene_idle"].includes(state.phase)
@@ -100,6 +283,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
         activeRoleId: state.activeRoleId || "jfk",
         divergence: { exists: false, inProgress: false, branchId: `branch-${Date.now()}`, backtrackedNodeId: action.data.nodeId },
         analysis: { available: false },
+        analysisHtml: null,
         ui: { ...state.ui, showNodeDetail: false, rightDockTab: "transcript", showTips: false, showAnalysis: false, analysisViewed: false },
       }
     }
@@ -108,9 +292,9 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       if (state.phase !== "intervene_active") return state
       const msg: ChatMessage = {
         id: `user-chat-${Date.now()}`, type: "user_chat",
-        speakerName: action.data.speakerName, text: action.data.text, timestamp: Date.now(),
+        speakerName: action.data.speakerName, targetName: action.data.targetName, text: action.data.text, timestamp: Date.now(),
       }
-      return { ...state, chatHistory: [...state.chatHistory, msg] }
+      return { ...state, chatHistory: [...state.chatHistory, msg], inputRequest: null }
     }
 
     case "SEND_DIVERGE": {
@@ -158,6 +342,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       return {
         ...state, phase: "intervene_idle", selectedNodeId: null,
         divergence: { exists: false, inProgress: false }, analysis: { available: false },
+        analysisHtml: null, tipData: null,
         ui: { ...state.ui, showNodeDetail: false, rightDockTab: "transcript", showTips: false, showAnalysis: false, analysisViewed: false },
       }
 
@@ -165,7 +350,8 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       return {
         ...state, phase: "observe_complete", selectedNodeId: null,
         divergence: { exists: false, inProgress: false }, analysis: { available: false },
-        activeRoleId: null,
+        activeRoleId: null, activeRoleName: null,
+        analysisHtml: null, tipData: null, reflectionHtml: null, canReflect: false,
         ui: { ...state.ui, docks: { leftOpen: true, rightOpen: true }, showNodeDetail: false, rightDockTab: "transcript", showTips: false, showAnalysis: false, analysisViewed: false },
       }
 
@@ -197,7 +383,6 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       return { ...state, ui: { ...state.ui, rightDockTab: action.data.tab } }
 
     case "TOGGLE_TIPS":
-      // Only one of tips/analysis can be open
       return { ...state, ui: { ...state.ui, showTips: !state.ui.showTips, showAnalysis: state.ui.showTips ? state.ui.showAnalysis : false } }
 
     case "CLOSE_TIPS":
