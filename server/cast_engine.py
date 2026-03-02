@@ -2,16 +2,17 @@ import datetime
 import json
 import os
 import re
-from server.logger import EventLogger
+from server.utilities.logger import EventLogger
 import asyncio
 import textwrap
 from typing import List, Dict, Any, AsyncGenerator
 from server.facilitator import Facilitator
-from server.llm_cache import cached_chat_create, call_llm
+from server.utilities.llm_cache import cached_chat_create, call_llm
+from server.prompts import get_prompt, normalize_lang
 from server.story_engine import StoryEngine
 from typing import List, Dict
 from server.reflection_worker import ReflectionWorker
-from server.html_renderer import  render_reflection_report
+from server.utilities.html_renderer import  render_reflection_report
 
 
 class Agent:
@@ -61,6 +62,7 @@ class CastEngine:
         self.logger.log("CastEngine", "Boot", "System Starting", config)
 
         self.config = config
+        self.prompt_lang = normalize_lang(config.get("prompt_lang", "zh"))
 
         if not os.path.exists('saves'):
             os.makedirs('saves')
@@ -96,6 +98,7 @@ class CastEngine:
         self.facilitator = Facilitator(
             self.episode.get("title", ""),
             self.cast_str,
+            lang=self.prompt_lang,
         )
 
         # --- 4. 运行时状态 ---
@@ -665,7 +668,7 @@ class CastEngine:
         try:
             # 这里调用非流式接口拿到 JSON
             # 实际生产中建议用 Function Calling 强制 JSON
-            divergence_data = await call_llm(prompt)
+            divergence_data = await call_llm(prompt, lang=self.prompt_lang)
 
             # 更新图
             # 收集导致分歧的消息，用于迁移
@@ -682,13 +685,13 @@ class CastEngine:
             self.pending_messages = []  # 清空 Buffer
 
             # 4. 展示分析结果 (Markdown Table) 加个new_node_id
-            report_md = self._generate_divergence_report(divergence_data, new_node_id)
+            report = self._generate_divergence_report(divergence_data, new_node_id)
 
             await self.output_queue.put(
-                {"type": "action_update", "data": {"action": "divergence_complete", "report_md": report_md}}
+                {"type": "action_update", "data": {"action": "divergence_complete", "report": report}}
             )
 
-            self.logger.log("CastEngine", "Divergence", "Inference Result", report_md)
+            self.logger.log("CastEngine", "Divergence", "Inference Result", report)
             self.save_checkpoint(reason="post_divergence")
 
         except Exception as e:
@@ -825,7 +828,7 @@ class CastEngine:
 
             await self.output_queue.put({
                 "type": "reflection_report",
-                "data": {"html": html_report}
+                "data": {"report": html_report}
             })
 
             html_file =f"""<!DOCTYPE html><html lang="en">
@@ -923,39 +926,19 @@ class CastEngine:
             next_node_desc = f"{future_node["choice"]}(nodeid={future_node["id"]}): {future_node["desc"]}"
             next_id = future_node["id"]
 
-        prompt = f"""你是“{agent.name}”，正在扮演{agent.profile['title']}，场景来自「{self.episode.get('title','')}」。相关信息如下：
-
-<active_node>{active_node["title"]}(nodeid={active_node["id"]}): {active_node["desc"]}</active_node>
-<next_node>{'nodeid=end' if not next_node_desc else next_node_desc}</next_node>
-
-<cast>{cast_str}</cast>
-
-目标：与 <cast> 共同依据 <active_node> 进行**宏观的历史重演**，并在 3–4 轮内推进到<next_node>。
-
-规则（严格）
-- Storyline 强绑定：你**只能**使用 <active_node> 中出现的事实与冲突；不得扩展琐碎细节。
-- 交互对象：
-    - 只知道你在该时间点、该身份、该交际圈内合理可知的信息，禁止预知未来。
-    - 你**只能**与 <cast> 中的角色对话，并根据<active_node>的描述和当前语境选择合适的对象，需要全面。
-        - 若史实上该角色能接触，则将 targetName 设为该角色的 EXACT 名称，禁止一切非 <cast> 人物。
-        - 若需要交互的角色无法联络（如远方的敌人），将 targetName 设为"Facilitator"，此时你的台词必须严格是想获取的该角色的信息，必须以疑问句结尾。
-- 节奏控制：
-    - 每个节点严格控制在 **3–4 轮**交互。
-    - 一上来不要触达 node.title 的 dilemma（先铺垫冲突与动机）；第 2–4 轮再推进到决策/收束。
-    - 遇到决策时：立刻做出<next_node>的行动，不要反复拉扯。
-    - 若其他角色做出任意与史实不同的选择，积极鼓励并允许，并记录为"diverged"；只有在极其荒谬的请求下，需要简短拒绝并转向可行行动。
-
-输出（严格，仅1条）
-<meta targetName="..." nodeid="..." /> 角色台词（自然口语，极简1-3句话，语言要求与<cast>一致）
-
-Meta 说明
-- targetName：你正在对话的对象，必须是 <cast> 中的 EXACT 名称或是"Facilitator"。
-- nodeid：
-  - 当前节点仍在进行时：填 {active_node["id"]}.
-  - 当本节点演完时：填 {next_id}.
-  - 遇到有别于史实的分歧时：填 "diverged"。"""
-
-        return prompt
+        return get_prompt(
+            "cast.agent_system",
+            self.prompt_lang,
+            agent_name=agent.name,
+            agent_title=agent.profile["title"],
+            episode_title=self.episode.get("title", ""),
+            active_node_title=active_node["title"],
+            active_node_id=active_node["id"],
+            active_node_desc=active_node["desc"],
+            next_node_desc=("nodeid=end" if not next_node_desc else next_node_desc),
+            cast_str=cast_str,
+            next_id=next_id,
+        )
 
     def get_divergence_prompt(self, episode_title, cast_str, storyline_json, recent_context):
 
@@ -970,55 +953,16 @@ Meta 说明
         
         context_str = "\n".join([f"[{m['from']} -> {m['to']}]: {m['content']}" for m in recent_context[-3:]])
 
-        return f"""你是 divergence 历史事件推断器。learner 正在体验「{episode_title}」，参与的Cast见<cast>，learner在<current_node>的行为与<canonical_next>或其他史实发生了分歧，你需要根据当前节点的交互记录<interaction>：
-
-1. 判断该分歧相对于<canonical_next>的关系：若 learner 的分歧动作直接回答/改变了<current_node> title 所描述的决策本身，则 target = "child"，否则 target = "sibling"
-2. 较严厉地评估该分歧在现实世界中的可行性（plausibility）
-2. 用极简方式概括可能的结果走向（most likely / best-case / worst-case）
-3. 以“最可能走向”为主，生成该分歧之后的线性分支 Storyline（2–5 个节点，直到出现明确结局/收束）
-
-<cast>{cast_str}</cast>
-<current_node>{active_node["title"]}: {active_node["desc"]}</current_node>
-<canonical_next>{'end'if not next_node_desc else next_node_desc}</canonical_next>
-<interaction>{context_str}</interaction>
-
-你必须严格依据 <interaction> 的实际行为细节 + <Storyline> 的史实约束 + <cast> 的人物动机/权力/资源来推断。
-
-OUTPUT FORMAT（严格）
-{{
-  "target": "child" | "sibling",
-  "feasibility": {{
-    "score": <integer 0-100>,
-    "rationale": "<1-2 句：为什么可行/不可行>",
-    "key_drivers": ["<极短>", "..."],
-    "key_constraints": ["<极短>", "..."]
-  }},
-  "outcomes_brief": [
-    {{ "label": "Most likely", "summary": "<1-2 句>" }},
-    {{ "label": "Best-case", "summary": "<1-2 句>" }},
-    {{ "label": "Worst-case", "summary": "<1-2 句>" }}
-  ],
-  "branch_storyline": [
-    {{ "title": "...", "choice": "...", "desc": "..." }},
-    ...
-  ]
-}}
-
-branch_storyline的生成规则
-- 严格根据feasibility控制节点数量。
-  - 若 feasibility.score < 50：严格只能输出 1–2 节点，并更快收束到失败/坏结局的 Resolution。
-  - 若 50–80：严格只能输出 2–3 节点。
-  - 若 >80：可以输出 3–4 节点，可包含更复杂的谈判/反制/连锁后果。
-- 每个节点代表：一个过程中的Decision Checkpoint或最终Resolution。
-
-字段规则
-- title：开放式 dilemma/question（10 词以内），不要写成选项列表；最后一条可用 "Resolution: ..."。
-- choice：用于可视化的极短标签（≤6 词），表示“上一 Decision Checkpoint 最可能的选择/结果”。
-  - 对于第 1 条：choice是从 <interaction> 抽取并压缩的 learner 分歧动作。
-- desc：2–4 句；符合史实逻辑与常识；必须体现多方视角冲突（至少 2 方）；必须点名关键人物（每条至少 2 个来自 <cast>的人物），保持精炼。
-  - desc 的逻辑是由choice开头，叙述该choice的后果（因果链、约束、反应），最后引出当前节点 title 的困境（Resolution 除外）。
-
-只返回 JSON，Use English"""
+        return get_prompt(
+            "cast.divergence",
+            self.prompt_lang,
+            episode_title=episode_title,
+            cast_str=cast_str,
+            active_node_title=active_node["title"],
+            active_node_desc=active_node["desc"],
+            canonical_next=("end" if not next_node_desc else next_node_desc),
+            context_str=context_str,
+        )
 
 
     def _generate_divergence_report(self, data: dict, new_node_id: str) -> str:

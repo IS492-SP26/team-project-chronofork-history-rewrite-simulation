@@ -8,6 +8,7 @@ from diskcache import Cache
 from typing import List, Dict
 
 from openai import AsyncOpenAI
+from server.prompts import get_prompt, normalize_lang
 
 # 初始化缓存，指定目录
 # 这会自动在目录下生成 sqlite.db，完美持久化
@@ -77,9 +78,10 @@ async def cached_chat_create(model: str, messages: List[Dict], stream: bool = Fa
         return content
     
 
-async def call_llm(user_prompt):
+async def call_llm(user_prompt, lang: str = "zh"):
+    prompt_lang = normalize_lang(lang)
     messages = [
-        {"role": "system", "content": "You are a helpful historical assistant. Output strictly in JSON format."},
+        {"role": "system", "content": get_prompt("llm.system_json", prompt_lang)},
         {"role": "user", "content": user_prompt}
     ]
 

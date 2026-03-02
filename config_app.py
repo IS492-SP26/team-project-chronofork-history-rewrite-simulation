@@ -3,11 +3,14 @@ import json
 import os
 import re
 import asyncio
+import argparse
+import sys
 import panel as pn
 import param
 from functools import partial
 
-from server.llm_cache import cached_chat_create, call_llm
+from server.utilities.llm_cache import call_llm
+from server.prompts import get_prompt
 
 # CSS for the Timeline Graph and General Styling
 css = """
@@ -78,9 +81,117 @@ textarea, input {
 }
 
 """
-aa="#444"
 
 pn.extension(raw_css=[css],notifications=True)
+
+
+def resolve_lang() -> str:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--lang")
+    args, _ = parser.parse_known_args()
+    if not args.lang:
+        print(
+            "[Startup Error] Missing required '--lang'. "
+            "Use: panel serve config_app.py --args --lang zh|en"
+        )
+        raise SystemExit(2)
+    if args.lang not in {"zh", "en"}:
+        print(
+            f"[Startup Error] Invalid --lang='{args.lang}'. "
+            "Allowed values: zh, en. "
+            "Use: panel serve config_app.py --args --lang zh|en"
+        )
+        raise SystemExit(2)
+    return args.lang
+
+UI_TEXTS = {
+    "zh": {
+        "theme_placeholder": "例如：春秋战国、二战、法国大革命...",
+        "analyze_theme": "分析主题",
+        "stage1_title": "阶段 1：配置",
+        "stage2_loading": "正在构建故事图...",
+        "stage2_select_first": "请先在阶段 1 中选择一个事件。",
+        "confirm_storyline": "确认故事线",
+        "back_to_episodes": "返回事件列表",
+        "stage2_title": "阶段 2：故事线",
+        "stage3_loading": "正在生成角色...",
+        "perspective_type": "视角类型",
+        "protagonists": "决策者",
+        "observers": "观察者",
+        "select_character": "选择角色",
+        "confirm_character_launch": "确认角色并启动",
+        "back_to_storyline": "返回故事线",
+        "reselect_character": "重新选择角色",
+        "stage3_title": "阶段 3：角色与视角",
+        "theme_input_heading": "### 主题输入",
+        "retrieving_episodes": "正在检索历史事件...",
+        "error_prefix": "错误",
+        "retry": "重试",
+        "select_episode": "选择事件",
+        "confirm_selection": "确认选择",
+        "back_to_theme": "返回主题",
+        "select_episode_heading": "### 请选择一个事件：",
+        "selected_prefix": "✅ 已选择",
+        "scenario_default": "场景",
+        "start_suffix": "开始",
+        "choice_prefix": "选择",
+        "decision_prefix": "决策",
+        "storyline_confirmed": "✅ 故事线已确认",
+        "with_storyline_nodes": "共 {count} 个节点",
+        "select_decision_maker": "选择决策者",
+        "select_historical_witness": "选择历史观察者",
+        "decision_maker_type": "🎯 决策者",
+        "historical_witness_type": "👁️ 历史观察者",
+        "char_default": "角色",
+        "type_label": "类型",
+        "title_label": "身份",
+        "saved_notice": "✅ 配置完成，已可进入体验。",
+        "app_title": "ChronoFork · 配置",
+    },
+    "en": {
+        "theme_placeholder": "E.g., Ancient China, WWII, The French Revolution...",
+        "analyze_theme": "Analyze Theme",
+        "stage1_title": "Stage 1: Configuration",
+        "stage2_loading": "Constructing Story Graph...",
+        "stage2_select_first": "Please select an episode in Stage 1.",
+        "confirm_storyline": "Confirm Storyline",
+        "back_to_episodes": "Back to Episodes",
+        "stage2_title": "Stage 2: Storyline",
+        "stage3_loading": "Casting Agents & Observers...",
+        "perspective_type": "Perspective Type",
+        "protagonists": "Protagonists",
+        "observers": "Observers",
+        "select_character": "Select Character",
+        "confirm_character_launch": "Confirm Character & Launch",
+        "back_to_storyline": "Back to Storyline",
+        "reselect_character": "Reselect Character",
+        "stage3_title": "Stage 3: Cast & Perspective",
+        "theme_input_heading": "### Theme Input",
+        "retrieving_episodes": "Retrieving Historical Episodes...",
+        "error_prefix": "Error",
+        "retry": "Retry",
+        "select_episode": "Select Episode",
+        "confirm_selection": "Confirm Selection",
+        "back_to_theme": "Back to Theme",
+        "select_episode_heading": "### Select an Episode:",
+        "selected_prefix": "✅ Selected",
+        "scenario_default": "Scenario",
+        "start_suffix": "START",
+        "choice_prefix": "Choice",
+        "decision_prefix": "Decision",
+        "storyline_confirmed": "✅ Storyline Confirmed",
+        "with_storyline_nodes": "With {count} storyline nodes",
+        "select_decision_maker": "Select Decision Maker",
+        "select_historical_witness": "Select Historical Witness",
+        "decision_maker_type": "🎯 Decision Maker",
+        "historical_witness_type": "👁️ Historical Witness",
+        "char_default": "Character",
+        "type_label": "Type",
+        "title_label": "Title",
+        "saved_notice": "✅ You’re all set! Enter the VR space.",
+        "app_title": "ChronoFork · Configuration",
+    },
+}
 
 class ConfigPage(pn.viewable.Viewer):
     # State Variables
@@ -93,38 +204,43 @@ class ConfigPage(pn.viewable.Viewer):
 
     def __init__(self, **params):
         super().__init__(**params)
+        self.prompt_lang = LANG
+        self.ui = UI_TEXTS[self.prompt_lang]
         self._init_ui()
+
+    def _t(self, key: str) -> str:
+        return self.ui[key]
 
     def _init_ui(self):
         # --- STAGE 1: THEME & EPISODES ---
         self.theme_input = pn.widgets.TextAreaInput(
-            placeholder="E.g., Ancient China, WWII, The French Revolution...",
+            placeholder=self._t("theme_placeholder"),
             height=100, sizing_mode='stretch_width'
         )
-        self.theme_confirm_btn = pn.widgets.Button(name='Analyze Theme', button_type='primary', sizing_mode='stretch_width')
+        self.theme_confirm_btn = pn.widgets.Button(name=self._t("analyze_theme"), button_type='primary', sizing_mode='stretch_width')
         self.theme_confirm_btn.on_click(partial(self.on_theme_confirm))
         
         self.episode_list_col = pn.Column(sizing_mode='stretch_both') # Container for generated episode buttons
         
         self.card1_content = pn.Column(
-            "### Theme Input",
+            self._t("theme_input_heading"),
             self.theme_input,
             self.theme_confirm_btn,
             self.episode_list_col,sizing_mode='stretch_both'
         )
-        self.card1 = pn.Card(self.card1_content, title='Stage 1: Configuration', sizing_mode='stretch_both', collapsed=False,margin=(0, 10, 0, 0))
+        self.card1 = pn.Card(self.card1_content, title=self._t("stage1_title"), sizing_mode='stretch_both', collapsed=False,margin=(0, 10, 0, 0))
 
         # --- STAGE 2: STORYLINE ---
-        self.loading_spinner = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), "Constructing Story Graph...",sizing_mode='stretch_width',visible=False)
-        self.graph_desc=pn.pane.HTML("Please select an episode in Stage 1.", sizing_mode='stretch_both')
+        self.loading_spinner = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), self._t("stage2_loading"),sizing_mode='stretch_width',visible=False)
+        self.graph_desc=pn.pane.HTML(self._t("stage2_select_first"), sizing_mode='stretch_both')
         
         self.graph_desc_container = pn.Column(self.loading_spinner, self.graph_desc, sizing_mode='stretch_both',scroll=True)
 
         # Setup Footer Buttons
-        self.confirm_btn = pn.widgets.Button(name="Confirm Storyline", button_type='success', sizing_mode='stretch_width',visible=False)
+        self.confirm_btn = pn.widgets.Button(name=self._t("confirm_storyline"), button_type='success', sizing_mode='stretch_width',visible=False)
         self.confirm_btn.on_click(partial(self.on_storyline_confirm))
         
-        self.back_btn = pn.widgets.Button(name="Back to Episodes", sizing_mode='stretch_width',visible=False)
+        self.back_btn = pn.widgets.Button(name=self._t("back_to_episodes"), sizing_mode='stretch_width',visible=False)
         self.back_btn.on_click(partial(self.back_to_stage1))
 
         self.graph_ctrls_display = pn.pane.HTML("", sizing_mode='stretch_width',margin=(5,0,5,0))
@@ -136,15 +252,20 @@ class ConfigPage(pn.viewable.Viewer):
             self.graph_desc_container,
             self.graph_ctrls_container,sizing_mode='stretch_both'
         )
-        self.card2 = pn.Card(self.card2_content, title='Stage 2: Storyline', sizing_mode='stretch_both', collapsed=True,margin=(0, 10, 0, 0))
+        self.card2 = pn.Card(self.card2_content, title=self._t("stage2_title"), sizing_mode='stretch_both', collapsed=True,margin=(0, 10, 0, 0))
 
         # --- STAGE 3: CAST ---
-        self.cast_loading = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), "Casting Agents & Observers...", visible=False)
+        self.cast_loading = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), self._t("stage3_loading"), visible=False)
 
         # 1. 类别选择器 (互斥按钮组)
+        self.category_option_labels = {
+            "Protagonists": self._t("protagonists"),
+            "Observers": self._t("observers"),
+        }
+        category_options = {label: value for value, label in self.category_option_labels.items()}
         self.category_selector = pn.widgets.RadioButtonGroup(
-            name='Perspective Type',
-            options=['Protagonists', 'Observers'], 
+            name=self._t("perspective_type"),
+            options=category_options, 
             value='Protagonists',
             button_type='default',
             button_style='solid',
@@ -154,7 +275,7 @@ class ConfigPage(pn.viewable.Viewer):
 
         # 2. 角色列表选择器 (RadioBoxGroup)
         self.cast_selector = pn.widgets.RadioButtonGroup(
-            name='Select Character',
+            name=self._t("select_character"),
             button_type='primary',
             button_style='outline',
             orientation='vertical', # 垂直排列名字
@@ -170,13 +291,13 @@ class ConfigPage(pn.viewable.Viewer):
         )
 
         # 5. 按钮组
-        self.cast_confirm_btn = pn.widgets.Button(name='Confirm Character & Launch', button_type='success', sizing_mode='stretch_width',visible=False)
+        self.cast_confirm_btn = pn.widgets.Button(name=self._t("confirm_character_launch"), button_type='success', sizing_mode='stretch_width',visible=False)
         self.cast_confirm_btn.on_click(self.on_cast_confirm_click)
 
-        self.cast_back_btn = pn.widgets.Button(name="Back to Storyline", button_type='default', sizing_mode='stretch_width',visible=False)
+        self.cast_back_btn = pn.widgets.Button(name=self._t("back_to_storyline"), button_type='default', sizing_mode='stretch_width',visible=False)
         self.cast_back_btn.on_click(self.back_to_stage2)
 
-        self.cast_reselect_btn = pn.widgets.Button(name='Reselect Character', button_type='warning', sizing_mode='stretch_width', visible=False)
+        self.cast_reselect_btn = pn.widgets.Button(name=self._t("reselect_character"), button_type='warning', sizing_mode='stretch_width', visible=False)
         self.cast_reselect_btn.on_click(self.on_cast_reselect_click)
 
 
@@ -191,7 +312,7 @@ class ConfigPage(pn.viewable.Viewer):
             sizing_mode='stretch_both'
         )
 
-        self.card3 = pn.Card(self.card3_content, title='Stage 3: Cast & Perspective', sizing_mode='stretch_both', collapsed=True)
+        self.card3 = pn.Card(self.card3_content, title=self._t("stage3_title"), sizing_mode='stretch_both', collapsed=True)
 
         # Layout
         self._layout = pn.GridBox(
@@ -217,24 +338,21 @@ class ConfigPage(pn.viewable.Viewer):
         
         # Loading State
         self.episode_list_col[:] = [
-            pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), "Retrieving Historical Episodes...")
+            pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), self._t("retrieving_episodes"))
         ]
         
         # LLM Call
-        prompt = f"""Based on the historical theme: "{self.selected_theme}", recommend 5 distinct "Episodes" (high-leverage historical moments).
-Output ONLY JSON format:"""+"""
-[
-    {{"emoji": "⚔️", "title": "Storming of the Bastille", "desc": "The flashpoint of the revolution..."}},
-    ...
-]
-Important: title must be concise and descriptive.
-        """
+        prompt = get_prompt(
+            "config.theme_to_episodes",
+            self.prompt_lang,
+            selected_theme=self.selected_theme,
+        )
         try:
-            response_data = await call_llm(prompt)
+            response_data = await call_llm(prompt, lang=self.prompt_lang)
             self.episode_list=response_data
             self.render_episodes(response_data)
         except Exception as e:
-            self.episode_list_col[:] = [f"Error: {str(e)}", pn.widgets.Button(name="Retry", on_click=partial(self.on_theme_confirm))]
+            self.episode_list_col[:] = [f"{self._t('error_prefix')}: {str(e)}", pn.widgets.Button(name=self._t("retry"), on_click=partial(self.on_theme_confirm))]
             self.theme_confirm_btn.disabled = False
 
     def render_episodes(self, episodes):
@@ -246,7 +364,7 @@ Important: title must be concise and descriptive.
 
         # 2. 单选组件
         self.episode_selector = pn.widgets.RadioButtonGroup(
-            name='Select Episode',
+            name=self._t("select_episode"),
             options=options_labels,
             value=options_labels[0],
             button_type='primary',
@@ -269,17 +387,17 @@ Important: title must be concise and descriptive.
         self.episode_selector.param.watch(update_details, 'value')
 
         # 4. 按钮组 (Confirm 和 Redo)
-        self.ep_confirm_btn = pn.widgets.Button(name='Confirm Selection', button_type='success', sizing_mode='stretch_width')
+        self.ep_confirm_btn = pn.widgets.Button(name=self._t("confirm_selection"), button_type='success', sizing_mode='stretch_width')
         self.ep_confirm_btn.on_click(self.on_episode_confirm_click)
 
-        self.ep_redo_btn = pn.widgets.Button(name='Back to Theme', sizing_mode='stretch_width')
+        self.ep_redo_btn = pn.widgets.Button(name=self._t("back_to_theme"), sizing_mode='stretch_width')
         self.ep_redo_btn.on_click(self.on_reset_theme_click)
 
         self.ep_buttons_row = pn.Row(self.ep_confirm_btn, self.ep_redo_btn, sizing_mode='stretch_width')
 
         # 5. 组装
         self.episode_list_col.extend([
-            pn.pane.Markdown("### Select an Episode:"),
+            pn.pane.Markdown(self._t("select_episode_heading")),
             self.episode_selector,
             self.episode_detail_view,
             self.ep_buttons_row
@@ -319,7 +437,7 @@ Important: title must be concise and descriptive.
         # 2. 将详情区域更新为高亮样式 (Green Highlight)
         highlight_html = f"""
         <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px;">
-            <h3 style="margin-top:0; color: #28a745;">✅ Selected: {selected_label}</h3>
+            <h3 style="margin-top:0; color: #28a745;">{self._t("selected_prefix")}: {selected_label}</h3>
             <p style="color: #666; margin-bottom:0; ">{episode_data.get('desc')}</p>
         </div>
         """
@@ -340,55 +458,24 @@ Important: title must be concise and descriptive.
         self.loading_spinner.visible = True
         self.graph_desc.object = ""
         
-        prompt = f"""Create a historically grounded, linear Storyline as a JSON array of 4–6 nodes for the episode: {self.selected_episode['title']}
-
-Each node is a Decision Checkpoint (or a final Resolution) in a Storyline used for agent casting and later Scene Script expansion.
-
-OUTPUT FORMAT (ONLY valid JSON, no extra text):"""+"""
-[
-  {"title": "...", "choice": "...", "desc": "..."},
-  ...
-]
-
-FIELD REQUIREMENTS
-- title: an open-ended dilemma/question for THIS node’s Decision Checkpoint (<= 8–12 words).
-  * MUST be phrased as an OPEN question.
-  * For last node, use "Resolution: (Statement)" (also concise).
-
-- choice: the REAL-HISTORY canonical choice made at the PREVIOUS node’s question.
-  * For Node 1, set choice to "None".
-  * Keep it very short (<= 6 words) for visualization.
-
-- desc: 2–4 sentences, concise and easy to read (NO MORE THAN 4 sentences).
-  * Historically coherent, multi-perspective, character-rich (name key figures).
-  * No dialogue; no scene directions—storyline-level narrative only.
-
-DESC RULES (cause → effect → next)
-- Node 1 desc: background only (time/place/context + key figures/factions + tensions), ending by setting up Node 1 question.
-  * Do NOT reveal any choice here (since choice is "None").
-- Node i>1 desc: the FIRST sentence MUST explicitly state the PREVIOUS node’s real-history choice. Then narrate the canonical consequences (chronology + tensions + named people) that lead to THIS node’s question.
-
-
-CONTENT REQUIREMENTS
-- Historical coherence: correct chronology, actors, locations; avoid anachronisms and speculative claims not supported by the canonical record.
-- Multi-perspective tension: at least two viewpoints per node (e.g., leaders vs advisors, allies vs opponents, domestic vs international).
-- Character richness: each desc names at least 2 key figures; across the storyline include 4–6 distinct figures when possible.
-- Keep it linear: each node should naturally lead to the next Decision Checkpoint (or Resolution).
-
-Return ONLY JSON."""
+        prompt = get_prompt(
+            "config.episode_to_storyline",
+            self.prompt_lang,
+            episode_title=self.selected_episode["title"],
+        )
         try:
-            nodes = await call_llm(prompt)
+            nodes = await call_llm(prompt, lang=self.prompt_lang)
             self.storyline_data = nodes
             self.render_story_graph(nodes)
         except Exception as e:
             self.loading_spinner.visible = False
-            self.graph_desc.object = f"Error: {str(e)}"
+            self.graph_desc.object = f"{self._t('error_prefix')}: {str(e)}"
 
     def render_story_graph(self, nodes):
         self.loading_spinner.visible = False
         html_content = '<div style="padding: 10px;">'
         
-        scenario_title = self.selected_episode.get('title', 'Scenario')
+        scenario_title = self.selected_episode.get('title', self._t("scenario_default"))
 
         for idx, node in enumerate(nodes):
             is_last = (idx == len(nodes) - 1)
@@ -399,9 +486,9 @@ Return ONLY JSON."""
 
             # 卡片 Header (灰色小标题)
             if is_first:
-                header_text = f"🟢 🚩 {scenario_title} START"
+                header_text = f"🟢 🚩 {scenario_title} {self._t('start_suffix')}"
             else:
-                header_text = f"🟢 ⚖️ Choice: {node.get('choice')}"
+                header_text = f"🟢 ⚖️ {self._t('choice_prefix')}: {node.get('choice')}"
 
             # 卡片 Body (描述)
             body_text = node.get('desc')
@@ -412,7 +499,7 @@ Return ONLY JSON."""
                 decision_question = node.get('title')
                 footer_html = f"""
                 <div class="node-decision">
-                    🤔 Decision: {decision_question}
+                    🤔 {self._t('decision_prefix')}: {decision_question}
                 </div>
                 """
             else:
@@ -446,8 +533,8 @@ Return ONLY JSON."""
         self.graph_ctrls_display.visible = True
         self.graph_ctrls_display.object = f"""
         <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px; margin-left:5px; margin-right:5px;">
-            <h3 style="margin-top:0; color: #28a745;">✅ Storyline Confirmed</h3>
-            <p style="color: #666; margin-bottom:0;">With {len(self.storyline_data)} storyline nodes</p>
+            <h3 style="margin-top:0; color: #28a745;">{self._t("storyline_confirmed")}</h3>
+            <p style="color: #666; margin-bottom:0;">{self._t("with_storyline_nodes").format(count=len(self.storyline_data))}</p>
         </div>
         """
         # Activate Stage 3
@@ -470,40 +557,19 @@ Return ONLY JSON."""
         storyline_str = json.dumps(self.storyline_data, ensure_ascii=False)
 
         # 修改 Prompt 以请求两类角色
-        prompt = f"""Based on the episode "{self.selected_episode['title']}" and the <storyline> provided, recommend characters for two distinct categories:
-
-1. "protagonists": Historical figures/leaders with agency who make decisions affecting the graph.
-2. "observers": Ordinary citizens, minor stakeholders, or witnesses who primarily experience the consequences (e.g., a merchant, a soldier's mother, a journalist).
-
-<storyline>
-{storyline_str}
-</storyline>
-
-REQUIREMENTS:
-- Generate 2-5 characters for EACH category.
-- For Observers, focus the description on what they see/feel/lose rather than political power.
-- All characters must be historically grounded.
-- Both name and title should be concise.
-
-Output ONLY JSON format:"""+"""
-{{
-    "protagonists": [
-        {{"name": "General LaFayette", "title": "Commander", "desc": "Controls the city guard...", "avatar": "👮"}},
-        ...
-    ],
-    "observers": [
-        {{"name": "Jean Valjean", "title": "Bread Thief", "desc": "Starving in the slums...", "avatar": "🥖"}},
-        ...
-    ]
-}}
-"""
+        prompt = get_prompt(
+            "config.storyline_to_cast",
+            self.prompt_lang,
+            episode_title=self.selected_episode["title"],
+            storyline_str=storyline_str,
+        )
         try:
-            cast_data = await call_llm(prompt)
+            cast_data = await call_llm(prompt, lang=self.prompt_lang)
             self.full_cast_data = cast_data # 保存完整字典
             self.cast_data=cast_data.get('protagonists',[])
             self.render_cast(cast_data)
         except Exception as e:
-            self.cast_desc.object = f"Error: {str(e)}"
+            self.cast_detail_view.object = f"{self._t('error_prefix')}: {str(e)}"
 
     # ==========================================
     # STAGE 3 UI: CAST SELECTION
@@ -531,10 +597,10 @@ Output ONLY JSON format:"""+"""
             if new_options:
                 self.cast_selector.value = new_options[0] # 默认选中第一个
                 if category_name=='Protagonists':
-                    self.cast_selector.name='Select Decision Maker'
+                    self.cast_selector.name=self._t("select_decision_maker")
                     self.cast_selector.button_type='primary'
                 else:
-                    self.cast_selector.name='Select Historical Witness'
+                    self.cast_selector.name=self._t("select_historical_witness")
                     self.cast_selector.button_type='warning'
             
         # B. 监听类别切换
@@ -557,12 +623,12 @@ Output ONLY JSON format:"""+"""
             char_data = self.cast_map[selected_label]
             # 区分显示不同类别的提示语
             role_type = self.category_selector.value
-            prefix = "🎯 Decision Maker" if role_type == 'Protagonists' else "👁️ Historical Witness"
+            prefix = self._t("decision_maker_type") if role_type == 'Protagonists' else self._t("historical_witness_type")
             self.cast_detail_view.object = f'''
         <div style="background-color: #f5f5f5; border: 2px solid #C5C5C7; padding: 15px; border-radius: 8px;">
-            <h3 style="margin-top:0;">{char_data.get('avatar','👤')} {char_data.get('name','Character')}:</h3>
-            <p style="font-size:1.1em;"><strong>Type:</strong> {prefix}</p>
-            <p style="font-size:1.1em;"><strong>Title:</strong> {char_data.get('title','Character')}</p>
+            <h3 style="margin-top:0;">{char_data.get('avatar','👤')} {char_data.get('name',self._t('char_default'))}:</h3>
+            <p style="font-size:1.1em;"><strong>{self._t('type_label')}:</strong> {prefix}</p>
+            <p style="font-size:1.1em;"><strong>{self._t('title_label')}:</strong> {char_data.get('title',self._t('char_default'))}</p>
             <p style="color: #666; margin-bottom:0;font-size:1em;">{char_data.get('desc')}</p>
         </div>'''
 
@@ -590,8 +656,8 @@ Output ONLY JSON format:"""+"""
         # 2. 高亮展示
         highlight_html = f"""
         <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px;">
-            <h3 style="margin-top:0; color: #28a745;">✅ Selected: {selected_label}</h3>
-            <p><strong>Type:</strong> {role_category}</p>
+            <h3 style="margin-top:0; color: #28a745;">{self._t("selected_prefix")}: {selected_label}</h3>
+            <p><strong>{self._t("type_label")}:</strong> {self.category_option_labels.get(role_category, role_category)}</p>
             <p style="color: #666; margin-bottom:0;">{character_data.get('desc')}</p>
         </div>
         """
@@ -620,7 +686,7 @@ Output ONLY JSON format:"""+"""
             print(f"Error saving config: {e}")
 
         if pn.state.notifications:
-            pn.state.notifications.success('✅ You’re all set! Enter the VR space.', duration=5000)
+            pn.state.notifications.success(self._t("saved_notice"), duration=5000)
     
     def on_cast_reselect_click(self, event):
         # 1. 解锁
@@ -637,8 +703,12 @@ Output ONLY JSON format:"""+"""
         if selected_label:
             self.refresh_cast_list(selected_label)
 
+
+LANG = resolve_lang()
+print(f"[Startup] config_app prompt language: {LANG}")
+
 # Create Panel Server
-app = pn.template.VanillaTemplate(title='ChronoFork · Configuration')
+app = pn.template.VanillaTemplate(title=UI_TEXTS[LANG]["app_title"])
 config_component = ConfigPage()
 app.main.append(config_component)
 app.servable()

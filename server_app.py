@@ -1,12 +1,40 @@
 import asyncio
+import argparse
 import glob
 import json
 import os
+import sys
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import Dict
 from server.cast_engine import CastEngine
 
 app = FastAPI()
+
+
+def resolve_prompt_lang() -> str:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--lang")
+    args, _ = parser.parse_known_args()
+    if not args.lang:
+        print(
+            "[Startup Error] Missing required '--lang'. "
+            "Use: python server_app.py --lang zh|en",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+    if args.lang not in {"zh", "en"}:
+        print(
+            f"[Startup Error] Invalid --lang='{args.lang}'. "
+            "Allowed values: zh, en. "
+            "Use: python server_app.py --lang zh|en",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+    return args.lang
+
+
+PROMPT_LANG = resolve_prompt_lang()
+print(f"[Startup] server_app prompt language: {PROMPT_LANG}")
 
 def load_latest_config():
     """读取 config/ 目录下最新的 session json"""
@@ -44,6 +72,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # --- 2. 初始化 CastEngine (含 StoryEngine) ---
     config = load_latest_config()
+    config["prompt_lang"] = PROMPT_LANG
     cast_engine = CastEngine(config)
     print("CastEngine initialized.")
 

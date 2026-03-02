@@ -1,22 +1,34 @@
 from typing import List, Dict, AsyncGenerator
 
-from server.llm_cache import cached_chat_create, call_llm
+from server.utilities.llm_cache import cached_chat_create, call_llm
+from server.prompts import get_prompt, normalize_lang
 
 class Facilitator:
-    def __init__(self, episode: str, cast_str: str):
+    def __init__(self, episode: str, cast_str: str, lang: str = "zh"):
         
         self.cast_str = cast_str
+        self.lang = normalize_lang(lang)
         # 1. System Prompt
         self.messages = [{
             "role": "system", 
-            "content": f"You are the Facilitator for a historical role-play experience. Theme: {episode}. The participating characters are <cast>{cast_str}</cast>. You do not role-play. Your job is to provide brief, spoken, plain-language guidance to the user."
+            "content": get_prompt(
+                "facilitator.system",
+                self.lang,
+                episode=episode,
+                cast_str=cast_str,
+            )
         }]
 
     async def run_intro(self,start_node_desc,user_role) -> AsyncGenerator[str, None]:
         """运行 Intro，返回流式 Token"""
         msg = [self.messages[0],{
             "role": "user",
-            "content": f"Task: Open the experience with a short intro and hand the spotlight to the first character to speak. The script for the first scene is <first_scene>{start_node_desc}</first_scene>\n\nOutput format (strict):\n- Line 1: <meta targetName=\"exact name of the first introduced member in <cast>, except the user ({user_role})\"/>\n- Line 2+: Briefly introduce the background. Briefly introduce key cast members and their stances. End with a final sentence that hands the conversation to targetName. Use concise, spoken short sentences. Keep it short."
+            "content": get_prompt(
+                "facilitator.intro",
+                self.lang,
+                start_node_desc=start_node_desc,
+                user_role=user_role,
+            )
         }]
         stream = await cached_chat_create(
                 "gpt-5-mini", 
@@ -41,7 +53,11 @@ class Facilitator:
         # 这里按照你的 Prompt 结构，似乎是希望追加到历史中。
         user_msg = {
             "role": "user",
-            "content": f"Task: Based on the dialogue snippet, give the user a brief analysis by choosing 1-2 suitable focuses from: Recap (what important things just happened), Orientation (did a key tension emerge), Causal thread (did an action lead to a consequence), Divergence nudges (are there plausible ways to diverge or explore alternatives—suggest options), Micro-reflection (a light prompt/question to elicit stance/strategy/trade-offs). <messages>{msgs_str}</messages>\n\nOutput: 1–2 short spoken sentences in one line, starting with an emoji. Don’t list options. Ask open-endedly if needed."
+            "content": get_prompt(
+                "facilitator.reflection",
+                self.lang,
+                msgs_str=msgs_str,
+            )
         }
         
         # 临时构建请求 Messages (System + Intro History + Current Task)
@@ -81,26 +97,16 @@ class Facilitator:
 
         msg = [self.messages[0],{
             "role": "user",
-            "content": f"""Task: 你需要作为导演切换镜头，目标是用最少轮次推进<active_node>节点结束(并进入<next_node>)。
-
-<active_node>{active_node["title"]}: {active_node["desc"]}</active_node>
-<next_node>{'end'if not next_node_desc else next_node_desc}</next_node>
-<cast>{self.cast_str}</cast>
-
-角色 “{agent_name}” 请求切换镜头，上下文如下：「{context_str}」。
-
-**决策逻辑 (严格遵守)**
-- 剧情推进：
-    - 若角色表现了对某角色的兴趣，则转向该角色。
-    - 若角色开始聊细节/跑题：立即拉回<active_node>并最大程度推进。
-    - 最大程度上推进<active_node>节点结束，进入<next_node>
-    - 如果<active_node>已接近结束，在旁白中进行总结和并说明进入<next_node>
-- 旁白风格：
-    - 极简（1-2句），第三人称。
-
-输出格式 (严格)，ONLY Use English:
-<meta targetName="下一个对话的对象，必须是 <cast> 中的 EXACT 名称"/> [旁白：描述镜头切换后的新画面/氛围，引出下一人的行动]
-"""
+            "content": get_prompt(
+                "facilitator.bridge",
+                self.lang,
+                active_node_title=active_node["title"],
+                active_node_desc=active_node["desc"],
+                next_node_desc=("end" if not next_node_desc else next_node_desc),
+                cast_str=self.cast_str,
+                agent_name=agent_name,
+                context_str=context_str,
+            )
         }]
 
         stream = await cached_chat_create(
@@ -125,28 +131,17 @@ class Facilitator:
 
         recent_logs_str = "\n".join([f"{m['from']} -> {m['to']}: {m['content']}" for m in recent_logs])
         
-        prompt = f"""你是用户的“历史战略顾问”。Learner 正在进行「{episode_title}」的历史模拟，已进行的故事线是<context>，参与的的角色包括<cast>，最近的对话是<logs>（重点关注最后一句提问），你需要根据当前局势，为用户提供2或4个不同的行动选项`options`，以探索不同的历史可能性或改写历史，要求精炼。目标是培养用户的历史思维（权衡利弊、预判后果）。
-
-<context>{history_prefix_str}</context>
-<cast>{self.cast_str}</cast>
-<logs>{recent_logs_str}</logs>"""+"""
-输出严格 JSON 格式，ONLY Use English：
-{{
-  "situation_analysis": "1句话简述当前尴尬/危机/决策点，点出核心矛盾。",
-  "options": [
-    {{"""+f"""
-      "label": "短标签 (e.g. 强硬拒绝 / 妥协换取时间)",
-      "target_agent": "建议对话的目标角色名 (EXACT name in <cast>, except the user({user_role_name}))",
-      "example_response": "用户可以说的一句具体的台词示例 (自然口语，简短)",
-      "rationale": "为什么要这么做 (收益/动机)",
-      "risks": "潜在风险或代价 (Consequences)",
-      "intent_type": "Escalation | De-escalation | Alliance Building | Info Gathering" """+"""
-    }},
-    ...
-  ]
-}}"""
+        prompt = get_prompt(
+            "facilitator.tips",
+            self.lang,
+            episode_title=episode_title,
+            history_prefix_str=history_prefix_str,
+            cast_str=self.cast_str,
+            recent_logs_str=recent_logs_str,
+            user_role_name=user_role_name,
+        )
         try:
-            response = await call_llm(prompt)
+            response = await call_llm(prompt, lang=self.lang)
             return response
         except Exception as e:
             print(f"Tip Gen Error: {e}")

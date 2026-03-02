@@ -4,7 +4,8 @@ import json
 import asyncio
 import os
 from typing import Dict, List, Any
-from server.llm_cache import call_llm
+from server.utilities.llm_cache import call_llm
+from server.prompts import get_prompt
 
 class ReflectionWorker:
     def __init__(self, engine, cast_engine):
@@ -182,10 +183,10 @@ class ReflectionWorker:
         # B: 结果 (Outcome Only)
         # C: 细节/认知
         # D: 反事实 (Alternatives Only)
-        task_a = self._call_llm(PROMPT_WORKER_A, ctx)
-        task_b = self._call_llm(PROMPT_WORKER_B, ctx)
-        task_c = self._call_llm(PROMPT_WORKER_C, ctx)
-        task_d = self._call_llm(PROMPT_WORKER_D, ctx)
+        task_a = self._call_llm("reflection.worker_a", ctx)
+        task_b = self._call_llm("reflection.worker_b", ctx)
+        task_c = self._call_llm("reflection.worker_c", ctx)
+        task_d = self._call_llm("reflection.worker_d", ctx)
         
         res_a, res_b, res_c, res_d = await asyncio.gather(task_a, task_b, task_c, task_d)
         
@@ -208,9 +209,9 @@ class ReflectionWorker:
         ctx_stage2["outcome_snapshot"] = outcome_snapshot
         ctx_stage2["key_tradeoff"] = key_tradeoff
         
-        task_e = self._call_llm(PROMPT_WORKER_E, ctx_stage2)
+        task_e = self._call_llm("reflection.worker_e", ctx_stage2)
         
-        task_f = self._call_llm(PROMPT_WORKER_F, ctx_stage2)
+        task_f = self._call_llm("reflection.worker_f", ctx_stage2)
         
         res_e, res_f = await asyncio.gather(task_e, task_f)
         
@@ -219,13 +220,11 @@ class ReflectionWorker:
         
         return full_report
 
-    async def _call_llm(self, prompt_tmpl, ctx):
+    async def _call_llm(self, prompt_key, ctx):
         """Helper to format prompt and call LLM safely"""
         try:
-            # 使用 .format(**ctx) 自动填充
-            prompt = prompt_tmpl.format(**ctx)
-            # 这里的 cached_chat_create 需支持 json mode
-            response = await call_llm(prompt)
+            prompt = get_prompt(prompt_key, self.cast_engine.prompt_lang, **ctx)
+            response = await call_llm(prompt, lang=self.cast_engine.prompt_lang)
             return response
         except Exception as e:
             print(f"Worker Error: {e}")
@@ -289,251 +288,3 @@ class ReflectionWorker:
         }
     
 
-# reflection_prompts.py
-
-# ==============================================================================
-# Worker A: Scenario Analyst (I.1)
-# ==============================================================================
-PROMPT_WORKER_A = """你是Scenario Analyst。Learner 完成了「{episode}」的历史模拟，体验的故事线见<history>，重点在{divergence_node_id}，你需要根据故事线中的重点和其他node生成体验Reflection报告中的Decision Context部分。
-
-<history>{history_prefix}</history>
-
-内容要求：
-- Trade-off Map：真实决策前需权衡的多维度因素（如安全升级、联盟/信誉、国内政治、时间压力、信息可靠性、伦理约束），选取最关键的维度，不超过6个。
-- Stakeholders & Constraints：不同历史角色的目标、底线、资源与约束（为多视角理解铺垫）），选取最关键的维度，不超过6个。
-
-输出严格 JSON 格式，每个field都需要极其精炼，以避免文本负担过重，Use English：
-{{
-  "tradeoff_map": [
-    {{
-      "dimension": "String (e.g., Security vs Stability)",
-      "tensions": ["String", "String"],
-      "why_it_matters": "String (1 sentence)",
-      "typical_failure_mode": "String (1 sentence)"
-    }}
-  ],
-  "stakeholders_constraints": [
-    {{
-      "stakeholder": "String (Name/Group)",
-      "goals": ["String", "..."],
-      "red_lines": ["String", "..."],
-      "levers": ["String", "..."],
-      "constraints": ["String", "..."]
-    }}
-  ]
-}}
-"""
-
-# ==============================================================================
-# Worker B: Branch Forensics (I.2)
-# ==============================================================================
-PROMPT_WORKER_B = """你是Branch Forensics。Learner 完成了「{episode}」的历史模拟，故事线是<history_prefix>，但因为做出了与历史不同的决策变成了<branch_line>，你需要根据这些信息，结合用户的交互记录<branch_logs>，生成体验Reflection报告中的Outcome Analysis部分。
-
-<history_prefix>{history_prefix}</history_prefix>
-<branch_line>{branch_line}</branch_line>
-<branch_logs>{branch_logs}</branch_logs>
-
-内容要求：
-- Outcome Dashboard：<branch_line>在多个维度上的结果画像（风险/升级、联盟/政治、信誉、长期稳定性等），区分短期 (Short-term) 与 中长期 (Long-term Unintended)，不仅列出直接结果（如：赢了战争），还要列出长期的隐性代价（如：国库亏空导致十年后的内乱）。
-- Causal Chain：关键因果链条 + 影响最大的 turning points（从 outcome 回溯到 checkpoint）。
-- Plausibility：在当时语境下评估这条路径“为何可能/为何不太可能”，指出关键假设。
-
-
-输出严格 JSON 格式，每个field都需要极其精炼，以避免文本负担过重，Use English：
-{{
-  "outcome_dashboard": [
-    {{
-      "dimension": "String (e.g., Nuclear Risk)",
-      "assessment": "String (1-2 sentences)",
-      "short_term": "String",
-      "long_term_unintended_cost": "String",
-      "confidence": Integer (0-100),
-    }}
-  ],
-  "causal_chain_turning_points": [
-    {{
-      "from_node": "id (e.g., 4.1)",
-      "to_node": "id",
-      "mechanism": "String",
-      "turning_point": Boolean,
-    }}
-  ],
-  "plausibility_reasonableness_check": {{
-    "summary": "String",
-    "key_assumptions": ["String"],
-    "stress_points": ["String"],
-    "plausibility_score": Integer (0-100)
-  }}
-}}
-"""
-
-# ==============================================================================
-# Worker C: Historical Thinking Coach (I.3, I.4)
-# ==============================================================================
-PROMPT_WORKER_C = """你是Historical Thinking Coach。Learner 完成了「{episode}」的历史模拟，故事线是<history_prefix>，但因为做出了与历史不同的决策变成了<branch_line>，你需要根据这些信息，结合用户的交互记录<branch_logs>，生成体验Reflection报告中的Information Limits和Structure vs Agency部分。
-
-输入信息：
-<history_prefix>{history_prefix}</history_prefix>
-<branch_line>{branch_line}</branch_line>
-<branch_logs>{branch_logs}</branch_logs>
-
-内容要求：
-- What Was Knowable Then：当时可得信息、信息质量、误判空间、偶然性作用。
-- Hindsight / Anachronism Flags：识别用户是否使用“上帝视角”或时代错置的知识/价值框架，并解释为何在当时难以成立（教育价值：语境意识与证据意识）。
-- Effective Leverage Points：用户哪些行动真正改变了轨迹（agency 生效点）。
-- Structural Constraints：哪些结构性力量难以被个人决策撼动（联盟体系、军政制度、资源/后勤、核威慑结构等）（教育价值：必然性/偶然性边界）。
-
-输出严格 JSON 格式，每个field都需要极其精炼并限制列表内元素最多6个，以避免文本负担过重，Use English：
-{{
-  "what_was_knowable_then": {{
-    "available_information": ["String"],
-    "information_gaps": ["String"],
-    "info_quality_notes": ["String"],
-    "chance_and_fog_factors": ["String"]
-  }},
-  "hindsight_anachronism_flags": [
-    {{
-      "flag": "String",
-      "why_unrealistic_then": "String",
-      "period_consistent_reframe": "String"
-    }}
-  ],
-  "structure_vs_agency": {{
-    "effective_leverage_points": [
-      {{
-        "action_summary": "String",
-        "why_it_mattered": "String"
-      }}
-    ],
-    "structural_constraints": [
-      {{
-        "constraint": "String",
-        "why_binding": "String"
-      }}
-    ]
-  }}
-}}
-"""
-
-# ==============================================================================
-# Worker D: Counterfactual Analyst (I.5)
-# ==============================================================================
-PROMPT_WORKER_D = """你是Counterfactual Analyst。Learner 完成了「{episode}」的历史模拟，故事线是<history_prefix>，但因为做出了与历史不同的决策，接下来的故事线由<original_future>变成了<branch_line>，你需要根据这些信息，对比“用户走过的路”与“未选择的路”，进行沙盘推演，生成体验Reflection报告中的Alternative Paths部分。
-
-输入信息：
-<history_prefix>{history_prefix}</history_prefix>
-<original_future>{original_future}</original_future>
-<branch_line>{branch_line}</branch_line>
-
-内容要求：
-- Unchosen Options & Likely Rollouts：列出关键 checkpoint 未选选项及其最可能后果（短 rollout,<=6条）。
-- Branch Contrast：与当前分支/ canonical 的关键差异：从哪个 checkpoint 开始扩散、为何扩散。
-- Recommended Next Experiment：建议下次最值得回溯的 checkpoint 与可切换的视角（形成迭代学习闭环）。
-
-输出严格 JSON 格式，每个field都需要极其精炼，以避免文本负担过重，Use English：
-{{
-  "alternative_paths": {{
-    "unchosen_options_likely_rollouts": [
-      {{
-        "checkpoint_node": "id (Where the choice existed, e.g., 4.1)",
-        "unchosen_options": [
-          {{
-            "option_label": "String (The path not taken)",
-            "most_likely_rollout": "String (Short simulation of consequence)",
-            "risk_level": "low/medium/high"
-          }}
-        ]
-      }}
-    ],
-    "recommended_next_experiment": {{
-      "recommended_checkpoint": "id (a.b)",
-      "recommended_perspective": "String (Role)",
-      "rationale": "String (Why this is a good learning loop)"
-    }}
-  }}
-}}
-"""
-
-# ==============================================================================
-# Worker E: Learner Profiler (II.1, II.2)
-# ==============================================================================
-PROMPT_WORKER_E = """你是Learner Profiler。Learner 完成了「{episode}」的历史模拟，故事线是<history_prefix>，参与的的角色包括<cast>，但因为做出了与历史不同的决策变成了<branch_line>，你需要根据这些信息，结合用户的交互记录<branch_logs>和<outcome_snapshot>，生成体验Reflection报告中的Decision Profile和Personalized Learning Suggestions部分。
-
-输入信息：
-<cast>{cast_str}</cast>
-<history_prefix>{history_prefix}</history_prefix>
-<branch_line>{branch_line}</branch_line>
-<branch_logs>{branch_logs}</branch_logs>
-<outcome_snapshot>{outcome_snapshot}</outcome_snapshot>
-
-
-内容要求：
-- Decision Pattern Summary：风险偏好、妥协/对抗、短期/长期导向、对联盟/国内政治的权重等用户特点
-- Blind Spots：被忽略的角色/群体/后果维度（例如忽略民意、忽略盟友、忽略长期稳定性）。
-- Historical Archetype Matching：将该决策风格类比到某类历史人物/流派（作为启发式镜像）。
-- Coaching Recommendations：针对用户的决策模式给出下次探索策略（例如在不确定时如何降低升级风险、如何主动获取对手视角）。
-- Skill Targets (Historical Thinking)：明确要练的能力点：多重因果、证据与不确定性、视角转换、反事实比较、结构-能动辨析。
-- Skill Visualization (Radar)：把上述能力点映射成可视化维度供可视化展示，须给出具体分数和理由。
-- Next Steps：建议继续探索的 checkpoint / perspective / episode（促进迁移学习与持续练习）。
-
-输出严格 JSON 格式，每个field都需要极其精炼，以避免文本负担过重，Use English：
-{{
-  "decision_profile_blind_spots": {{
-    "decision_pattern_summary": [
-      {{ "pattern": "String", "explanation": "String" }}
-    ],
-    "blind_spots": [
-      {{ "blind_spot": "String", "why_it_matters": "String" }}
-    ],
-    "historical_archetype_matching": {{ "archetype": "String", "why_fit": "String", "caveat": "String" }}
-  }},
-  "personalized_learning_suggestions": {{
-    "coaching_recommendations": [
-      {{ "recommendation": "String", "rationale": "String" }}
-    ],
-    "skill_targets_historical_thinking": ["Multi-causality", "Evidence & Uncertainty", "Perspective Taking", "Counterfactual Comparison", "Structure vs Agency"],
-    "skill_visualization_radar": {{
-      "Multi-causality": {{ "score": Integer (0-10), "rationale": "String" }},
-      "Evidence & Uncertainty": {{ "score": Integer, "rationale": "String" }},
-      "Perspective Taking": {{ "score": Integer, "rationale": "String" }},
-      "Counterfactual Comparison": {{ "score": Integer, "rationale": "String" }},
-      "Structure vs Agency": {{ "score": Integer, "rationale": "String" }}
-    }},
-    "next_steps": [
-      {{ "recommended_checkpoint": "id (a.b)", "recommended_perspective": "String, EXACT name in <cast>", "learning_goal": "String" }}
-    ]
-  }}
-}}
-"""
-
-# ==============================================================================
-# Worker F: Meta-Historian (III.1)
-# ==============================================================================
-PROMPT_WORKER_F = """你是Meta-Historian。Learner 完成了「{episode}」的历史模拟，你的任务是跳出具体细节，提供宏观的 Anchors, Boundaries & Transfer部分。
-
-输入信息：
-<canonical_summary>{canonical_summary}</canonical_summary>
-<branch_summary>{branch_summary}</branch_summary>
-<outcome_snapshot>{outcome_snapshot}</outcome_snapshot>
-<key_tradeoff>{key_tradeoff}</key_tradeoff>
-
-内容要求：
-- Canonical Fact Anchors：本 episode 的关键史实锚点（真实历史上这里发生了什么，作为对照）。
-- Simulation Disclaimer：指出哪些推演是合理假设但不可证的。
-- Meta-Lessons & Transfer：围绕因果、结构约束的总括性启示，以及可迁移到现代场景的模式（如安全困境）。
-- Transferable Patterns：将本事件抽象为可迁移的模式（安全困境、信誉承诺、升级控制、联盟政治等），引导用户识别现实世界的相似结构（迁移学习）。
-
-输出严格 JSON 格式，每个field都需要极其精炼，以避免文本负担过重，Use English：
-{{
-    "canonical_fact_anchors": [
-      {{ "fact": "String", "contrast_to_branch": "String" }}
-    ],
-    "simulation_disclaimer": [
-      {{ "assumption": "String", "why_uncertain": "String" }}
-    ],
-    "meta_lessons": ["String (Deep historical insight)"],
-    "transferable_patterns": [
-      {{ "pattern": "String", "in_episode": "String", "modern_parallel": "String" }}
-    ]
-}}
-"""
