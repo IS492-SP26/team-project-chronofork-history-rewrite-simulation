@@ -1,7 +1,6 @@
 "use client"
 
 import {
-  ThemeProvider,
   ChronoForkProvider,
   useChronoFork,
   FlowHeader,
@@ -51,10 +50,8 @@ function ConsoleInner() {
 
 export default function ConsolePage() {
   return (
-    <ThemeProvider>
-      <ChronoForkProvider>
-        <ConsoleInner />
-      </ChronoForkProvider>
-    </ThemeProvider>
+    <ChronoForkProvider>
+      <ConsoleInner />
+    </ChronoForkProvider>
   )
 }

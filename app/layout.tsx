@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from "sonner"
+import { AppProviders } from "./providers"
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground overflow-hidden">
-        {children}
+        <AppProviders>{children}</AppProviders>
         <Toaster position="bottom-left" toastOptions={{
           classNames: {
             toast: "!rounded-xl !shadow-lg !border !border-border/30 !backdrop-blur-lg",

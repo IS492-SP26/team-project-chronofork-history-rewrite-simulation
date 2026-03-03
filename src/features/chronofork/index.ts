@@ -1,4 +1,5 @@
 export { ThemeProvider } from "./theme"
+export { I18nProvider, useI18n } from "./i18n"
 export { ChronoForkProvider, useChronoFork } from "./state/context"
 export { FlowHeader } from "./components/FlowHeader"
 export { CenterStage } from "./components/CenterStage"

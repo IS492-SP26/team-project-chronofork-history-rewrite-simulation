@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useChronoFork } from "@features/chronofork/state/context"
+import { useI18n } from "@features/chronofork/i18n"
 import { phaseColor } from "@features/chronofork/phaseColor"
 import { roles, structuredTips, mockAnalysisHtml, scenes, dialogueBeats } from "@features/chronofork/mock/mockData"
 import type { StrategyOption } from "@features/chronofork/mock/mockData"
@@ -22,6 +23,7 @@ import { toast } from "sonner"
 
 function TranscriptPanel() {
   const { state } = useChronoFork()
+  const { t } = useI18n()
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -36,7 +38,7 @@ function TranscriptPanel() {
         {state.chatHistory.length === 0 ? (
           <div className="flex items-center justify-center py-10">
             <p className="text-sm text-muted-foreground italic">
-              {state.phase === "observe_idle" ? "Start observation to see transcript." : "Waiting for dialogue..."}
+              {state.phase === "observe_idle" ? t("Start observation to see transcript.") : t("Waiting for dialogue...")}
             </p>
           </div>
         ) : (
@@ -128,6 +130,7 @@ function groupBySpeakerPair(messages: ChatMessage[]): MessageGroup[] {
 }
 
 function TranscriptLine({ message }: { message: ChatMessage }) {
+  const { t } = useI18n()
   const isDiverge = message.type === "user_diverge"
   const isSystem = message.type === "system"
   if (isSystem) return <div className="text-center py-1"><span className="text-xs text-muted-foreground font-mono">{message.text}</span></div>
@@ -136,7 +139,7 @@ function TranscriptLine({ message }: { message: ChatMessage }) {
     <div className={`py-1 ${isDiverge ? "rounded-lg px-2.5 -mx-1" : ""}`}
       style={isDiverge ? { backgroundColor: "color-mix(in oklch, var(--chrono-amber) 8%, transparent)" } : undefined}>
       <p className="text-xs text-foreground/90 leading-relaxed">
-        {isDiverge && <Badge variant="outline" className="text-[10px] font-mono mr-1 py-0" style={{ color: "var(--chrono-amber)", borderColor: "color-mix(in oklch, var(--chrono-amber) 30%, transparent)" }}>DIVERGE</Badge>}
+        {isDiverge && <Badge variant="outline" className="text-[10px] font-mono mr-1 py-0" style={{ color: "var(--chrono-amber)", borderColor: "color-mix(in oklch, var(--chrono-amber) 30%, transparent)" }}>{t("DIVERGE")}</Badge>}
         {message.text}
       </p>
     </div>
@@ -165,6 +168,7 @@ function intentIcon(type: string) {
 }
 
 function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: () => void }) {
+  const { t } = useI18n()
   const ic = intentColors[option.intentType] ?? intentColors.info_gathering
   const targetRole = roles.find((r) => r.id === option.targetAgentId)
 
@@ -174,13 +178,13 @@ function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: ()
         {/* Intent badge */}
         <div className="flex items-center gap-2">
           <Badge className="text-[10px] font-mono gap-1 py-0.5 px-2 border-0" style={{ backgroundColor: ic.bg, color: ic.text }}>
-            {intentIcon(option.intentType)} {ic.label}
+            {intentIcon(option.intentType)} {t(ic.label)}
           </Badge>
         </div>
         {/* Target */}
         {targetRole && (
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground font-mono">TO:</span>
+            <span className="text-[10px] text-muted-foreground font-mono">{t("TO:")}</span>
             <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
               style={{ backgroundColor: `color-mix(in oklch, ${targetRole.portrait} 20%, transparent)`, color: targetRole.portrait }}>
               {targetRole.shortName.slice(0, 2)}
@@ -197,11 +201,11 @@ function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: ()
         {/* Why / Risk blocks */}
         <div className="flex flex-col gap-1.5">
           <div className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "color-mix(in oklch, var(--chrono-teal) 6%, transparent)" }}>
-            <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-teal)" }}>Why</p>
+            <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-teal)" }}>{t("Why")}</p>
             <p className="text-xs text-foreground/80 leading-relaxed">{option.why}</p>
           </div>
           <div className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "color-mix(in oklch, var(--chrono-red) 6%, transparent)" }}>
-            <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-red)" }}>Risk</p>
+            <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-red)" }}>{t("Risk")}</p>
             <p className="text-xs text-foreground/80 leading-relaxed">{option.risk}</p>
           </div>
         </div>
@@ -210,7 +214,7 @@ function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: ()
       <button onClick={onSelect}
         className="w-full py-2 text-xs font-semibold transition-colors hover:opacity-90 text-primary-foreground"
         style={{ backgroundColor: ic.text }}>
-        Select Option
+        {t("Select Option")}
       </button>
     </div>
   )
@@ -218,6 +222,7 @@ function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: ()
 
 function TipsPanelContent({ onSelectOption }: { onSelectOption: (opt: StrategyOption) => void }) {
   const { state } = useChronoFork()
+  const { t } = useI18n()
 
   /* Use server-driven tips if available, otherwise fall back to mock */
   const serverTips = state.tipData
@@ -261,7 +266,7 @@ function TipsPanelContent({ onSelectOption }: { onSelectOption: (opt: StrategyOp
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-3">
         <Loader2 className="w-7 h-7 animate-spin" style={{ color: "var(--chrono-amber)" }} />
-        <p className="text-sm font-mono" style={{ color: "var(--chrono-amber)" }}>Generating strategic advice...</p>
+        <p className="text-sm font-mono" style={{ color: "var(--chrono-amber)" }}>{t("Generating strategic advice...")}</p>
       </div>
     )
   }
@@ -273,7 +278,7 @@ function TipsPanelContent({ onSelectOption }: { onSelectOption: (opt: StrategyOp
         style={{ borderLeftColor: "var(--faction-us)", backgroundColor: "color-mix(in oklch, var(--faction-us) 5%, transparent)" }}>
         <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--faction-us)" }} />
         <div>
-          <p className="text-[10px] font-mono uppercase tracking-wider mb-1" style={{ color: "var(--faction-us)" }}>Situation Analysis</p>
+          <p className="text-[10px] font-mono uppercase tracking-wider mb-1" style={{ color: "var(--faction-us)" }}>{t("Situation Analysis")}</p>
           <p className="text-xs text-foreground/80 leading-relaxed">{displaySituation}</p>
         </div>
       </div>
@@ -311,10 +316,11 @@ function AnalysisPanelContent() {
 
 /* ── Divergence Loader ── */
 function DivergenceLoader() {
+  const { t } = useI18n()
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-10 gap-3">
       <Loader2 className="w-7 h-7 animate-spin" style={{ color: "var(--chrono-amber)" }} />
-      <p className="text-sm font-mono" style={{ color: "var(--chrono-amber)" }}>{"Temporal recalculation\u2026"}</p>
+      <p className="text-sm font-mono" style={{ color: "var(--chrono-amber)" }}>{t("Temporal recalculation…")}</p>
       <div className="flex items-center gap-1">
         {[0, 1, 2].map((i) => (
           <motion.div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: "var(--chrono-amber)" }}
@@ -340,6 +346,7 @@ function FloatingCard({ children, className = "", style }: { children: React.Rea
 
 export function TacticalHUDDock() {
   const { state, dispatch } = useChronoFork()
+  const { t } = useI18n()
   const { phase } = state
   const [transcriptOpen, setTranscriptOpen] = useState(true)
   const showDivergenceLoader = phase === "divergence_running"
@@ -352,7 +359,7 @@ export function TacticalHUDDock() {
 
   const handleSelectOption = (opt: StrategyOption) => {
     dispatch({ type: "CLOSE_TIPS" })
-    toast.success(`Selected: ${opt.label}. Response inserted.`)
+    toast.success(`${t("Selected:")} ${opt.label}. ${t("Response inserted.")}`)
   }
 
   return (
@@ -365,9 +372,9 @@ export function TacticalHUDDock() {
         <button
           onClick={() => setTranscriptOpen(!transcriptOpen)}
           className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-secondary/20 transition-colors shrink-0"
-          aria-label={transcriptOpen ? "Collapse transcript" : "Expand transcript"}
+          aria-label={transcriptOpen ? t("Collapse transcript") : t("Expand transcript")}
         >
-          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground flex-1">Transcript</h3>
+          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("Transcript")}</h3>
           {transcriptOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
         </button>
         {transcriptOpen && (
@@ -391,8 +398,8 @@ export function TacticalHUDDock() {
             <FloatingCard className="flex flex-col h-full min-h-0">
               <div className="flex items-center gap-2 px-3 py-2.5 shrink-0">
                 <Target className="w-3.5 h-3.5" style={{ color: pc }} />
-                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>Strategic Advisor</h3>
-                <button onClick={() => dispatch({ type: "CLOSE_TIPS" })} className="text-muted-foreground hover:text-foreground" aria-label="Close tips">
+                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>{t("Strategic Advisor")}</h3>
+                <button onClick={() => dispatch({ type: "CLOSE_TIPS" })} className="text-muted-foreground hover:text-foreground" aria-label={t("Close tips")}>
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -419,9 +426,9 @@ export function TacticalHUDDock() {
             <FloatingCard className="flex flex-col h-full min-h-0">
               <div className="flex items-center gap-2 px-3 py-2.5 shrink-0">
                 <Zap className="w-3.5 h-3.5" style={{ color: pc }} />
-                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>Analysis</h3>
+                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>{t("Analysis")}</h3>
                 {!showDivergenceLoader && (
-                  <button onClick={() => dispatch({ type: "CLOSE_ANALYSIS" })} className="text-muted-foreground hover:text-foreground" aria-label="Close analysis">
+                  <button onClick={() => dispatch({ type: "CLOSE_ANALYSIS" })} className="text-muted-foreground hover:text-foreground" aria-label={t("Close analysis")}>
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}

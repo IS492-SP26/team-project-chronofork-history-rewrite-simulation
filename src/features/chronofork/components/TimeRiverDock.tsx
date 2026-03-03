@@ -1,6 +1,7 @@
 "use client"
 
 import { useChronoFork } from "@features/chronofork/state/context"
+import { useI18n } from "@features/chronofork/i18n"
 import { graphNodes, graphEdges, timelineNodes, type GraphNode, type GraphEdge } from "@features/chronofork/mock/mockData"
 import type { ServerGraphData } from "@features/chronofork/state/types"
 import { motion, AnimatePresence } from "framer-motion"
@@ -36,6 +37,7 @@ function PortalTooltip({ children, show }: { children: React.ReactNode; show: bo
 /* ── Server Graph DAG ── */
 function ServerDAGVisualization({ graph }: { graph: ServerGraphData }) {
   const { state, dispatch } = useChronoFork()
+  const { t } = useI18n()
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const [hoveredEdge, setHoveredEdge] = useState<[string, string] | null>(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
@@ -151,7 +153,7 @@ function ServerDAGVisualization({ graph }: { graph: ServerGraphData }) {
       <PortalTooltip show={!!hoveredEdge}>
         <div className="fixed z-[200] pointer-events-none" style={{ left: tooltipPos.x, top: tooltipPos.y, maxWidth: 220 }}>
           <div className="bg-popover text-popover-foreground border border-border rounded-lg px-3 py-2.5 shadow-2xl">
-            <p className="text-xs text-foreground leading-relaxed">Path transition</p>
+            <p className="text-xs text-foreground leading-relaxed">{t("Path transition")}</p>
           </div>
         </div>
       </PortalTooltip>
@@ -162,6 +164,7 @@ function ServerDAGVisualization({ graph }: { graph: ServerGraphData }) {
 /* ── Polished Mock SVG DAG ── */
 function DAGVisualization() {
   const { state, dispatch } = useChronoFork()
+  const { t } = useI18n()
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null)
   const [hoveredEdge, setHoveredEdge] = useState<GraphEdge | null>(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
@@ -299,7 +302,7 @@ function DAGVisualization() {
             <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{hoveredNode?.hoverDesc}</p>
             {hoveredTn && (
               <p className="text-xs mt-1 font-medium" style={{ color: "var(--chrono-teal)" }}>
-                Decision: {hoveredTn.canonicalChoice}
+                {t("Decision:")} {hoveredTn.canonicalChoice}
               </p>
             )}
           </div>
@@ -321,6 +324,7 @@ function DAGVisualization() {
 /* ── Main Dock ── */
 export function TimeRiverDock() {
   const { state, dispatch } = useChronoFork()
+  const { t } = useI18n()
   const isOpen = state.ui.docks.leftOpen
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -346,9 +350,9 @@ export function TimeRiverDock() {
         <button
           onClick={() => dispatch({ type: "TOGGLE_DOCK", data: { dock: "left" } })}
           className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-secondary/20 transition-colors"
-          aria-label={isOpen ? "Collapse timeline" : "Expand timeline"}
+          aria-label={isOpen ? t("Collapse timeline") : t("Expand timeline")}
         >
-          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground flex-1">Timeline</h3>
+          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("Timeline")}</h3>
           {isOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
         </button>
         <AnimatePresence initial={false}>

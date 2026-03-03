@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { mockReportData, mockDivergenceAnalysis, ThemeProvider } from "@features/chronofork"
+import { mockReportData, mockDivergenceAnalysis, useI18n } from "@features/chronofork"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Download, GitFork, Clock, Target } from "lucide-react"
@@ -62,6 +62,7 @@ function MiniTimeline({ label, color, nodes }: { label: string; color: string; n
 
 function ReportContent() {
   const report = mockReportData
+  const { t } = useI18n()
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,41 +73,41 @@ function ReportContent() {
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <Link href="/"><Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" />Back</Button></Link>
-          <Button variant="outline" size="sm" className="gap-2 text-muted-foreground border-border/50"><Download className="w-3.5 h-3.5" />Export</Button>
+          <Link href="/"><Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" />{t("Back")}</Button></Link>
+          <Button variant="outline" size="sm" className="gap-2 text-muted-foreground border-border/50"><Download className="w-3.5 h-3.5" />{t("Export")}</Button>
         </div>
 
         <div className="text-center mb-10">
-          <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-muted-foreground mb-2">Aftermath Report</p>
+          <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-muted-foreground mb-2">{t("Aftermath Report")}</p>
           <h1 className="text-2xl font-bold text-foreground mb-2 text-balance">{report.episode}</h1>
           <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground font-mono">
             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{report.duration}</span>
-            <span className="flex items-center gap-1"><GitFork className="w-3 h-3" />{report.forksCreated} fork(s)</span>
-            <span className="flex items-center gap-1"><Target className="w-3 h-3" />Fork: {report.forkNode}</span>
+            <span className="flex items-center gap-1"><GitFork className="w-3 h-3" />{report.forksCreated} {t("fork(s)")}</span>
+            <span className="flex items-center gap-1"><Target className="w-3 h-3" />{t("Fork:")} {report.forkNode}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
           <Card className="bg-card/50 border-border/30 backdrop-blur">
             <CardContent className="pt-6">
-              <MiniTimeline label="Canonical" color="var(--chrono-teal)" nodes={["U-2 Photos Revealed", "ExComm Deliberations", "Quarantine Decision", "Address to Nation", "Black Saturday"]} />
+              <MiniTimeline label={t("Canonical")} color="var(--chrono-teal)" nodes={["U-2 Photos Revealed", "ExComm Deliberations", "Quarantine Decision", "Address to Nation", "Black Saturday"]} />
             </CardContent>
           </Card>
           <Card className="bg-card/50 border-border/30 backdrop-blur">
             <CardContent className="pt-6">
-              <MiniTimeline label="Your Timeline" color="var(--chrono-amber)" nodes={["U-2 Photos Revealed", "ExComm Deliberations", "Early Backchannel (Fork)", "Quiet Diplomacy", "Accelerated Resolution"]} />
+              <MiniTimeline label={t("Your Timeline")} color="var(--chrono-amber)" nodes={["U-2 Photos Revealed", "ExComm Deliberations", "Early Backchannel (Fork)", "Quiet Diplomacy", "Accelerated Resolution"]} />
             </CardContent>
           </Card>
         </div>
 
         <Card className="bg-card/50 border-border/30 backdrop-blur mb-10">
-          <CardHeader><CardTitle className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Dimension Shift</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-xs font-mono uppercase tracking-wider text-muted-foreground">{t("Dimension Shift")}</CardTitle></CardHeader>
           <CardContent>
             <div className="flex flex-col items-center gap-4">
               <RadarVisualization dimensions={report.dimensions} />
               <div className="flex items-center gap-6 text-[9px] font-mono">
-                <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--chrono-teal)" }} />Canonical</span>
-                <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--chrono-amber)" }} />Your Fork</span>
+                <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--chrono-teal)" }} />{t("Canonical")}</span>
+                <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--chrono-amber)" }} />{t("Your Timeline")}</span>
               </div>
             </div>
           </CardContent>
@@ -114,21 +115,21 @@ function ReportContent() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <Card className="bg-card/50 border-border/30 backdrop-blur">
-            <CardHeader><CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Trade-offs</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{t("Trade-offs")}</CardTitle></CardHeader>
             <CardContent><ul className="flex flex-col gap-3">{report.tradeoffs.map((t, i) => <li key={i} className="text-xs text-foreground/90 leading-relaxed">{t}</li>)}</ul></CardContent>
           </Card>
           <Card className="bg-card/50 border-border/30 backdrop-blur">
-            <CardHeader><CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Overlooked</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{t("Overlooked")}</CardTitle></CardHeader>
             <CardContent><ul className="flex flex-col gap-3">{report.overlooked.map((o, i) => <li key={i} className="text-xs text-foreground/90 leading-relaxed">{o}</li>)}</ul></CardContent>
           </Card>
           <Card className="bg-card/50 border-border/30 backdrop-blur">
-            <CardHeader><CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Suggestions</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{t("Suggestions")}</CardTitle></CardHeader>
             <CardContent><ul className="flex flex-col gap-3">{report.recommendations.map((r, i) => <li key={i} className="text-xs text-foreground/90 leading-relaxed">{r}</li>)}</ul></CardContent>
           </Card>
         </div>
 
         <div className="text-center">
-          <Link href="/"><Button size="lg" className="gap-2 text-primary-foreground" style={{ backgroundColor: "var(--chrono-amber)" }}><ArrowLeft className="w-4 h-4" />Back to Console</Button></Link>
+          <Link href="/"><Button size="lg" className="gap-2 text-primary-foreground" style={{ backgroundColor: "var(--chrono-amber)" }}><ArrowLeft className="w-4 h-4" />{t("Back to Console")}</Button></Link>
         </div>
       </div>
     </div>
@@ -136,9 +137,5 @@ function ReportContent() {
 }
 
 export default function ReportPage() {
-  return (
-    <ThemeProvider>
-      <ReportContent />
-    </ThemeProvider>
-  )
+  return <ReportContent />
 }

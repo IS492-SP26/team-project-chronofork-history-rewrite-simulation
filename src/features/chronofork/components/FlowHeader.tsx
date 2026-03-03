@@ -2,6 +2,7 @@
 
 import { useChronoFork } from "@features/chronofork/state/context"
 import { useTheme } from "@features/chronofork/theme"
+import { useI18n, type Locale } from "@features/chronofork/i18n"
 import { episode } from "@features/chronofork/mock/mockData"
 import type { FlowPhase } from "@features/chronofork/state/types"
 import type { ConnectionStatus } from "@features/chronofork/state/types"
@@ -9,10 +10,10 @@ import { HelpCircle, Eye, Swords, BookOpen, Check, Lock, Sun, Moon, Loader2 } fr
 import { Button } from "@/components/ui/button"
 
 type SegId = "observe" | "intervene" | "reflection"
-const segments: { id: SegId; label: string; icon: React.ElementType }[] = [
-  { id: "observe", label: "OBSERVE", icon: Eye },
-  { id: "intervene", label: "INTERVENE", icon: Swords },
-  { id: "reflection", label: "REFLECTION", icon: BookOpen },
+const segments: { id: SegId; icon: React.ElementType }[] = [
+  { id: "observe", icon: Eye },
+  { id: "intervene", icon: Swords },
+  { id: "reflection", icon: BookOpen },
 ]
 
 function segState(id: SegId, phase: FlowPhase): "active" | "done" | "locked" {
@@ -29,23 +30,28 @@ function segColor(id: SegId): string {
   return "var(--chrono-violet)"
 }
 
-function wsStatusInfo(status: ConnectionStatus): { color: string; label: string; pulsing: boolean } {
+function wsStatusInfo(status: ConnectionStatus, locale: Locale): { color: string; label: string; pulsing: boolean } {
+  const label = locale === "zh"
+    ? { connected: "WS: 已连接", connecting: "WS: 连接中", mock: "WS: 模拟模式", disconnected: "WS: 未连接" }
+    : { connected: "WS: Connected", connecting: "WS: Connecting", mock: "WS: Mock", disconnected: "WS: Disconnected" }
   switch (status) {
-    case "connected": return { color: "var(--chrono-teal)", label: "WS: Connected", pulsing: false }
-    case "connecting": return { color: "var(--chrono-amber)", label: "WS: Connecting", pulsing: true }
-    case "mock": return { color: "var(--chrono-violet)", label: "WS: Mock", pulsing: false }
-    default: return { color: "var(--chrono-red)", label: "WS: Disconnected", pulsing: false }
+    case "connected": return { color: "var(--chrono-teal)", label: label.connected, pulsing: false }
+    case "connecting": return { color: "var(--chrono-amber)", label: label.connecting, pulsing: true }
+    case "mock": return { color: "var(--chrono-violet)", label: label.mock, pulsing: false }
+    default: return { color: "var(--chrono-red)", label: label.disconnected, pulsing: false }
   }
 }
 
 export function FlowHeader() {
   const { state, dispatch } = useChronoFork()
   const { theme, toggle: toggleTheme } = useTheme()
+  const { locale, toggleLocale, t } = useI18n()
   const { phase, connectionStatus, serverConfig } = state
   const isIdle = phase === "observe_idle"
   const isObsPlaying = phase === "observe_playing"
-  const wsInfo = wsStatusInfo(connectionStatus)
+  const wsInfo = wsStatusInfo(connectionStatus, locale)
   const displayTitle = serverConfig?.episode?.title ?? episode.title
+  const segLabel: Record<SegId, string> = { observe: t("Observe"), intervene: t("Intervene"), reflection: t("Reflection") }
 
   return (
     <header className="flex items-center px-5 py-3 gap-4 glass-panel border-b border-border/30 relative z-40" style={{ minHeight: 56 }}>
@@ -99,7 +105,7 @@ export function FlowHeader() {
                   }}
                 >
                   {ss === "done" ? <Check className="w-3.5 h-3.5" /> : ss === "locked" ? <Lock className="w-3 h-3" /> : <Icon className="w-3.5 h-3.5" />}
-                  <span className="hidden md:inline">{seg.label}</span>
+                  <span className="hidden md:inline">{segLabel[seg.id]}</span>
                   {/* Percentage shown inline on observe pill */}
                   {isObsActive && (
                     <span className="text-[10px] font-mono ml-1 opacity-80">{state.observeProgress}%</span>
@@ -126,10 +132,31 @@ export function FlowHeader() {
           )}
           <span className="hidden lg:inline">{wsInfo.label}</span>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={toggleTheme} aria-label="Toggle theme">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2.5 text-[12px] font-mono uppercase tracking-wider border-border/40"
+          onClick={toggleLocale}
+          aria-label={locale === "zh" ? "切换到英文" : "Switch to Chinese"}
+        >
+          {locale === "zh" ? "中" : "EN"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          onClick={toggleTheme}
+          aria-label={locale === "zh" ? "切换主题" : "Toggle theme"}
+        >
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => dispatch({ type: "TOGGLE_HELP_PANEL" })} aria-label="Help">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          onClick={() => dispatch({ type: "TOGGLE_HELP_PANEL" })}
+          aria-label={locale === "zh" ? "帮助" : "Help"}
+        >
           <HelpCircle className="w-4 h-4" />
         </Button>
       </div>
