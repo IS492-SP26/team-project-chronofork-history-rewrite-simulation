@@ -1,11 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { mockReportData, mockDivergenceAnalysis } from "@/src/lib/mock/mockData"
+import { mockReportData, mockDivergenceAnalysis, ThemeProvider } from "@features/chronofork"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Download, GitFork, Clock, Target } from "lucide-react"
-import { ThemeProvider } from "@/src/lib/theme"
 
 function RadarVisualization({ dimensions }: { dimensions: typeof mockReportData.dimensions }) {
   const cx = 150, cy = 150, maxR = 110, count = dimensions.length

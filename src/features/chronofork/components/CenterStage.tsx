@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { useChronoFork } from "@/src/lib/state/context"
-import { phaseColor } from "@/src/lib/phaseColor"
-import { roles, scenes, dialogueBeats, mockDivergenceAnalysis, mockReportData, episode, type DialogueBeat, type Role } from "@/src/lib/mock/mockData"
+import { useEffect, useState } from "react"
+import { useChronoFork } from "@features/chronofork/state/context"
+import { phaseColor } from "@features/chronofork/phaseColor"
+import { roles, scenes, dialogueBeats, mockDivergenceAnalysis, mockReportData, episode, type DialogueBeat, type Role } from "@features/chronofork/mock/mockData"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

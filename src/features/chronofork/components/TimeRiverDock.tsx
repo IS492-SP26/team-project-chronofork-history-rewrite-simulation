@@ -1,8 +1,8 @@
 "use client"
 
-import { useChronoFork } from "@/src/lib/state/context"
-import { graphNodes, graphEdges, timelineNodes, type GraphNode, type GraphEdge } from "@/src/lib/mock/mockData"
-import type { ServerGraphData } from "@/src/lib/state/types"
+import { useChronoFork } from "@features/chronofork/state/context"
+import { graphNodes, graphEdges, timelineNodes, type GraphNode, type GraphEdge } from "@features/chronofork/mock/mockData"
+import type { ServerGraphData } from "@features/chronofork/state/types"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { useState, useRef, useEffect, useCallback } from "react"

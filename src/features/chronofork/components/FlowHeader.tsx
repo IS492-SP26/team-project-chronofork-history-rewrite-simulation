@@ -1,10 +1,10 @@
 "use client"
 
-import { useChronoFork } from "@/src/lib/state/context"
-import { useTheme } from "@/src/lib/theme"
-import { episode } from "@/src/lib/mock/mockData"
-import type { FlowPhase } from "@/src/lib/state/types"
-import type { ConnectionStatus } from "@/src/lib/state/types"
+import { useChronoFork } from "@features/chronofork/state/context"
+import { useTheme } from "@features/chronofork/theme"
+import { episode } from "@features/chronofork/mock/mockData"
+import type { FlowPhase } from "@features/chronofork/state/types"
+import type { ConnectionStatus } from "@features/chronofork/state/types"
 import { HelpCircle, Eye, Swords, BookOpen, Check, Lock, Sun, Moon, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 

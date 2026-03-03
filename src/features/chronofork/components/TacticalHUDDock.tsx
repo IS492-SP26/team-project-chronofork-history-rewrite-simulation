@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useChronoFork } from "@/src/lib/state/context"
-import { phaseColor } from "@/src/lib/phaseColor"
-import { roles, structuredTips, mockAnalysisHtml, scenes, dialogueBeats } from "@/src/lib/mock/mockData"
-import type { StrategyOption } from "@/src/lib/mock/mockData"
+import { useChronoFork } from "@features/chronofork/state/context"
+import { phaseColor } from "@features/chronofork/phaseColor"
+import { roles, structuredTips, mockAnalysisHtml, scenes, dialogueBeats } from "@features/chronofork/mock/mockData"
+import type { StrategyOption } from "@features/chronofork/mock/mockData"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import {
   Zap, Anchor, ArrowRight, Users, Target, AlertTriangle, Search, Shield,
   Loader2, Info,
 } from "lucide-react"
-import type { ChatMessage } from "@/src/lib/state/types"
+import type { ChatMessage } from "@features/chronofork/state/types"
 import { toast } from "sonner"
 
 /* ════════════════════════════════════════════════════════════════

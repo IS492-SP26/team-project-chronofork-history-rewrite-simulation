@@ -1,6 +1,6 @@
 "use client"
 
-import { useChronoFork } from "@/src/lib/state/context"
+import { useChronoFork } from "@features/chronofork/state/context"
 import { motion } from "framer-motion"
 
 export function TimeWarpOverlay({ active }: { active: boolean }) {

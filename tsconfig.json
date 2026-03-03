@@ -23,9 +23,9 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@chrono/*": ["./src/*"],
+      "@features/*": ["./src/features/*"]
     }
   },
   "include": [

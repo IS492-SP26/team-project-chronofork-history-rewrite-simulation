@@ -1,6 +1,6 @@
 // ─── ChronoFork API Client ──────────────────────────────────────────
 // TODO (Round 2): implement real HTTP/WS client using api.md
-import { BACKEND_URL } from "../env"
+import { BACKEND_URL } from "../config/env"
 
 /**
  * Typed helper to send API messages.

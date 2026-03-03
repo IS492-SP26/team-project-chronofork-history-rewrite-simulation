@@ -1,13 +1,16 @@
 "use client"
 
-import { ThemeProvider } from "@/src/lib/theme"
-import { ChronoForkProvider, useChronoFork } from "@/src/lib/state/context"
-import { FlowHeader } from "@/src/components/console/FlowHeader"
-import { CenterStage } from "@/src/components/console/CenterStage"
-import { TimeRiverDock } from "@/src/components/console/TimeRiverDock"
-import { TacticalHUDDock } from "@/src/components/console/TacticalHUDDock"
-import { HelpPanel } from "@/src/components/console/HelpPanel"
-import { TimeWarpOverlay } from "@/src/components/console/TimeWarpOverlay"
+import {
+  ThemeProvider,
+  ChronoForkProvider,
+  useChronoFork,
+  FlowHeader,
+  CenterStage,
+  TimeRiverDock,
+  TacticalHUDDock,
+  HelpPanel,
+  TimeWarpOverlay,
+} from "@features/chronofork"
 import { AnimatePresence } from "framer-motion"
 
 function ConsoleInner() {

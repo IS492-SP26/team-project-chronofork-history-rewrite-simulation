@@ -118,9 +118,8 @@ export default function EpisodesPage() {
                   <Link href="/">
                     <Button
                       size="sm"
-                      className="w-full mt-2 text-xs"
+                      className="w-full mt-2 text-xs text-white"
                       style={{ backgroundColor: "var(--chrono-teal)" }}
-                      className="text-white"
                     >
                       Launch Simulation
                     </Button>
