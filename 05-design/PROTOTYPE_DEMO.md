@@ -7,7 +7,6 @@ For Checkpoint 2, we provide a **minimal sandbox demo** of the critical flows ra
 - **Interactive co-roleplay prototype**
 
 ### Access
-```text
 Configuration UI:
 http://143.244.176.215:5006
 
