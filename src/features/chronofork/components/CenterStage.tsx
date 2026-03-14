@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react"
 import { useChronoFork } from "@features/chronofork/state/context"
 import { useI18n } from "@features/chronofork/i18n"
-import { phaseColor } from "@features/chronofork/phaseColor"
-import { roles, scenes, dialogueBeats, mockDivergenceAnalysis, mockReportData, episode, type DialogueBeat, type Role } from "@features/chronofork/mock/mockData"
+import { phaseColor, phaseTone } from "@features/chronofork/phaseColor"
+import { roles, scenes, dialogueBeats, mockDivergenceAnalysis, mockReportData, episode, timelineNodes, type DialogueBeat, type Role } from "@features/chronofork/mock/mockData"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPin, Clock, Play, Pause, Bookmark, Info, Send, Zap, Loader2, Eye, Users, ToggleLeft, ToggleRight, BookOpen, X, ArrowLeft, Download, GitFork, Target, Wifi, WifiOff, Database } from "lucide-react"
+import { MapPin, Clock, Play, Pause, Bookmark, Info, Send, Zap, Loader2, Eye, Users, ToggleLeft, ToggleRight, BookOpen, X, ArrowLeft, Download, GitFork, Target, Wifi, WifiOff, Database, Lightbulb, FileCheck } from "lucide-react"
 import { toast } from "sonner"
 
 /* ── helpers ── */
@@ -40,7 +40,7 @@ function Avatar({ role, isSpeaking, latestEmotion }: { role: Role; isSpeaking: b
   return (
     <div className={`flex flex-col items-center gap-1 transition-opacity duration-200 ${isSpeaking ? "opacity-100" : "opacity-30"}`}>
       <div
-        className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold transition-all ${isSpeaking ? "animate-breathe" : ""}`}
+        className={`w-20 h-20 rounded-full flex items-center justify-center text-sm font-bold transition-all ${isSpeaking ? "animate-breathe" : ""}`}
         style={{
           backgroundColor: fs.bg, color: fs.ring,
           border: isSpeaking ? `2px solid ${fs.ring}` : "2px solid transparent",
@@ -132,8 +132,8 @@ function PreStartOverlay() {
           <div className="flex flex-col gap-2 w-full">
             <Button
               size="default"
+              tone="observe"
               className="w-full gap-2 text-sm font-semibold text-primary-foreground"
-              style={{ backgroundColor: "var(--chrono-teal)" }}
               onClick={() => connectToServer(wsUrl)}
               disabled={isConnecting}
             >
@@ -152,6 +152,7 @@ function PreStartOverlay() {
             <Button
               size="default"
               variant="outline"
+              tone="observe"
               className="w-full gap-2 text-sm border-border/40 text-muted-foreground hover:text-foreground"
               onClick={useMockData}
               disabled={isConnecting}
@@ -180,6 +181,7 @@ function InteractionIdle() {
   const isMock = state.connectionStatus === "mock"
   const isWS = state.connectionStatus === "connected"
   const currentScene = scenes[0]
+  const tone = phaseTone(state.phase)
 
   const handleStart = () => {
     dispatch({ type: "START_OBSERVE" })
@@ -192,11 +194,8 @@ function InteractionIdle() {
   return (
     <div className="flex flex-col gap-4 py-2">
       <div className="text-center">
-        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1">
-          {state.serverConfig?.episode?.emoji ?? ""} {state.serverConfig?.episode?.title ? "" : episode.year}
-        </p>
         <h2 className="text-lg font-bold text-foreground text-balance">
-          {state.serverConfig?.episode?.title ?? episode.title}: {episode.subtitle}
+          {state.serverConfig?.episode?.emoji ?? ""} {state.serverConfig?.episode?.title ?? episode.title}
         </h2>
         <p className="text-sm text-muted-foreground leading-relaxed mt-2 max-w-md mx-auto">
           {state.serverConfig?.episode?.desc ?? episode.description}
@@ -217,35 +216,35 @@ function InteractionIdle() {
         <div className="flex items-center justify-center gap-3 flex-wrap">
           {state.serverConfig.cast_data.slice(0, 5).map((c, i) => (
             <div key={i} className="flex flex-col items-center gap-1">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg bg-secondary border border-border/30">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg bg-secondary border border-border/30">
                 {c.avatar}
               </div>
-              <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[60px]">{c.name.split(" ").pop()}</span>
+              <span className="text-[12px] font-mono text-muted-foreground truncate max-w-[60px]">{c.name.split(" ").pop()}</span>
             </div>
           ))}
         </div>
       )}
       {/* User role badge from server config */}
-      {isWS && state.serverConfig?.user_role && (
+      {/* {isWS && state.serverConfig?.user_role && (
         <div className="flex justify-center">
           <Badge variant="outline" className="text-sm font-mono gap-1.5 px-3 py-1.5" style={{ borderColor: "var(--chrono-amber)", color: "var(--chrono-amber)" }}>
             <Target className="w-3.5 h-3.5" />
             {t("Role:")} {state.serverConfig.user_role.name} ({state.serverConfig.user_role.title})
           </Badge>
         </div>
-      )}
+      )} */}
       <div className="flex items-center justify-center gap-2.5">
         <Button
           size="default"
+          tone={tone}
           className="gap-2 text-sm font-semibold text-primary-foreground animate-glow-cta"
-          style={{ backgroundColor: "var(--chrono-teal)" }}
           onClick={handleStart}
         >
           <Play className="w-4 h-4" />
           {t("Start Observation")}
         </Button>
         {isMock && (
-          <Button size="default" variant="outline" className="gap-2 text-sm border-border/40 text-muted-foreground">
+          <Button size="default" variant="outline" tone={tone} className="gap-2 text-sm border-border/40 text-muted-foreground">
             {t("Load Different Episode")}
           </Button>
         )}
@@ -259,6 +258,7 @@ function InteractionObserving() {
   const { t } = useI18n()
   const [paused, setPaused] = useState(false)
   const pc = phaseColor(state.phase)
+  const tone = phaseTone(state.phase)
   /* Progress description instead of distracting bar */
   const progressDesc = state.observeProgress < 25
     ? t("The scene is unfolding. Key actors are establishing their positions...")
@@ -279,22 +279,21 @@ function InteractionObserving() {
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed italic">{progressDesc}</p>
       <div className="flex items-center gap-1.5 flex-wrap">
-        <Button size="sm" variant="outline" className="text-xs h-7 px-2.5 gap-1 border-border/40" onClick={() => toast.info(t("Mock: Scene summarized"))}>
+        <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40" onClick={() => toast.info(t("Mock: Scene summarized"))}>
           <Info className="w-3.5 h-3.5" /> {t("Summarize")}
         </Button>
-        <Button size="sm" variant="outline" className="text-xs h-7 px-2.5 gap-1 border-border/40" onClick={() => toast.info(t("Mock: Term explained"))}>
+        <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40" onClick={() => toast.info(t("Mock: Term explained"))}>
           {t("Explain term")}
         </Button>
-        <Button size="sm" variant="outline"
+        <Button size="sm" variant="outline" tone={tone}
           className="text-xs h-7 px-2.5 gap-1 border-border/40"
           disabled={!state.decisionPointReached}
           onClick={() => toast.success(t("Mock: Moment bookmarked"))}
         >
           <Bookmark className="w-3.5 h-3.5" /> {t("Bookmark")}
         </Button>
-        <Button size="sm" variant={paused ? "default" : "outline"}
+        <Button size="sm" variant={paused ? "default" : "outline"} tone={tone}
           className={`text-xs h-7 px-2.5 gap-1 ml-auto ${paused ? "text-primary-foreground" : "border-border/40"}`}
-          style={paused ? { backgroundColor: pc } : undefined}
           onClick={() => { setPaused(!paused); toast.info(paused ? t("Resumed") : t("Paused (mock)")) }}
         >
           {paused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -314,6 +313,10 @@ function InteractionBacktrackSetup() {
   const hasNode = !!state.selectedNodeId
   const hasRole = !!state.activeRoleId
   const pc = phaseColor(state.phase)
+  const tone = phaseTone(state.phase)
+  const selectedNodeTitle = state.selectedNodeId
+    ? t("Selected Node: ") + timelineNodes.find((node) => node.id === state.selectedNodeId)?.label
+    : null
 
   const handleBacktrack = () => {
     if (!state.selectedNodeId) return
@@ -389,14 +392,16 @@ function InteractionBacktrackSetup() {
       )}
       <Button
         size="default"
+        tone={tone}
         className="w-full text-sm h-9 gap-2 font-semibold text-primary-foreground"
-        style={{ backgroundColor: pc }}
         disabled={!hasNode || (!hasRole && !state.activeRoleName)}
         onClick={handleBacktrack}
       >
         {t("Backtrack to Node")}
       </Button>
-      {!hasNode && <p className="text-xs text-muted-foreground text-center">{t("Select a node from the Timeline panel.")}</p>}
+      <p className="text-xs text-muted-foreground text-center">
+        {selectedNodeTitle ?? t("Select a node from the Timeline panel.")}
+      </p>
     </div>
   )
 }
@@ -406,12 +411,12 @@ function InteractionComposer() {
   const { t } = useI18n()
   const isWS = state.connectionStatus === "connected"
   const [text, setText] = useState("")
-  const [isIntervention, setIsIntervention] = useState(false)
   const activeRole = state.activeRoleId ? roles.find((r) => r.id === state.activeRoleId) : null
   const roleName = state.activeRoleName ?? activeRole?.shortName ?? "You"
   const targetRoles = roles.filter((r) => r.id !== "facilitator" && r.id !== state.activeRoleId)
   const [targetId, setTargetId] = useState<string | null>(null)
   const pc = "var(--chrono-amber)"
+  const tone = phaseTone(state.phase)
 
   const handleSend = () => {
     if (!text.trim()) return
@@ -423,12 +428,11 @@ function InteractionComposer() {
       ws.send("user_message", { content: text.trim(), target: targetName })
       dispatch({ type: "SEND_CHAT", data: { text: text.trim(), speakerName: roleName, targetName } })
       setText("")
-      setIsIntervention(false)
       return
     }
 
     // Mock mode
-    if (isIntervention || text.trim().startsWith("DIVERGE:")) {
+    if (text.trim().startsWith("DIVERGE:")) {
       dispatch({ type: "SEND_DIVERGE", data: { text: text.trim(), speakerName: roleName } })
       toast.success(t("Intervention committed. Computing divergence..."))
       setTimeout(() => dispatch({ type: "DIVERGENCE_COMPLETE" }), 1500)
@@ -442,7 +446,6 @@ function InteractionComposer() {
     } else {
       dispatch({ type: "SEND_CHAT", data: { text: text.trim(), speakerName: roleName } })
     }
-    setText(""); setIsIntervention(false)
   }
 
   const handleRequestTip = () => {
@@ -497,55 +500,62 @@ function InteractionComposer() {
           })
         )}
       </div>
-      <Textarea
-        value={text} onChange={(e) => setText(e.target.value)}
-        placeholder={isIntervention ? t("Write your alternative decision...") : `${t("Type in character as")} ${roleName}...`}
-        className="min-h-[52px] text-sm bg-card/50 border-border/30 resize-none leading-relaxed" rows={2}
-        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-      />
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <Button size="sm" variant="outline" className="text-xs h-7 px-2.5 gap-1 border-border/40"
-          disabled={state.tipLoading}
-          onClick={handleRequestTip}>
-          {state.tipLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-          {t("Tips")}
-        </Button>
-        {showCheckPrevious && (
-          <Button size="sm" variant="outline" className="text-xs h-7 px-2.5 gap-1 border-border/40"
-            onClick={() => dispatch({ type: "OPEN_ANALYSIS" })}>
-            {t("Check previous analysis")}
+      <div className="flex">
+        <Textarea
+          tone={tone}
+          value={text} onChange={(e) => setText(e.target.value)}
+          placeholder={`${t("Type in character as")} ${roleName}...`}
+          className="min-h-[52px] w-full text-sm bg-card/50 border-border/30 resize-none leading-relaxed" rows={2}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+        />
+      </div>
+      <div className="flex items-end justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40"
+            disabled={state.tipLoading}
+            onClick={handleRequestTip}>
+            {state.tipLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
+            {t("Tips")}
           </Button>
-        )}
-        {!isWS && (
-          <Button size="sm" variant="outline" className="text-xs h-7 px-2.5 gap-1 border-border/40 text-muted-foreground"
-            onClick={() => {
-              if (!text.trim()) {
-                dispatch({ type: "SEND_DIVERGE", data: { text: "DEBUG: Trigger divergence", speakerName: roleName } })
-                toast.success(t("DEBUG: Computing divergence..."))
-                setTimeout(() => dispatch({ type: "DIVERGENCE_COMPLETE" }), 1500)
-                setTimeout(() => {
-                  dispatch({ type: "ANALYSIS_COMPLETE", data: { analysis: {
-                    available: true, plausibility: mockDivergenceAnalysis.plausibility,
-                    drivers: mockDivergenceAnalysis.drivers, constraints: mockDivergenceAnalysis.constraints,
-                    outcomes: mockDivergenceAnalysis.outcomes, causalChain: mockDivergenceAnalysis.causalChain,
-                  }}})
-                }, 4000)
-              }
-            }}>
-            <Zap className="w-3.5 h-3.5" /> {t("Trigger Divergence")}
+          {showCheckPrevious && (
+            <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40"
+              onClick={() => dispatch({ type: "OPEN_ANALYSIS" })}>
+              {t("Check previous analysis")}
+            </Button>
+          )}
+          {!isWS && (
+            <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40 text-muted-foreground"
+              onClick={() => {
+                if (!text.trim()) {
+                  dispatch({ type: "SEND_DIVERGE", data: { text: "DEBUG: Trigger divergence", speakerName: roleName } })
+                  toast.success(t("DEBUG: Computing divergence..."))
+                  setTimeout(() => dispatch({ type: "DIVERGENCE_COMPLETE" }), 1500)
+                  setTimeout(() => {
+                    dispatch({ type: "ANALYSIS_COMPLETE", data: { analysis: {
+                      available: true, plausibility: mockDivergenceAnalysis.plausibility,
+                      drivers: mockDivergenceAnalysis.drivers, constraints: mockDivergenceAnalysis.constraints,
+                      outcomes: mockDivergenceAnalysis.outcomes, causalChain: mockDivergenceAnalysis.causalChain,
+                    }}})
+                  }, 4000)
+                }
+              }}>
+              <Zap className="w-3.5 h-3.5" /> {t("Trigger Divergence")}
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 ml-auto shrink-0">
+          <Button
+            size="sm"
+            tone={tone}
+            className="h-8 px-3 gap-1.5 font-semibold text-primary-foreground"
+            disabled={!text.trim()}
+            onClick={handleSend}
+            aria-label={t("Send")}
+          >
+            <Send className="w-4 h-4" />
+            <span>{t("Send")}</span>
           </Button>
-        )}
-        <button onClick={() => setIsIntervention(!isIntervention)}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ml-auto ${isIntervention ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground bg-secondary/40"}`}
-          style={isIntervention ? { backgroundColor: pc } : undefined}>
-          {isIntervention ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
-          {t("Intervention")}
-        </button>
-        <Button size="sm" className="text-xs h-7 px-4 gap-1 font-semibold text-primary-foreground"
-          style={{ backgroundColor: pc }}
-          disabled={!text.trim()} onClick={handleSend}>
-          <Send className="w-3.5 h-3.5" /> {t("Send")}
-        </Button>
+        </div>
       </div>
     </div>
   )
@@ -595,7 +605,13 @@ function ReflectionPrompt({ onViewReport }: { onViewReport: () => void }) {
     >
       <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${loading ? "animate-pulse-halo-violet" : ""}`}
         style={{ backgroundColor: "var(--chrono-violet-bg)", border: "2px solid var(--chrono-violet)" }}>
-        {loading ? <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--chrono-violet)" }} /> : <BookOpen className="w-6 h-6" style={{ color: "var(--chrono-violet)" }} />}
+        {loading ? (
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--chrono-violet)" }} />
+        ) : ready ? (
+          <FileCheck className="w-6 h-6" style={{ color: "var(--chrono-violet)" }} />
+        ) : (
+          <BookOpen className="w-6 h-6" style={{ color: "var(--chrono-violet)" }} />
+        )}
       </div>
       <div className="text-center">
         <p className="text-base font-semibold text-foreground">
@@ -606,8 +622,7 @@ function ReflectionPrompt({ onViewReport }: { onViewReport: () => void }) {
         </p>
       </div>
       {!loading && !ready && (
-        <Button size="default" className="text-sm font-semibold text-primary-foreground gap-2"
-          style={{ backgroundColor: "var(--chrono-violet)" }}
+        <Button size="default" tone="reflection" className="text-sm font-semibold text-primary-foreground gap-2"
           onClick={handleRequest}>
           <BookOpen className="w-4 h-4" /> {t("Request Reflection Report")}
         </Button>
@@ -621,8 +636,7 @@ function ReflectionPrompt({ onViewReport }: { onViewReport: () => void }) {
         </div>
       )}
       {ready && (
-        <Button size="default" className="text-sm font-semibold text-primary-foreground gap-2"
-          style={{ backgroundColor: "var(--chrono-violet)" }}
+        <Button size="default" tone="reflection" className="text-sm font-semibold text-primary-foreground gap-2"
           onClick={handleView}>
           <BookOpen className="w-4 h-4" /> {t("View Reflection Report")}
         </Button>
@@ -703,10 +717,10 @@ function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
               <div className="p-6">
                 <div dangerouslySetInnerHTML={{ __html: state.reflectionHtml! }} />
                 <div className="flex items-center justify-center gap-3 pt-6 border-t border-border/20 mt-6">
-                  <Button variant="outline" size="default" className="gap-2 text-sm" style={{ color: "var(--chrono-violet)", borderColor: "color-mix(in oklch, var(--chrono-violet) 30%, transparent)" }} onClick={onReturn}>
+                  <Button variant="outline" size="default" tone="reflection" className="gap-2 text-sm" onClick={onReturn}>
                     <ArrowLeft className="w-4 h-4" /> {t("Return to Console")}
                   </Button>
-                  <Button variant="outline" size="default" className="gap-2 text-sm" style={{ color: "var(--chrono-teal)", borderColor: "color-mix(in oklch, var(--chrono-teal) 30%, transparent)" }}
+                  <Button variant="outline" size="default" tone="observe" className="gap-2 text-sm"
                     onClick={() => toast.info(t("Export functionality coming soon."))}>
                     <Download className="w-4 h-4" /> {t("Export Report")}
                   </Button>
@@ -777,10 +791,10 @@ function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
 
                   {/* Export + Return buttons */}
                   <div className="flex items-center justify-center gap-3 pt-2 pb-4">
-                    <Button variant="outline" size="default" className="gap-2 text-sm" style={{ color: "var(--chrono-violet)", borderColor: "color-mix(in oklch, var(--chrono-violet) 30%, transparent)" }} onClick={onReturn}>
+                    <Button variant="outline" size="default" tone="reflection" className="gap-2 text-sm" onClick={onReturn}>
                       <ArrowLeft className="w-4 h-4" /> {t("Return to Console")}
                     </Button>
-                    <Button variant="outline" size="default" className="gap-2 text-sm" style={{ color: "var(--chrono-teal)", borderColor: "color-mix(in oklch, var(--chrono-teal) 30%, transparent)" }}
+                    <Button variant="outline" size="default" tone="observe" className="gap-2 text-sm"
                       onClick={() => toast.info(t("Export functionality coming soon."))}>
                       <Download className="w-4 h-4" /> {t("Export Report")}
                     </Button>
@@ -914,11 +928,11 @@ export function CenterStage() {
       {!isIdle && facilitatorText && <FacilitatorStrip text={facilitatorText} />}
 
       {/* Middle: Round table + speech bubble */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 relative overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 pb-32 relative overflow-hidden -translate-y-8">
         {!isIdle && state.connectionStatus === "mock" && (
           <div className="flex flex-col items-center w-full max-w-lg relative">
             {/* Top row avatars */}
-            <div className="flex items-end justify-center gap-7 mb-3 relative z-10">
+            <div className="flex items-end justify-center gap-8 mb-3 relative z-10">
               {tableRoles.slice(0, 3).map((role) => (
                 <Avatar key={role.id} role={role} isSpeaking={currentBeat?.speakerId === role.id}
                   latestEmotion={sceneBeats.slice(0, state.currentDialogueIndex + 1).filter((b) => b.speakerId === role.id).pop()?.emotion}
@@ -964,7 +978,7 @@ export function CenterStage() {
             </div>
 
             {/* Bottom row avatars */}
-            <div className="flex items-start justify-center gap-7 mt-3 relative z-10">
+            <div className="flex items-start justify-center gap-8 mt-3 relative z-10">
               {tableRoles.slice(3).map((role) => (
                 <Avatar key={role.id} role={role} isSpeaking={currentBeat?.speakerId === role.id}
                   latestEmotion={sceneBeats.slice(0, state.currentDialogueIndex + 1).filter((b) => b.speakerId === role.id).pop()?.emotion}

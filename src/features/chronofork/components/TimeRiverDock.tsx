@@ -2,28 +2,72 @@
 
 import { useChronoFork } from "@features/chronofork/state/context"
 import { useI18n } from "@features/chronofork/i18n"
-import { graphNodes, graphEdges, timelineNodes, type GraphNode, type GraphEdge } from "@features/chronofork/mock/mockData"
+import { graphNodes, graphEdges, timelineNodes, type GraphEdge } from "@features/chronofork/mock/mockData"
 import type { ServerGraphData } from "@features/chronofork/state/types"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
 
+type UnifiedNodeStatus = "completed" | "in_progress" | "unfinished" | "suspended" | "divergent"
+
+interface UnifiedNode {
+  id: string
+  label: string
+  status: UnifiedNodeStatus
+  branch: "canonical" | "divergent"
+  hoverTitle: string
+  hoverDesc: string
+  isClickable: boolean
+}
+
+interface UnifiedEdge {
+  from: string
+  to: string
+  branch: "canonical" | "divergent"
+  tooltip: {
+    title: string
+    desc: string
+  }
+}
+
+interface UnifiedGraph {
+  nodes: UnifiedNode[]
+  edges: UnifiedEdge[]
+  pos: Record<string, [number, number]>
+  activeNodeId: string | null
+}
+
+interface GraphLayout {
+  svgW: number
+  svgH: number
+  pos: Record<string, { x: number; y: number }>
+}
+
 /* ── Node colors ── */
-function nodeColor(n: GraphNode, isBacktracked: boolean) {
+function nodeColor(n: { branch: "canonical" | "divergent"; status: UnifiedNodeStatus }, isBacktracked: boolean) {
   if (isBacktracked) return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
   if (n.branch === "divergent") return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
   if (n.status === "completed") return { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)" }
   if (n.status === "in_progress") return { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)" }
+  if (n.status === "suspended") return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
   return { fill: "transparent", stroke: "var(--border)" }
 }
 
-/* ── Edge choice text ── */
-function edgeChoiceText(edge: GraphEdge): string {
+/* ── Edge tooltip content ── */
+function edgeChoiceText(edge: GraphEdge): { title: string; desc: string } {
   const toNode = graphNodes.find((n) => n.id === edge.to)
   const tn = toNode ? timelineNodes.find((t) => t.id === toNode.id) : null
-  if (edge.branch === "divergent") return toNode ? `Divergent: ${toNode.hoverDesc}` : "Divergent path"
-  return tn ? `Choice: ${tn.canonicalChoice}` : (toNode?.hoverDesc ?? "")
+  if (edge.branch === "divergent") {
+    return {
+      title: "Divergence",
+      desc: toNode?.hoverDesc ?? "Rewritten branch path",
+    }
+  }
+  return {
+    title: "Choice",
+    desc: tn?.canonicalChoice ?? toNode?.hoverDesc ?? "Canonical path transition",
+  }
 }
 
 /* ── Portal Tooltip ── */
@@ -34,188 +78,128 @@ function PortalTooltip({ children, show }: { children: React.ReactNode; show: bo
   return createPortal(children, document.body)
 }
 
-/* ── Server Graph DAG ── */
-function ServerDAGVisualization({ graph }: { graph: ServerGraphData }) {
-  const { state, dispatch } = useChronoFork()
-  const { t } = useI18n()
-  const [hoveredNode, setHoveredNode] = useState<string | null>(null)
-  const [hoveredEdge, setHoveredEdge] = useState<[string, string] | null>(null)
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
-  const canSelect = ["observe_complete", "intervene_idle"].includes(state.phase)
-
+function computeGraphLayout(graph: UnifiedGraph): GraphLayout {
   const posEntries = Object.entries(graph.pos)
+  const padX = 30
+  const padY = 30
+  const labelW = 60
+  const minSvgW = 180
+  const minSvgH = 200
+
+  if (posEntries.length === 0) {
+    return { svgW: minSvgW, svgH: minSvgH, pos: {} }
+  }
+
   const allX = posEntries.map(([, p]) => p[0])
   const allY = posEntries.map(([, p]) => p[1])
-  const minX = Math.min(...allX), maxX = Math.max(...allX)
-  const minY = Math.min(...allY), maxY = Math.max(...allY)
-  const rangeX = maxX - minX || 1
-  const rangeY = maxY - minY || 1
+  const minX = Math.min(...allX)
+  const maxX = Math.max(...allX)
+  const minY = Math.min(...allY)
+  const maxY = Math.max(...allY)
+  const rangeX = maxX - minX
+  const rangeY = maxY - minY
+  const svgW = Math.max(minSvgW, rangeX + padX * 2 + labelW)
+  const svgH = Math.max(minSvgH, rangeY + padY * 2 + 20)
 
-  const pad = 30, svgW = 240, labelW = 60
-  const usableW = svgW - pad * 2 - labelW
-  const usableH = Math.max(250, posEntries.length * 70)
-  const svgH = usableH + pad * 2
+  const pos = Object.fromEntries(posEntries.map(([id, p]) => {
+    const x = rangeX === 0 ? svgW / 2 : padX + labelW / 2 + (p[0] - minX)
+    const y = rangeY === 0 ? svgH / 2 : padY + (p[1] - minY)
+    return [id, { x, y }]
+  }))
 
-  function toSVG(pos: [number, number]): { x: number; y: number } {
-    const nx = posEntries.length <= 1 ? svgW / 2 : pad + ((pos[0] - minX) / rangeX) * usableW + labelW / 2
-    const ny = posEntries.length <= 1 ? svgH / 2 : pad + ((pos[1] - minY) / rangeY) * usableH
-    return { x: nx, y: ny }
-  }
-
-  function sNodeColor(status: string) {
-    switch (status) {
-      case "COMPLETED": return { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)" }
-      case "IN_PROGRESS": return { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)" }
-      case "SUSPENDED": return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
-      default: return { fill: "transparent", stroke: "var(--border)" }
-    }
-  }
-
-  const updateTooltipPos = useCallback((cx: number, cy: number) => {
-    setTooltipPos({ x: cx + 14, y: cy - 8 })
-  }, [])
-
-  const hoveredNodeData = hoveredNode ? graph.nodes.find((n) => n.id === hoveredNode) : null
-
-  return (
-    <>
-      <svg width="100%" viewBox={`0 0 ${svgW} ${svgH}`} className="block" role="img" aria-label="Server DAG">
-        {graph.edges.map(([from, to]) => {
-          const fromPos = graph.pos[from], toPos = graph.pos[to]
-          if (!fromPos || !toPos) return null
-          const f = toSVG(fromPos), t = toSVG(toPos)
-          const isHovered = hoveredEdge?.[0] === from && hoveredEdge?.[1] === to
-          return (
-            <g key={`${from}-${to}`}>
-              <line x1={f.x} y1={f.y + 12} x2={t.x} y2={t.y - 12}
-                stroke="transparent" strokeWidth={14} className="cursor-default"
-                onMouseEnter={(e) => { setHoveredEdge([from, to]); setHoveredNode(null); updateTooltipPos(e.clientX, e.clientY) }}
-                onMouseMove={(e) => updateTooltipPos(e.clientX, e.clientY)}
-                onMouseLeave={() => setHoveredEdge(null)} />
-              <line x1={f.x} y1={f.y + 12} x2={t.x} y2={t.y - 12}
-                stroke="var(--chrono-teal)" strokeWidth={1.5} opacity={isHovered ? 0.9 : 0.3}
-                className="pointer-events-none transition-opacity duration-150" />
-            </g>
-          )
-        })}
-        {graph.nodes.map((node) => {
-          const pos = graph.pos[node.id]
-          if (!pos) return null
-          const { x, y } = toSVG(pos)
-          const colors = sNodeColor(node.status)
-          const isActive = node.id === graph.active_id
-          const isSelected = state.selectedNodeId === node.id
-          const isClickable = canSelect && (node.status === "COMPLETED" || node.status === "IN_PROGRESS")
-          const r = 10
-          return (
-            <g key={node.id}
-              className={isClickable ? "cursor-pointer" : "cursor-default"}
-              onMouseEnter={(e) => { setHoveredNode(node.id); setHoveredEdge(null); updateTooltipPos(e.clientX, e.clientY) }}
-              onMouseMove={(e) => updateTooltipPos(e.clientX, e.clientY)}
-              onMouseLeave={() => setHoveredNode(null)}
-              onClick={() => { if (isClickable) dispatch({ type: "SELECT_NODE", data: { nodeId: isSelected ? null : node.id } }) }}
-            >
-              {/* Label above node */}
-              <text x={x} y={y - r - 5} textAnchor="middle" dominantBaseline="auto"
-                fill={node.status === "UNFINISHED" ? "var(--muted-foreground)" : "var(--foreground)"}
-                fontSize="9" fontFamily="var(--font-mono)" fontWeight="600"
-                opacity={node.status === "UNFINISHED" ? 0.4 : 0.85}>
-                {node.label_id}
-              </text>
-              {isActive && node.status === "IN_PROGRESS" && (
-                <circle cx={x} cy={y} r={r + 5} fill="none" stroke={colors.stroke} strokeWidth="1" opacity={0.35} className="animate-node-breathe" />
-              )}
-              {(hoveredNode === node.id || isSelected) && !(isActive && node.status === "IN_PROGRESS") && (
-                <circle cx={x} cy={y} r={r + 4} fill="none" stroke={colors.stroke} strokeWidth="0.8" opacity={0.25} />
-              )}
-              <circle cx={x} cy={y} r={r}
-                fill={node.status === "UNFINISHED" ? "var(--background)" : colors.fill}
-                stroke={colors.stroke} strokeWidth={isSelected ? 2 : 1.2}
-                opacity={node.status === "UNFINISHED" ? 0.35 : 1} />
-              {node.status === "COMPLETED" && (
-                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="10" fontWeight="bold">&#x2713;</text>
-              )}
-              {node.status === "IN_PROGRESS" && isActive && (
-                <circle cx={x} cy={y} r={3} fill="var(--background)" />
-              )}
-            </g>
-          )
-        })}
-      </svg>
-      <PortalTooltip show={!!hoveredNodeData}>
-        <div className="fixed z-[200] pointer-events-none" style={{ left: tooltipPos.x, top: tooltipPos.y, maxWidth: 240 }}>
-          <div className="bg-popover text-popover-foreground border border-border rounded-lg px-3 py-2.5 shadow-2xl">
-            <p className="text-xs font-semibold text-foreground leading-tight">{hoveredNodeData?.hover_title}</p>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{hoveredNodeData?.hover_desc}</p>
-          </div>
-        </div>
-      </PortalTooltip>
-      <PortalTooltip show={!!hoveredEdge}>
-        <div className="fixed z-[200] pointer-events-none" style={{ left: tooltipPos.x, top: tooltipPos.y, maxWidth: 220 }}>
-          <div className="bg-popover text-popover-foreground border border-border rounded-lg px-3 py-2.5 shadow-2xl">
-            <p className="text-xs text-foreground leading-relaxed">{t("Path transition")}</p>
-          </div>
-        </div>
-      </PortalTooltip>
-    </>
-  )
+  return { svgW, svgH, pos }
 }
 
-/* ── Polished Mock SVG DAG ── */
-function DAGVisualization() {
-  const { state, dispatch } = useChronoFork()
-  const { t } = useI18n()
-  const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null)
-  const [hoveredEdge, setHoveredEdge] = useState<GraphEdge | null>(null)
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
-
-  const canSelect = ["observe_complete", "intervene_idle"].includes(state.phase)
-  const showDivergent = state.divergence.exists || state.divergence.inProgress
-
+function buildMockGraph(phase: string, divergence: { exists: boolean; inProgress: boolean }, activeNodeId: string | null): UnifiedGraph {
+  const canSelect = ["observe_complete", "intervene_idle"].includes(phase)
+  const showDivergent = divergence.exists || divergence.inProgress
   const visibleNodes = graphNodes.filter((n) => n.branch === "canonical" || showDivergent)
   const visibleEdges = graphEdges.filter((e) => !(e.branch === "divergent" && !showDivergent))
 
-  /* Tighter layout */
-  const nodeSpacing = 68
-  const svgW = showDivergent ? 250 : 180
-  const canonicalNodes = visibleNodes.filter((n) => n.branch === "canonical")
-  const svgH = Math.max(200, canonicalNodes.length * nodeSpacing + 50)
+  return {
+    nodes: visibleNodes.map((node) => ({
+      id: node.id,
+      label: node.label,
+      status: node.status,
+      branch: node.branch,
+      hoverTitle: node.hoverTitle,
+      hoverDesc: node.hoverDesc,
+      isClickable: canSelect && node.branch === "canonical" && (node.status === "completed" || node.status === "in_progress"),
+    })),
+    edges: visibleEdges.map((edge) => ({
+      ...edge,
+      tooltip: edgeChoiceText(edge),
+    })),
+    pos: Object.fromEntries(visibleNodes.map((node) => [node.id, [node.pos.x, node.pos.y] as [number, number]])),
+    activeNodeId,
+  }
+}
 
-  /* Recompute positions for tighter vertical layout */
-  const posMap = new Map<string, { x: number; y: number }>()
-  canonicalNodes.forEach((n, i) => {
-    posMap.set(n.id, { x: svgW / 2 - (showDivergent ? 30 : 0), y: 30 + i * nodeSpacing })
-  })
-  visibleNodes.filter((n) => n.branch === "divergent").forEach((n, i) => {
-    const parentCanon = graphEdges.find((e) => e.to === n.id)
-    const parentPos = parentCanon ? posMap.get(parentCanon.from) : null
-    const baseY = parentPos ? parentPos.y + 40 : 180
-    posMap.set(n.id, { x: svgW / 2 + 55, y: baseY + i * nodeSpacing })
-  })
+function buildServerGraph(graph: ServerGraphData, phase: string): UnifiedGraph {
+  const canSelect = ["observe_complete", "intervene_idle"].includes(phase)
+  return {
+    nodes: graph.nodes.map((node) => ({
+      id: node.id,
+      label: node.label_id,
+      status:
+        node.status === "COMPLETED"
+          ? "completed"
+          : node.status === "IN_PROGRESS"
+            ? "in_progress"
+            : node.status === "SUSPENDED"
+              ? "suspended"
+              : "unfinished",
+      branch: "canonical",
+      hoverTitle: node.hover_title,
+      hoverDesc: node.hover_desc,
+      isClickable: canSelect && (node.status === "COMPLETED" || node.status === "IN_PROGRESS"),
+    })),
+    edges: graph.edges.map(([from, to]) => ({
+      from,
+      to,
+      branch: "canonical" as const,
+      tooltip: {
+        title: "Choice",
+        desc: "Path transition",
+      },
+    })),
+    pos: graph.pos,
+    activeNodeId: graph.active_id,
+  }
+}
+
+/* ── Unified DAG Visualization ── */
+function UnifiedDAGVisualization({ graph }: { graph: UnifiedGraph }) {
+  const { state, dispatch } = useChronoFork()
+  const { t } = useI18n()
+  const [hoveredNode, setHoveredNode] = useState<UnifiedNode | null>(null)
+  const [hoveredEdge, setHoveredEdge] = useState<UnifiedEdge | null>(null)
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const layout = computeGraphLayout(graph)
+  const r = 12
 
   const updateTooltipPos = useCallback((cx: number, cy: number) => {
     setTooltipPos({ x: cx + 14, y: cy - 8 })
   }, [])
 
-  const onNodeEnter = useCallback((e: React.MouseEvent, node: GraphNode) => {
+  const onNodeEnter = useCallback((e: React.MouseEvent, node: UnifiedNode) => {
     setHoveredNode(node); setHoveredEdge(null); updateTooltipPos(e.clientX, e.clientY)
   }, [updateTooltipPos])
   const onNodeMove = useCallback((e: React.MouseEvent) => { updateTooltipPos(e.clientX, e.clientY) }, [updateTooltipPos])
-  const onEdgeEnter = useCallback((e: React.MouseEvent, edge: GraphEdge) => {
+  const onEdgeEnter = useCallback((e: React.MouseEvent, edge: UnifiedEdge) => {
     setHoveredEdge(edge); setHoveredNode(null); updateTooltipPos(e.clientX, e.clientY)
   }, [updateTooltipPos])
   const onEdgeMove = useCallback((e: React.MouseEvent) => { updateTooltipPos(e.clientX, e.clientY) }, [updateTooltipPos])
   const onLeave = useCallback(() => { setHoveredNode(null); setHoveredEdge(null) }, [])
 
   const hoveredTn = hoveredNode ? timelineNodes.find((t) => t.id === hoveredNode.id) : null
-  const r = 10
 
   return (
     <>
-      <svg width="100%" viewBox={`0 0 ${svgW} ${svgH}`} className="block" role="img" aria-label="Timeline DAG">
-        {/* Edges */}
-        {visibleEdges.map((edge) => {
-          const fromPos = posMap.get(edge.from), toPos = posMap.get(edge.to)
+      <svg width={layout.svgW} height={layout.svgH} viewBox={`0 0 ${layout.svgW} ${layout.svgH}`} className="block" role="img" aria-label="Timeline DAG">
+        {graph.edges.map((edge) => {
+          const fromPos = layout.pos[edge.from]
+          const toPos = layout.pos[edge.to]
           if (!fromPos || !toPos) return null
           const isDivergent = edge.branch === "divergent"
           const isHovered = hoveredEdge === edge
@@ -233,33 +217,29 @@ function DAGVisualization() {
           )
         })}
 
-        {/* Nodes */}
-        {visibleNodes.map((node) => {
-          const pos = posMap.get(node.id)
+        {graph.nodes.map((node) => {
+          const pos = layout.pos[node.id]
           if (!pos) return null
           const { x, y } = pos
           const isSelected = state.selectedNodeId === node.id
-          const isActive = state.activeNodeId === node.id
+          const isActive = (graph.activeNodeId ?? state.activeNodeId) === node.id
           const isBacktracked = state.divergence.backtrackedNodeId === node.id
           const colors = nodeColor(node, isBacktracked)
-          const isClickable = canSelect && node.branch === "canonical" && (node.status === "completed" || node.status === "in_progress")
           const isDivergent = node.branch === "divergent"
 
           return (
             <g key={node.id}
-              className={isClickable ? "cursor-pointer" : "cursor-default"}
+              className={node.isClickable ? "cursor-pointer" : "cursor-default"}
               onMouseEnter={(e) => onNodeEnter(e, node)} onMouseMove={onNodeMove} onMouseLeave={onLeave}
-              onClick={() => { if (isClickable) dispatch({ type: "SELECT_NODE", data: { nodeId: isSelected ? null : node.id } }) }}
+              onClick={() => { if (node.isClickable) dispatch({ type: "SELECT_NODE", data: { nodeId: isSelected ? null : node.id } }) }}
             >
-              {/* Label ABOVE the node */}
               <text x={x} y={y - r - 5} textAnchor="middle" dominantBaseline="auto"
                 fill={node.status === "unfinished" ? "var(--muted-foreground)" : "var(--foreground)"}
-                fontSize="9" fontFamily="var(--font-mono)" fontWeight="600"
+                fontSize="10" fontFamily="var(--font-mono)" fontWeight="600"
                 opacity={node.status === "unfinished" ? 0.4 : 0.85}>
                 {node.label}
               </text>
 
-              {/* Breathing glow ring for active node */}
               {isActive && node.status === "in_progress" && (
                 <circle cx={x} cy={y} r={r + 5} fill="none" stroke={colors.stroke} strokeWidth="1" opacity={0.35} className="animate-node-breathe" />
               )}
@@ -267,13 +247,11 @@ function DAGVisualization() {
                 <circle cx={x} cy={y} r={r + 4} fill="none" stroke={colors.stroke} strokeWidth="0.8" opacity={0.25} />
               )}
 
-              {/* Main node circle */}
               <circle cx={x} cy={y} r={r}
                 fill={node.status === "unfinished" || node.status === "suspended" ? "var(--background)" : colors.fill}
                 stroke={colors.stroke} strokeWidth={isSelected ? 2 : 1.2}
                 opacity={node.status === "unfinished" ? 0.35 : 1} />
 
-              {/* Status icon inside */}
               {node.status === "completed" && !isBacktracked && !isDivergent && (
                 <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="10" fontWeight="bold">&#x2713;</text>
               )}
@@ -309,11 +287,11 @@ function DAGVisualization() {
         </div>
       </PortalTooltip>
 
-      {/* Edge tooltip */}
       <PortalTooltip show={!!hoveredEdge}>
         <div className="fixed z-[200] pointer-events-none" style={{ left: tooltipPos.x, top: tooltipPos.y, maxWidth: 220 }}>
           <div className="bg-popover text-popover-foreground border border-border rounded-lg px-3 py-2.5 shadow-2xl">
-            <p className="text-xs text-foreground leading-relaxed">{hoveredEdge ? edgeChoiceText(hoveredEdge) : ""}</p>
+            <p className="text-xs font-semibold text-foreground leading-tight">{hoveredEdge?.tooltip.title}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{hoveredEdge?.tooltip.desc}</p>
           </div>
         </div>
       </PortalTooltip>
@@ -327,22 +305,28 @@ export function TimeRiverDock() {
   const { t } = useI18n()
   const isOpen = state.ui.docks.leftOpen
   const scrollRef = useRef<HTMLDivElement>(null)
+  const activeGraph = state.serverGraph ? buildServerGraph(state.serverGraph, state.phase) : buildMockGraph(state.phase, state.divergence, state.activeNodeId)
 
   useEffect(() => {
     if (!isOpen || !scrollRef.current) return
+    const activeNodeId = activeGraph.activeNodeId ?? state.activeNodeId
+    if (!activeNodeId) return
+
     const timer = setTimeout(() => {
       if (scrollRef.current) {
         const container = scrollRef.current
-        const activeNode = graphNodes.find((n) => n.id === state.activeNodeId)
-        if (activeNode) {
-          const ratio = activeNode.pos.y / 440
-          const scrollTarget = ratio * container.scrollHeight - container.clientHeight / 2
-          container.scrollTo({ top: Math.max(0, scrollTarget), behavior: "smooth" })
-        }
+        const layout = computeGraphLayout(activeGraph)
+        const activePos = layout.pos[activeNodeId]
+        if (!activePos) return
+        container.scrollTo({
+          left: Math.max(0, activePos.x - container.clientWidth / 2),
+          top: Math.max(0, activePos.y - container.clientHeight / 2),
+          behavior: "smooth",
+        })
       }
     }, 300)
     return () => clearTimeout(timer)
-  }, [state.activeNodeId, isOpen])
+  }, [activeGraph, isOpen, state.activeNodeId])
 
   return (
     <div className="absolute left-3 top-3 z-30" style={{ width: isOpen ? "auto" : "auto", maxWidth: 260 }}>
@@ -365,8 +349,18 @@ export function TimeRiverDock() {
               className="overflow-hidden"
             >
               <div className="border-t border-border/20" />
-              <div ref={scrollRef} className="overflow-auto max-h-[55vh] px-2 py-2">
-                {state.serverGraph ? <ServerDAGVisualization graph={state.serverGraph} /> : <DAGVisualization />}
+              <div
+                ref={scrollRef}
+                className="overflow-auto max-h-[55vh] max-w-[260px] px-2 py-2"
+                onWheel={(e) => {
+                  const container = e.currentTarget
+                  if (e.deltaX !== 0) container.scrollLeft += e.deltaX
+                  if (e.deltaY !== 0) container.scrollTop += e.deltaY
+                }}
+              >
+                <div className="grid min-w-full place-items-center">
+                  <UnifiedDAGVisualization graph={activeGraph} />
+                </div>
               </div>
             </motion.div>
           )}

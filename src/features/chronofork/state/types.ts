@@ -13,7 +13,7 @@ export type FlowPhase =
   | "branch_complete"     // branch run ended
   | "reflection_open"     // user on report page
 
-export type ChatMessageType = "dialogue" | "user_chat" | "user_diverge" | "system" | "clarify"
+export type ChatMessageType = "dialogue" | "user_chat" | "user_diverge" | "system" | "clarify" | "node_update" | "backtrack_complete" | "history_divider"
 
 export interface ChatMessage {
   id: string
@@ -24,6 +24,7 @@ export interface ChatMessage {
   text: string
   timestamp: number
   isKeyMoment?: boolean
+  meta?: any // For storing from_id, to_id, etc.
 }
 
 /* ── Server-side config from system_init ── */
@@ -198,6 +199,7 @@ export type RunAction =
   | { type: "FACILITATOR_STREAM"; data: { token: string } }
   | { type: "NODE_UPDATE"; data: { from_id: string; to_id: string } }
   | { type: "ACTION_UPDATE_BACKTRACK"; data: { new_node_id: string; new_role: string } }
+  | { type: "COMPLETE_HISTORY_REVIEW" }
   | { type: "ACTION_UPDATE_DIVERGENCE_IN_PROGRESS" }
   | { type: "ACTION_UPDATE_DIVERGENCE_COMPLETE"; data: { report: string } }
   | { type: "SET_ANALYSIS_HTML"; data: { html: string } }

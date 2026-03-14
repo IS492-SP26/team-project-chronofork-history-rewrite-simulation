@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useRef, useEffect } from "react"
 import { useChronoFork } from "@features/chronofork/state/context"
 import { useI18n } from "@features/chronofork/i18n"
 import { phaseColor } from "@features/chronofork/phaseColor"
@@ -21,6 +21,45 @@ import { toast } from "sonner"
    TRANSCRIPT PANEL -- no timestamps, centered speakers
    ════════════════════════════════════════════════════════════════ */
 
+const SPEAKER_COLORS = [
+  "#0284c7", // Sky
+  "#ea580c", // Amber
+  "#059669", // Emerald
+  "#4f46e5", // Indigo
+  "#db2777", // Pink
+  "#e11d48", // Rose
+  "#7c3aed", // Violet
+  "#d97706", // Orange
+]
+
+function getSpeakerColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return SPEAKER_COLORS[Math.abs(hash) % SPEAKER_COLORS.length]
+}
+
+function getSpeakerEmoji(name: string, config: any): string | undefined {
+  if (!config || !name) return undefined
+  
+  // Try exact match or substring match for user role
+  const ur = config.user_role
+  if (ur && (ur.name === name || name.includes(ur.name) || ur.name.includes(name))) {
+    return ur.avatar
+  }
+  
+  // Try exact match or substring match for cast data
+  if (config.cast_data) {
+    const cast = config.cast_data.find((c: any) => 
+      c.name === name || name.includes(c.name) || c.name.includes(name)
+    )
+    if (cast) return cast.avatar
+  }
+  
+  return undefined
+}
+
 function TranscriptPanel() {
   const { state } = useChronoFork()
   const { t } = useI18n()
@@ -30,7 +69,7 @@ function TranscriptPanel() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [state.chatHistory.length])
 
-  const groups = groupBySpeakerPair(state.chatHistory)
+  const groups = groupBySpeakerPair(state.chatHistory, state.serverConfig)
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -43,26 +82,31 @@ function TranscriptPanel() {
           </div>
         ) : (
           <div className="flex flex-col gap-5">
-            {groups.map((group, gi) => (
-              <div key={gi}>
+            {groups.map((group, gi) => {
+              const isSpecial = group.speakerName === "System" && !group.color
+              return (
+              <div key={gi} className="animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
                 {/* Centered speaker header -- no timestamps */}
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <SpeakerPill name={group.speakerName} color={group.color} />
-                  {group.targetName && (
-                    <>
-                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40" />
-                      <SpeakerPill name={group.targetName} color={group.targetColor ?? "var(--muted-foreground)"} />
-                    </>
-                  )}
-                </div>
+                {!isSpecial && (
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <SpeakerPill name={group.speakerName} emoji={group.emoji} color={group.color} />
+                    {group.targetName && (
+                      <>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40" />
+                        <SpeakerPill name={group.targetName} emoji={group.targetEmoji} color={group.targetColor ?? "var(--muted-foreground)"} />
+                      </>
+                    )}
+                  </div>
+                )}
                 {/* Messages */}
-                <div className="flex flex-col gap-1 pl-2.5 border-l-2 border-border/15 ml-1">
+                <div className={`flex flex-col gap-1 ${isSpecial ? "" : "pl-2.5 border-l-[3px] ml-1"}`}
+                  style={!isSpecial ? { borderLeftColor: `color-mix(in oklch, ${group.color} 30%, transparent)` } : {}}>
                   {group.messages.map((msg) => (
                     <TranscriptLine key={msg.id} message={msg} />
                   ))}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -70,11 +114,13 @@ function TranscriptPanel() {
   )
 }
 
-function SpeakerPill({ name, color }: { name: string; color: string }) {
+function SpeakerPill({ name, emoji, color }: { name: string; emoji?: string; color?: string }) {
+  if (!color) return null
   return (
-    <span className="text-xs font-bold px-2 py-0.5 rounded-md"
-      style={{ backgroundColor: `color-mix(in oklch, ${color} 12%, transparent)`, color }}>
-      {name}
+    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md drop-shadow-sm tracking-wide bg-background/50 border border-border/50 flex items-center gap-1.5"
+      style={{ color }}>
+      {emoji && <span className="text-xs">{emoji}</span>}
+      <span>{name}</span>
     </span>
   )
 }
@@ -82,21 +128,30 @@ function SpeakerPill({ name, color }: { name: string; color: string }) {
 /* ── Grouping helper -- no timestamps ── */
 interface MessageGroup {
   speakerName: string
+  emoji?: string
   color: string
   targetName?: string
+  targetEmoji?: string
   targetColor?: string
   sceneLabel?: string
   messages: ChatMessage[]
 }
 
-function groupBySpeakerPair(messages: ChatMessage[]): MessageGroup[] {
+function groupBySpeakerPair(messages: ChatMessage[], config: any): MessageGroup[] {
   const groups: MessageGroup[] = []
   let currentGroup: MessageGroup | null = null
 
   for (const msg of messages) {
-    const role = msg.speakerId ? roles.find((r) => r.id === msg.speakerId) : null
-    const color = role?.portrait ?? (msg.type === "user_chat" || msg.type === "user_diverge" ? "var(--chrono-teal)" : "var(--muted-foreground)")
+    if (msg.type === "node_update" || msg.type === "backtrack_complete" || msg.type === "history_divider") {
+      groups.push({ speakerName: "System", color: "", messages: [msg] })
+      currentGroup = null
+      continue
+    }
+
     const speakerName = msg.speakerName
+    let color = getSpeakerColor(speakerName)
+    if (msg.type === "user_chat" || msg.type === "user_diverge") color = "var(--chrono-teal)"
+    const emoji = getSpeakerEmoji(speakerName, config)
 
     /* Scene label from matching beat */
     let sceneLabel: string | undefined
@@ -110,17 +165,20 @@ function groupBySpeakerPair(messages: ChatMessage[]): MessageGroup[] {
 
     if (!currentGroup || currentGroup.speakerName !== speakerName) {
       let targetName: string | undefined
+      let targetEmoji: string | undefined
       let targetColor: string | undefined
       const idx = messages.indexOf(msg)
       if (idx > 0) {
         const prev = messages[idx - 1]
-        if (prev.speakerName !== speakerName) {
+        // only link arrow if it wasn't a system msg
+        if (prev.speakerName !== speakerName && prev.speakerName !== "System") {
           targetName = prev.speakerName
-          const tRole = prev.speakerId ? roles.find((r) => r.id === prev.speakerId) : null
-          targetColor = tRole?.portrait ?? "var(--muted-foreground)"
+          targetEmoji = getSpeakerEmoji(prev.speakerName, config)
+          targetColor = getSpeakerColor(prev.speakerName)
+          if (prev.type === "user_chat" || prev.type === "user_diverge") targetColor = "var(--chrono-teal)"
         }
       }
-      currentGroup = { speakerName, color, targetName, targetColor, sceneLabel, messages: [msg] }
+      currentGroup = { speakerName, emoji, color, targetName, targetEmoji, targetColor, sceneLabel, messages: [msg] }
       groups.push(currentGroup)
     } else {
       currentGroup.messages.push(msg)
@@ -131,15 +189,66 @@ function groupBySpeakerPair(messages: ChatMessage[]): MessageGroup[] {
 
 function TranscriptLine({ message }: { message: ChatMessage }) {
   const { t } = useI18n()
+  
+  if (message.type === "node_update") {
+    const { from_id, to_id } = message.meta || {}
+    if (from_id === 'start') {
+      return (
+        <div className="text-center text-[#28a745] my-5 font-bold animate-in fade-in zoom-in duration-500">
+          🌱 故事从节点 {to_id} 开始
+        </div>
+      )
+    } else if (to_id === 'end') {
+      return (
+        <div className="text-center text-[#dc3545] my-5 font-bold animate-in fade-in zoom-in duration-500">
+          🏁 到达结局（节点 {from_id}）
+        </div>
+      )
+    } else {
+      return (
+        <div className="text-center text-[#888] text-[0.9em] my-[15px] animate-in fade-in duration-500 flex items-center justify-center gap-2">
+          <span className="h-px bg-border flex-1" />
+          <span>── 📍 流转：{from_id} ➔ {to_id} ──</span>
+          <span className="h-px bg-border flex-1" />
+        </div>
+      )
+    }
+  }
+
+  if (message.type === "backtrack_complete") {
+    const { new_role, new_node_id } = message.meta || {}
+    return (
+      <div className="my-6 p-4 rounded-xl bg-muted/40 border border-border/50 backdrop-blur-sm text-center animate-in slide-in-from-bottom-2 fade-in duration-500">
+        <h4 className="text-sm font-bold mb-1 flex items-center justify-center gap-1.5"><Zap className="w-4 h-4 text-chrono-teal" /> 🔄 回溯完成</h4>
+        <p className="text-xs text-muted-foreground">
+          已以 <b className="text-foreground">{new_role}</b> 身份回溯到节点 <b className="text-foreground">{new_node_id}</b>。
+        </p>
+      </div>
+    )
+  }
+
+  if (message.type === "history_divider") {
+    return (
+      <div className="text-center text-muted-foreground/80 font-mono text-[10px] my-6 flex items-center justify-center gap-2 animate-in fade-in duration-700">
+        <span className="h-px bg-border/50 flex-1" />
+        <span className="px-2 py-0.5 rounded-full bg-muted/30 border border-border/30">── 📝 之前的交互上下文 ──</span>
+        <span className="h-px bg-border/50 flex-1" />
+      </div>
+    )
+  }
+
   const isDiverge = message.type === "user_diverge"
   const isSystem = message.type === "system"
-  if (isSystem) return <div className="text-center py-1"><span className="text-xs text-muted-foreground font-mono">{message.text}</span></div>
+  if (isSystem) return <div className="text-center py-2"><span className="text-[10px] text-muted-foreground font-mono bg-muted/30 px-2 py-0.5 rounded-md">{message.text}</span></div>
+
+  const isUser = message.type === "user_chat" || message.type === "user_diverge"
 
   return (
-    <div className={`py-1 ${isDiverge ? "rounded-lg px-2.5 -mx-1" : ""}`}
-      style={isDiverge ? { backgroundColor: "color-mix(in oklch, var(--chrono-amber) 8%, transparent)" } : undefined}>
-      <p className="text-xs text-foreground/90 leading-relaxed">
-        {isDiverge && <Badge variant="outline" className="text-[10px] font-mono mr-1 py-0" style={{ color: "var(--chrono-amber)", borderColor: "color-mix(in oklch, var(--chrono-amber) 30%, transparent)" }}>{t("DIVERGE")}</Badge>}
+    <div className={`py-1.5 px-3 rounded-xl my-0.5 transition-colors hover:bg-muted/30 ${isDiverge ? "border border-chrono-amber/20" : ""}`}
+      style={isDiverge ? { backgroundColor: "color-mix(in oklch, var(--chrono-amber) 6%, transparent)" } : 
+             isUser ? { backgroundColor: "color-mix(in oklch, var(--chrono-teal) 4%, transparent)" } : undefined}>
+      <p className="text-[13px] text-foreground/90 leading-[1.6]">
+        {isDiverge && <Badge variant="outline" className="text-[9px] font-mono mr-1.5 py-0 px-1 rounded-sm" style={{ color: "var(--chrono-amber)", borderColor: "color-mix(in oklch, var(--chrono-amber) 30%, transparent)", backgroundColor: "color-mix(in oklch, var(--chrono-amber) 10%, transparent)" }}>{t("DIVERGE")}</Badge>}
         {message.text}
       </p>
     </div>
@@ -348,7 +457,7 @@ export function TacticalHUDDock() {
   const { state, dispatch } = useChronoFork()
   const { t } = useI18n()
   const { phase } = state
-  const [transcriptOpen, setTranscriptOpen] = useState(true)
+  const isOpen = state.ui.docks.rightOpen
   const showDivergenceLoader = phase === "divergence_running"
   const pc = phaseColor(phase)
 
@@ -367,17 +476,17 @@ export function TacticalHUDDock() {
       {/* Transcript Card -- shrinks to header when collapsed, grows to fill otherwise */}
       <FloatingCard
         className="pointer-events-auto flex flex-col min-h-0"
-        style={{ flex: transcriptOpen ? (hasBottomPanel ? "1 1 50%" : "1 1 100%") : "0 0 auto", minHeight: 0 }}
+        style={{ flex: isOpen ? (hasBottomPanel ? "1 1 50%" : "1 1 100%") : "0 0 auto", minHeight: 0 }}
       >
         <button
-          onClick={() => setTranscriptOpen(!transcriptOpen)}
+          onClick={() => dispatch({ type: "TOGGLE_DOCK", data: { dock: "right" } })}
           className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-secondary/20 transition-colors shrink-0"
-          aria-label={transcriptOpen ? t("Collapse transcript") : t("Expand transcript")}
+          aria-label={isOpen ? t("Collapse transcript") : t("Expand transcript")}
         >
           <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("Transcript")}</h3>
-          {transcriptOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+          {isOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
         </button>
-        {transcriptOpen && (
+        {isOpen && (
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col border-t border-border/20">
             <TranscriptPanel />
           </div>
@@ -386,7 +495,7 @@ export function TacticalHUDDock() {
 
       {/* Tips Card -- 50% of space */}
       <AnimatePresence>
-        {showTipsCard && (
+        {isOpen && showTipsCard && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -414,7 +523,7 @@ export function TacticalHUDDock() {
 
       {/* Analysis Card -- 50% of space, shows loader first, then HTML container */}
       <AnimatePresence>
-        {showAnalysisCard && (
+        {isOpen && showAnalysisCard && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

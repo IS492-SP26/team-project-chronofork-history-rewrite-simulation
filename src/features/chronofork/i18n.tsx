@@ -141,6 +141,7 @@ const zhDict: Record<string, string> = {
   "Mock: Term explained": "模拟：术语已解释",
   "Mock: Moment bookmarked": "模拟：关键时刻已标记",
   "Repeat Intervene-Reflect from different nodes. The DAG on the left shows all branches.": "从不同节点重复“干预-复盘”流程。左侧 DAG 会展示全部分支。",
+  "Selected Node: ": "已选节点：",
 }
 
 const I18nContext = createContext<I18nContextValue>({

@@ -6,6 +6,7 @@ import { useI18n, type Locale } from "@features/chronofork/i18n"
 import { episode } from "@features/chronofork/mock/mockData"
 import type { FlowPhase } from "@features/chronofork/state/types"
 import type { ConnectionStatus } from "@features/chronofork/state/types"
+import { phaseTone } from "@features/chronofork/phaseColor"
 import { HelpCircle, Eye, Swords, BookOpen, Check, Lock, Sun, Moon, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -19,9 +20,10 @@ const segments: { id: SegId; icon: React.ElementType }[] = [
 function segState(id: SegId, phase: FlowPhase): "active" | "done" | "locked" {
   const obs: FlowPhase[] = ["observe_idle", "observe_playing", "observe_complete"]
   const int: FlowPhase[] = ["intervene_idle", "intervene_active", "divergence_running", "divergence_ready", "branch_complete"]
+  const ref: FlowPhase[] = ["branch_complete", "reflection_open"]
   if (id === "observe") return obs.includes(phase) ? "active" : "done"
-  if (id === "intervene") return int.includes(phase) ? "active" : phase === "reflection_open" ? "done" : "locked"
-  return phase === "reflection_open" ? "active" : "locked"
+  if (id === "intervene") return int.includes(phase) && !ref.includes(phase) ? "active" : ref.includes(phase) ? "done" : "locked"
+  return ref.includes(phase) ? "active" : "locked"
 }
 
 function segColor(id: SegId): string {
@@ -52,6 +54,7 @@ export function FlowHeader() {
   const wsInfo = wsStatusInfo(connectionStatus, locale)
   const displayTitle = serverConfig?.episode?.title ?? episode.title
   const segLabel: Record<SegId, string> = { observe: t("Observe"), intervene: t("Intervene"), reflection: t("Reflection") }
+  const tone = phaseTone(phase)
 
   return (
     <header className="flex items-center px-5 py-3 gap-4 glass-panel border-b border-border/30 relative z-40" style={{ minHeight: 56 }}>
@@ -135,6 +138,7 @@ export function FlowHeader() {
         <Button
           variant="ghost"
           size="sm"
+          tone={tone}
           className="h-8 px-2.5 text-[12px] font-mono uppercase tracking-wider border-border/40"
           onClick={toggleLocale}
           aria-label={locale === "zh" ? "切换到英文" : "Switch to Chinese"}
@@ -144,6 +148,7 @@ export function FlowHeader() {
         <Button
           variant="ghost"
           size="icon"
+          tone={tone}
           className="h-8 w-8 text-muted-foreground hover:text-foreground"
           onClick={toggleTheme}
           aria-label={locale === "zh" ? "切换主题" : "Toggle theme"}
@@ -153,6 +158,7 @@ export function FlowHeader() {
         <Button
           variant="ghost"
           size="icon"
+          tone={tone}
           className="h-8 w-8 text-muted-foreground hover:text-foreground"
           onClick={() => dispatch({ type: "TOGGLE_HELP_PANEL" })}
           aria-label={locale === "zh" ? "帮助" : "Help"}

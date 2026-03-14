@@ -167,14 +167,36 @@ export function runReducer(state: RunState, action: RunAction): RunState {
 
     case "NODE_UPDATE": {
       // Update active node on node transition
-      const { to_id } = action.data
-      if (to_id === "end") {
-        return { ...state, phase: "observe_complete", observeProgress: 100, decisionPointReached: true }
+      const { from_id, to_id } = action.data
+      const newHistory = [...state.chatHistory]
+      
+      const sysMsg: ChatMessage = {
+        id: `node_update_${from_id}_${to_id}_${Date.now()}`,
+        type: "node_update",
+        speakerName: "System",
+        text: "",
+        timestamp: Date.now(),
+        meta: { from_id, to_id }
       }
-      return { ...state, activeNodeId: to_id }
+      
+      // If we are observing or just got updated
+      newHistory.push(sysMsg)
+
+      if (to_id === "end") {
+        return { ...state, phase: "observe_complete", observeProgress: 100, decisionPointReached: true, chatHistory: newHistory }
+      }
+      return { ...state, activeNodeId: to_id, chatHistory: newHistory }
     }
 
     case "ACTION_UPDATE_BACKTRACK":
+      const backMsg: ChatMessage = {
+        id: `backtrack_${Date.now()}`,
+        type: "backtrack_complete",
+        speakerName: "System",
+        text: "",
+        timestamp: Date.now(),
+        meta: { new_node_id: action.data.new_node_id, new_role: action.data.new_role }
+      }
       return {
         ...state,
         phase: "intervene_active",
@@ -182,6 +204,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
         activeRoleName: action.data.new_role,
         divergence: { ...state.divergence, backtrackedNodeId: action.data.new_node_id },
         ui: { ...state.ui, showNodeDetail: false, rightDockTab: "transcript", showTips: false, showAnalysis: false },
+        chatHistory: [backMsg] // Clear previous history and set the backtrack message
       }
 
     case "ACTION_UPDATE_DIVERGENCE_IN_PROGRESS":
@@ -224,7 +247,14 @@ export function runReducer(state: RunState, action: RunAction): RunState {
 
     case "COMPLETE_HISTORY_REVIEW":
       // Stage2 history replay ended -- enable interaction
-      return { ...state, phase: "intervene_active" }
+      const divMsg: ChatMessage = {
+        id: `history_divider_${Date.now()}`,
+        type: "history_divider",
+        speakerName: "System",
+        text: "── 📝 之前的交互上下文 ──",
+        timestamp: Date.now()
+      }
+      return { ...state, phase: "intervene_active", chatHistory: [...state.chatHistory, divMsg] }
 
     /* ═══════════════════════════════════════════════
        Local / mock-driven actions (preserved from R1)
