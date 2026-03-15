@@ -155,6 +155,9 @@ export interface RunState {
   /* ── Input request ── */
   inputRequest: { msg: string; from_name: string } | null
 
+    /* ── Pending tip fill (tip selection → composer auto-fill) ── */
+    pendingTipFill: { text: string; targetName: string } | null
+
   /* ── UI ── */
   ui: {
     docks: { leftOpen: boolean; rightOpen: boolean }
@@ -217,3 +220,5 @@ export type RunAction =
   | { type: "SET_TIP_ERROR"; data: { msg: string } }
   | { type: "SET_TIP_LOADING"; data: { loading: boolean } }
   | { type: "SET_INPUT_REQUEST"; data: { msg: string; from_name: string } | null }
+  | { type: "SET_PENDING_TIP_FILL"; data: { text: string; targetName: string } }
+  | { type: "CLEAR_PENDING_TIP_FILL" }

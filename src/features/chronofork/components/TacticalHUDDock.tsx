@@ -89,10 +89,12 @@ function TranscriptPanel() {
                 {/* Centered speaker header -- no timestamps */}
                 {!isSpecial && (
                   <div className="flex items-center justify-center gap-2 mb-2">
+                    <span className="text-[10px] text-muted-foreground/70">🗣️</span>
                     <SpeakerPill name={group.speakerName} emoji={group.emoji} color={group.color} />
                     {group.targetName && (
                       <>
                         <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40" />
+                        <span className="text-[10px] text-muted-foreground/70">👂</span>
                         <SpeakerPill name={group.targetName} emoji={group.targetEmoji} color={group.targetColor ?? "var(--muted-foreground)"} />
                       </>
                     )}
@@ -167,17 +169,17 @@ function groupBySpeakerPair(messages: ChatMessage[], config: any): MessageGroup[
       let targetName: string | undefined
       let targetEmoji: string | undefined
       let targetColor: string | undefined
-      const idx = messages.indexOf(msg)
-      if (idx > 0) {
-        const prev = messages[idx - 1]
-        // only link arrow if it wasn't a system msg
-        if (prev.speakerName !== speakerName && prev.speakerName !== "System") {
-          targetName = prev.speakerName
-          targetEmoji = getSpeakerEmoji(prev.speakerName, config)
-          targetColor = getSpeakerColor(prev.speakerName)
-          if (prev.type === "user_chat" || prev.type === "user_diverge") targetColor = "var(--chrono-teal)"
-        }
+      
+      if (msg.targetName && msg.targetName !== speakerName && msg.targetName !== "System" && msg.targetName !== "User") {
+        targetName = msg.targetName
+        targetEmoji = getSpeakerEmoji(msg.targetName, config)
+        targetColor = getSpeakerColor(msg.targetName)
+      } else if (msg.targetName === "User") {
+        targetName = "User"
+        targetEmoji = "👤"
+        targetColor = "var(--chrono-teal)"
       }
+      
       currentGroup = { speakerName, emoji, color, targetName, targetEmoji, targetColor, sceneLabel, messages: [msg] }
       groups.push(currentGroup)
     } else {
@@ -195,20 +197,20 @@ function TranscriptLine({ message }: { message: ChatMessage }) {
     if (from_id === 'start') {
       return (
         <div className="text-center text-[#28a745] my-5 font-bold animate-in fade-in zoom-in duration-500">
-          🌱 故事从节点 {to_id} 开始
+          🌱 {t("Story begins from node ")}{to_id}{t(" starts")}
         </div>
       )
     } else if (to_id === 'end') {
       return (
         <div className="text-center text-[#dc3545] my-5 font-bold animate-in fade-in zoom-in duration-500">
-          🏁 到达结局（节点 {from_id}）
+          🏁 {t("Reached ending (node ")}{from_id}{t(")")}
         </div>
       )
     } else {
       return (
         <div className="text-center text-[#888] text-[0.9em] my-[15px] animate-in fade-in duration-500 flex items-center justify-center gap-2">
           <span className="h-px bg-border flex-1" />
-          <span>── 📍 流转：{from_id} ➔ {to_id} ──</span>
+          <span>── 📍 {t("Path transition: ")}{from_id} ➔ {to_id} ──</span>
           <span className="h-px bg-border flex-1" />
         </div>
       )
@@ -219,9 +221,9 @@ function TranscriptLine({ message }: { message: ChatMessage }) {
     const { new_role, new_node_id } = message.meta || {}
     return (
       <div className="my-6 p-4 rounded-xl bg-muted/40 border border-border/50 backdrop-blur-sm text-center animate-in slide-in-from-bottom-2 fade-in duration-500">
-        <h4 className="text-sm font-bold mb-1 flex items-center justify-center gap-1.5"><Zap className="w-4 h-4 text-chrono-teal" /> 🔄 回溯完成</h4>
+        <h4 className="text-sm font-bold mb-1 flex items-center justify-center gap-1.5"><Zap className="w-4 h-4 text-chrono-teal" /> 🔄 {t("Backtrack complete")}</h4>
         <p className="text-xs text-muted-foreground">
-          已以 <b className="text-foreground">{new_role}</b> 身份回溯到节点 <b className="text-foreground">{new_node_id}</b>。
+          {t("Backtracked as ")}<b className="text-foreground">{new_role}</b>{t(" to node ")}<b className="text-foreground">{new_node_id}</b>{t("。")}
         </p>
       </div>
     )
@@ -231,7 +233,7 @@ function TranscriptLine({ message }: { message: ChatMessage }) {
     return (
       <div className="text-center text-muted-foreground/80 font-mono text-[10px] my-6 flex items-center justify-center gap-2 animate-in fade-in duration-700">
         <span className="h-px bg-border/50 flex-1" />
-        <span className="px-2 py-0.5 rounded-full bg-muted/30 border border-border/30">── 📝 之前的交互上下文 ──</span>
+        <span className="px-2 py-0.5 rounded-full bg-muted/30 border border-border/30">── 📝 {t("Previous interaction context")} ──</span>
         <span className="h-px bg-border/50 flex-1" />
       </div>
     )
@@ -279,7 +281,12 @@ function intentIcon(type: string) {
 function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: () => void }) {
   const { t } = useI18n()
   const ic = intentColors[option.intentType] ?? intentColors.info_gathering
-  const targetRole = roles.find((r) => r.id === option.targetAgentId)
+  const targetRole = roles.find((r) =>
+    r.id === option.targetAgentId ||
+    r.name === option.targetAgentId ||
+    r.shortName === option.targetAgentId
+  )
+  const targetDisplayName = targetRole?.shortName ?? option.targetAgentId
 
   return (
     <div className="flex flex-col rounded-xl border border-border/30 bg-card/60 overflow-hidden">
@@ -291,14 +298,10 @@ function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: ()
           </Badge>
         </div>
         {/* Target */}
-        {targetRole && (
+        {option.targetAgentId && (
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-muted-foreground font-mono">{t("TO:")}</span>
-            <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
-              style={{ backgroundColor: `color-mix(in oklch, ${targetRole.portrait} 20%, transparent)`, color: targetRole.portrait }}>
-              {targetRole.shortName.slice(0, 2)}
-            </div>
-            <span className="text-xs font-medium text-foreground">{targetRole.shortName}</span>
+            <span className="text-xs font-medium text-foreground truncate max-w-[120px]">{targetDisplayName}</span>
           </div>
         )}
         {/* Label */}
@@ -345,12 +348,11 @@ function TipsPanelContent({ onSelectOption }: { onSelectOption: (opt: StrategyOp
       "Alliance Building": "alliance_building",
       "Info Gathering": "info_gathering",
     }
-    const targetRole = roles.find((r) => r.name === o.target_agent || r.shortName === o.target_agent)
     return {
       id: `server-opt-${i}`,
       label: o.label,
       intentType: intentMap[o.intent_type] ?? "info_gathering",
-      targetAgentId: targetRole?.id ?? o.target_agent,
+      targetAgentId: o.target_agent,
       exampleResponse: o.example_response,
       why: o.rationale,
       risk: o.risks,
@@ -412,13 +414,90 @@ function AnalysisPanelContent() {
 
   return (
     <div className="p-4">
-      <div className="rounded-xl border p-5 shadow-sm"
+      <div className="rounded-xl border p-5 shadow-sm divergence-report"
         style={{
           backgroundColor: "color-mix(in oklch, var(--chrono-amber) 4%, var(--card))",
           borderColor: "color-mix(in oklch, var(--chrono-amber) 20%, transparent)",
         }}>
         <div dangerouslySetInnerHTML={{ __html: html }} />
       </div>
+      <style jsx global>{`
+        .divergence-report .divergence-quote {
+          font-style: italic;
+          color: var(--foreground);
+          line-height: 1.65;
+          border-left: 3px solid color-mix(in oklch, var(--chrono-amber) 40%, transparent);
+          padding-left: 10px;
+          margin-bottom: 12px;
+          font-size: 12px;
+        }
+        .divergence-report .score-container {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          margin-bottom: 12px;
+          font-size: 12px;
+        }
+        .divergence-report .progress-track {
+          flex: 1;
+          height: 8px;
+          border-radius: 9999px;
+          background: color-mix(in oklch, var(--border) 70%, transparent);
+          overflow: hidden;
+        }
+        .divergence-report .progress-fill {
+          height: 100%;
+          border-radius: 9999px;
+        }
+        .divergence-report .drivers-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+          margin-top: 10px;
+        }
+        @media (min-width: 640px) {
+          .divergence-report .drivers-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+        .divergence-report .driver-col {
+          border: 1px solid color-mix(in oklch, var(--border) 65%, transparent);
+          border-radius: 10px;
+          padding: 10px;
+          background: color-mix(in oklch, var(--background) 85%, transparent);
+        }
+        .divergence-report .driver-col h4 {
+          margin: 0 0 8px;
+          font-size: 12px;
+          color: var(--foreground);
+        }
+        .divergence-report .driver-col ul {
+          margin: 0;
+          padding-left: 16px;
+        }
+        .divergence-report .driver-col li {
+          margin-bottom: 4px;
+          color: var(--foreground);
+          font-size: 12px;
+          line-height: 1.5;
+        }
+        /* Override backend inline font-size for projected outcomes block */
+        .divergence-report div[style*="font-size: 1.1em"] {
+          font-size: 13px !important;
+          line-height: 1.45 !important;
+        }
+        .divergence-report div[style*="margin-bottom: 4px"] {
+          font-size: 12px !important;
+          line-height: 1.55 !important;
+        }
+        .divergence-report div[style*="margin-bottom: 4px"] span {
+          font-size: inherit !important;
+        }
+        .divergence-report div[style*="font-size: 0.95em"] {
+          font-size: 11px !important;
+          line-height: 1.45 !important;
+        }
+      `}</style>
     </div>
   )
 }
@@ -468,11 +547,12 @@ export function TacticalHUDDock() {
 
   const handleSelectOption = (opt: StrategyOption) => {
     dispatch({ type: "CLOSE_TIPS" })
-    toast.success(`${t("Selected:")} ${opt.label}. ${t("Response inserted.")}`)
+    dispatch({ type: "SET_PENDING_TIP_FILL", data: { text: opt.exampleResponse, targetName: opt.targetAgentId } })
+    toast.success(`${t("Selected:")} ${opt.label}`)
   }
 
   return (
-    <div className="absolute right-3 top-3 bottom-3 z-30 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 320, width: 300 }}>
+    <div className="absolute right-3 top-3 bottom-3 z-30 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 380, width: 350 }}>
       {/* Transcript Card -- shrinks to header when collapsed, grows to fill otherwise */}
       <FloatingCard
         className="pointer-events-auto flex flex-col min-h-0"

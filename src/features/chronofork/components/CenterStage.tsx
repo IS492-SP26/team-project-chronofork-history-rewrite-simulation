@@ -14,9 +14,30 @@ import { MapPin, Clock, Play, Pause, Bookmark, Info, Send, Zap, Loader2, Eye, Us
 import { toast } from "sonner"
 
 /* ── helpers ── */
+/* ── Shared speaker color assignment (identical to TacticalHUDDock) ── */
+const SPEAKER_COLORS = [
+  "#0284c7", "#ea580c", "#059669", "#4f46e5",
+  "#db2777", "#e11d48", "#7c3aed", "#d97706",
+]
+function getSpeakerColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return SPEAKER_COLORS[Math.abs(hash) % SPEAKER_COLORS.length]
+}
+
 function getFaction(role: Role): "us" | "soviet" | "neutral" {
   if (["jfk", "rfk", "mcnamara", "lemay"].includes(role.id)) return "us"
   if (["khrushchev"].includes(role.id)) return "soviet"
+
+  const name = `${role.name ?? ""}`
+  const title = `${role.title ?? ""}`
+  const hint = `${name} ${title}`
+
+  if (hint.includes("肯尼迪") || hint.includes("美国") || hint.includes("U.S") || hint.includes("US")) return "us"
+  if (hint.includes("赫鲁晓夫") || hint.includes("苏联") || hint.includes("Soviet") || hint.includes("USSR")) return "soviet"
+
   return "neutral"
 }
 
@@ -34,43 +55,271 @@ function EmotionDot({ emotion }: { emotion: DialogueBeat["emotion"] }) {
   return <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: colors[emotion] ?? colors.calm }} aria-label={`Emotion: ${emotion}`} />
 }
 
-function Avatar({ role, isSpeaking, latestEmotion }: { role: Role; isSpeaking: boolean; latestEmotion?: DialogueBeat["emotion"] }) {
-  const f = getFaction(role)
-  const fs = factionStyle(f)
+type StageRole = Role & {
+  avatarEmoji?: string
+}
+
+type DialogueDisplayMode = "auto" | "manual"
+
+function Avatar({ role, isSpeaking, isListening, latestEmotion }: { role: StageRole; isSpeaking: boolean; isListening?: boolean; latestEmotion?: DialogueBeat["emotion"] }) {
+  const { t } = useI18n()
+  const ringColor = getSpeakerColor(role.name)
+  const active = isSpeaking || !!isListening
   return (
-    <div className={`flex flex-col items-center gap-1 transition-opacity duration-200 ${isSpeaking ? "opacity-100" : "opacity-30"}`}>
+    <div
+      className={`flex flex-col items-center gap-1 transition-all duration-300 ${
+        isSpeaking ? "scale-110 relative z-10" : isListening ? "scale-100" : "scale-90"
+      }`}
+      style={{ opacity: active ? 1 : 0.28, filter: isSpeaking ? "none" : undefined }}
+    >
       <div
-        className={`w-20 h-20 rounded-full flex items-center justify-center text-sm font-bold transition-all ${isSpeaking ? "animate-breathe" : ""}`}
+        className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold transition-all ${isSpeaking ? "animate-breathe" : ""}`}
         style={{
-          backgroundColor: fs.bg, color: fs.ring,
-          border: isSpeaking ? `2px solid ${fs.ring}` : "2px solid transparent",
-          boxShadow: isSpeaking ? fs.glow : "none",
+          backgroundColor: isSpeaking
+            ? `color-mix(in oklch, ${ringColor} 15%, var(--card))`
+            : isListening
+            ? "color-mix(in oklch, var(--chrono-amber) 12%, var(--card))"
+            : "var(--secondary)",
+          color: isSpeaking ? ringColor : isListening ? "var(--chrono-amber)" : "var(--muted-foreground)",
+          border: isSpeaking
+            ? `3px solid ${ringColor}`
+            : isListening
+            ? "2px dashed var(--chrono-amber)"
+            : "2px solid transparent",
+          boxShadow: isSpeaking
+            ? `0 0 20px 5px color-mix(in oklch, ${ringColor} 35%, transparent)`
+            : isListening
+            ? "0 0 12px 3px color-mix(in oklch, var(--chrono-amber) 28%, transparent)"
+            : "none",
         }}
       >
-        {role.shortName.slice(0, 2)}
+        <span>{role.avatarEmoji ?? role.shortName.slice(0, 2)}</span>
       </div>
-      <span className="text-xs font-semibold text-muted-foreground max-w-[60px] truncate text-center leading-tight">
+      <span
+        className="text-xs font-semibold max-w-[64px] truncate text-center leading-tight"
+        style={{ color: isSpeaking ? ringColor : isListening ? "var(--chrono-amber)" : "var(--muted-foreground)" }}
+      >
         {role.shortName}
       </span>
-      {latestEmotion && isSpeaking && <EmotionDot emotion={latestEmotion} />}
+      {isSpeaking && (
+        <span
+          className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5 whitespace-nowrap"
+          style={{ backgroundColor: ringColor }}
+        >
+          🗣️ {t("Speaking")}
+        </span>
+      )}
+      {!isSpeaking && isListening && (
+        <span
+          className="text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 whitespace-nowrap"
+          style={{ backgroundColor: "var(--chrono-amber)", color: "var(--background)" }}
+        >
+          👂 {t("Listening")}
+        </span>
+      )}
+      {latestEmotion && active && <EmotionDot emotion={latestEmotion} />}
+    </div>
+  )
+}
+
+function DialogueDisplayModeControls({
+  mode,
+  setMode,
+  onManualNext,
+  manualWaiting,
+  phaseColor: pc,
+  tone,
+}: {
+  mode: DialogueDisplayMode
+  setMode: (mode: DialogueDisplayMode) => void
+  onManualNext: () => void
+  manualWaiting: boolean
+  phaseColor: string
+  tone?: ReturnType<typeof phaseTone>
+}) {
+  const { t } = useI18n()
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{t("Dialogue Display")}</span>
+        <div className="ml-auto flex items-center gap-1 rounded-full border border-border/40 p-0.5">
+          <button
+            onClick={() => setMode("auto")}
+            className={`px-2.5 h-6 rounded-full text-[11px] font-semibold transition-colors ${mode === "auto" ? "text-primary-foreground" : "text-muted-foreground"}`}
+            style={mode === "auto" ? { backgroundColor: pc } : undefined}
+          >
+            {t("Auto")}
+          </button>
+          <button
+            onClick={() => setMode("manual")}
+            className={`px-2.5 h-6 rounded-full text-[11px] font-semibold transition-colors ${mode === "manual" ? "text-primary-foreground" : "text-muted-foreground"}`}
+            style={mode === "manual" ? { backgroundColor: pc } : undefined}
+          >
+            {t("Manual")}
+          </button>
+        </div>
+      </div>
+      {mode === "manual" && (
+        <Button
+          size="default"
+          tone={tone}
+          variant={manualWaiting ? "outline" : "default"}
+          className={`w-full h-9 text-sm font-semibold gap-2 ${manualWaiting ? "border-border/40 text-muted-foreground" : "text-primary-foreground"}`}
+          onClick={onManualNext}
+          disabled={manualWaiting}
+        >
+          {manualWaiting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+          {manualWaiting ? t("Waiting for next dialogue...") : t("Show Next Dialogue")}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/* ── Segmented observe progress bar ── */
+function SegmentedProgressBar({ phaseColor: pc }: { phaseColor: string }) {
+  const { state, ws } = useChronoFork()
+  const isWS = state.connectionStatus === "connected"
+  const transcriptTypes = new Set(["dialogue", "user_chat", "user_diverge"])
+  const configuredNodeCount = state.serverConfig?.storyline?.length ?? 0
+  const graphNodeCount = state.serverGraph?.current_path?.length ?? 0
+  const totalNodes = Math.max(configuredNodeCount, graphNodeCount, 1)
+  const totalSegments = Math.max(totalNodes - 1, 1)
+
+  // Node updates may include initial start -> first_node; this does not advance segment baseline.
+  const nodeUpdates = state.chatHistory.filter((m) => m.type === "node_update")
+  const transitionCount = nodeUpdates.filter((m) => m.meta?.from_id !== "start").length
+  const currentSegmentIdx = Math.min(transitionCount, totalSegments - 1)
+  const segStart = currentSegmentIdx / totalSegments
+  const segEnd = (currentSegmentIdx + 1) / totalSegments
+
+  // Count transcripts already displayed in current segment.
+  let lastNodeUpdateIdx = -1
+  for (let i = state.chatHistory.length - 1; i >= 0; i--) {
+    if (state.chatHistory[i].type === "node_update") {
+      lastNodeUpdateIdx = i
+      break
+    }
+  }
+  const shownTranscripts = state.chatHistory
+    .slice(lastNodeUpdateIdx + 1)
+    .filter((m) => transcriptTypes.has(m.type)).length
+
+  // Fine-grained progress is available only after the queue contains the next node_update.
+  let totalSegmentTranscripts = 0
+  let hasFineProgress = false
+
+  if (isWS) {
+    const queue = ws.getQueueSnapshot()
+    const nextNodeUpdateIdx = queue.findIndex((m) => m.type === "node_update")
+
+    if (nextNodeUpdateIdx >= 0) {
+      let queuedTranscriptBlocks = 0
+      let activeStreamKey: string | null = null
+
+      for (let i = 0; i < nextNodeUpdateIdx; i++) {
+        const msg = queue[i]
+        if (msg.type !== "stream_token") continue
+
+        const agent = typeof msg.data?.agent === "string" ? msg.data.agent : null
+        const target = typeof msg.data?.target === "string" ? msg.data.target : null
+        const streamKey = agent && target ? `${agent}::${target}` : null
+
+        if (!streamKey) continue
+        if (streamKey !== activeStreamKey) {
+          queuedTranscriptBlocks += 1
+          activeStreamKey = streamKey
+        }
+      }
+
+      totalSegmentTranscripts = shownTranscripts + queuedTranscriptBlocks
+      hasFineProgress = totalSegmentTranscripts > 0
+    }
+  }
+
+  const fineProgressRatio = hasFineProgress
+    ? Math.min(shownTranscripts / totalSegmentTranscripts, 1)
+    : 0
+
+  const fillPct = isWS
+    ? hasFineProgress
+      ? segStart + fineProgressRatio * (segEnd - segStart)
+      : segStart
+    : state.observeProgress / 100
+
+  const safeFillPct = Math.max(0, Math.min(fillPct, 1))
+  const currentNodeDisplay = Math.min(transitionCount + 1, totalNodes)
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="relative h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: "var(--secondary)" }}>
+        {/* Segment dividers */}
+        {Array.from({ length: totalSegments - 1 }, (_, i) => (
+          <div
+            key={i}
+            className="absolute top-0 bottom-0 w-px z-10"
+            style={{
+              left: `${((i + 1) / totalSegments) * 100}%`,
+              backgroundColor: "color-mix(in oklch, var(--background) 60%, transparent)",
+            }}
+          />
+        ))}
+        {/* Fill */}
+        <div
+          className="absolute left-0 top-0 h-full transition-all duration-500"
+          style={{ width: `${safeFillPct * 100}%`, backgroundColor: pc }}
+        />
+      </div>
+      <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+        <span>{Math.round(safeFillPct * 100)}%</span>
+        <span>{currentNodeDisplay} / {totalNodes}</span>
+      </div>
     </div>
   )
 }
 
 /* ── Facilitator Strip -- standard glass card, constrained width ── */
-function FacilitatorStrip({ text }: { text: string }) {
+function FacilitatorStrip({
+  text,
+  interaction,
+}: {
+  text?: string
+  interaction?: { isSpeaking: boolean; counterpart?: string }
+}) {
   const { t } = useI18n()
+  const isSpeaking = interaction?.isSpeaking ?? false
+  const toneColor = isSpeaking ? "var(--chrono-violet)" : "var(--chrono-amber)"
   return (
     <div className="flex justify-center px-4 py-1.5 shrink-0">
-      <div className="glass-panel max-w-lg w-full rounded-xl px-4 py-2.5">
+      <div
+        className="glass-panel max-w-lg w-full rounded-xl px-4 py-2.5 border"
+        style={{
+          borderColor: interaction ? toneColor : "color-mix(in oklch, var(--border) 70%, transparent)",
+          boxShadow: interaction
+            ? `0 0 14px 2px color-mix(in oklch, ${toneColor} 25%, transparent)`
+            : "none",
+        }}
+      >
         <div className="flex items-center gap-2 mb-0.5">
           <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
             style={{ backgroundColor: "color-mix(in oklch, var(--chrono-violet) 15%, transparent)" }}>
             <Eye className="w-3 h-3" style={{ color: "var(--chrono-violet)" }} />
           </div>
           <span className="text-xs font-mono uppercase tracking-wider font-bold" style={{ color: "var(--chrono-violet)" }}>{t("Facilitator")}</span>
+          {interaction && (
+            <span
+              className="text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+              style={{ backgroundColor: toneColor, color: "var(--background)" }}
+            >
+              {isSpeaking ? `🗣️ ${t("Speaking")}` : `👂 ${t("Listening")}`}
+            </span>
+          )}
+          {interaction?.counterpart && (
+            <span className="text-[10px] text-muted-foreground font-mono truncate">{interaction.counterpart}</span>
+          )}
         </div>
-        <p className="text-sm text-foreground/80 italic leading-relaxed">{text}</p>
+        {text && <p className="text-sm text-foreground/80 italic leading-relaxed">{text}</p>}
       </div>
     </div>
   )
@@ -253,53 +502,46 @@ function InteractionIdle() {
   )
 }
 
-function InteractionObserving() {
+function InteractionObserving({
+  dialogueMode,
+  setDialogueMode,
+  onManualNext,
+  manualWaiting,
+  showDialogueControls,
+}: {
+  dialogueMode: DialogueDisplayMode
+  setDialogueMode: (mode: DialogueDisplayMode) => void
+  onManualNext: () => void
+  manualWaiting: boolean
+  showDialogueControls: boolean
+}) {
   const { state } = useChronoFork()
   const { t } = useI18n()
   const [paused, setPaused] = useState(false)
   const pc = phaseColor(state.phase)
   const tone = phaseTone(state.phase)
-  /* Progress description instead of distracting bar */
-  const progressDesc = state.observeProgress < 25
-    ? t("The scene is unfolding. Key actors are establishing their positions...")
-    : state.observeProgress < 50
-    ? t("Tensions are building. Arguments are crystallizing around key options...")
-    : state.observeProgress < 75
-    ? t("A decision point approaches. Watch for moments where history could fork...")
-    : state.observeProgress < 100
-    ? t("The critical juncture is near. Prepare to intervene when you see an opening.")
-    : t("Observation complete. You may now select a node to backtrack.")
+  /* Segmented progress (replaces text description) */
 
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center gap-2">
         <Eye className="w-4 h-4" style={{ color: pc }} />
         <span className="text-sm font-semibold text-foreground">{t("Observation Mode")}</span>
-        <span className="text-[10px] font-mono ml-auto px-2 py-0.5 rounded-full" style={{ backgroundColor: `color-mix(in oklch, ${pc} 10%, transparent)`, color: pc }}>{state.observeProgress}%</span>
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed italic">{progressDesc}</p>
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40" onClick={() => toast.info(t("Mock: Scene summarized"))}>
-          <Info className="w-3.5 h-3.5" /> {t("Summarize")}
-        </Button>
-        <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40" onClick={() => toast.info(t("Mock: Term explained"))}>
-          {t("Explain term")}
-        </Button>
-        <Button size="sm" variant="outline" tone={tone}
-          className="text-xs h-7 px-2.5 gap-1 border-border/40"
-          disabled={!state.decisionPointReached}
-          onClick={() => toast.success(t("Mock: Moment bookmarked"))}
-        >
-          <Bookmark className="w-3.5 h-3.5" /> {t("Bookmark")}
-        </Button>
-        <Button size="sm" variant={paused ? "default" : "outline"} tone={tone}
-          className={`text-xs h-7 px-2.5 gap-1 ml-auto ${paused ? "text-primary-foreground" : "border-border/40"}`}
-          onClick={() => { setPaused(!paused); toast.info(paused ? t("Resumed") : t("Paused (mock)")) }}
-        >
-          {paused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-          {paused ? t("Resume") : t("Pause")}
-        </Button>
-      </div>
+      <SegmentedProgressBar phaseColor={pc} />
+      {/* <div className="flex items-center gap-1.5 flex-wrap">
+        ...commented controls...
+      </div> */}
+      {showDialogueControls && (
+        <DialogueDisplayModeControls
+          mode={dialogueMode}
+          setMode={setDialogueMode}
+          onManualNext={onManualNext}
+          manualWaiting={manualWaiting}
+          phaseColor={pc}
+          tone={tone}
+        />
+      )}
     </div>
   )
 }
@@ -309,15 +551,17 @@ function InteractionBacktrackSetup() {
   const { t } = useI18n()
   const isWS = state.connectionStatus === "connected"
   const playableRoles = roles.filter((r) => r.id !== "facilitator")
-  const userRoleName = state.serverConfig?.user_role?.name
-  const selectableServerRoles = (state.serverConfig?.cast_data ?? []).filter((c) => c.name !== userRoleName)
+  const selectableServerRoles = state.serverConfig?.cast_data ?? []
   const hasNode = !!state.selectedNodeId
   const hasRole = !!state.activeRoleId
   const pc = phaseColor(state.phase)
   const tone = phaseTone(state.phase)
-  const selectedNodeTitle = state.selectedNodeId
-    ? t("Selected Node: ") + timelineNodes.find((node) => node.id === state.selectedNodeId)?.label
+  const selectedNodeLabel = state.selectedNodeId
+    ? (state.serverGraph?.nodes.find((node) => node.id === state.selectedNodeId)?.label_id
+      ?? timelineNodes.find((node) => node.id === state.selectedNodeId)?.label
+      ?? state.selectedNodeId)
     : null
+  const selectedNodeTitle = selectedNodeLabel ? t("Selected Node: ") + selectedNodeLabel : null
 
   const handleBacktrack = () => {
     if (!state.selectedNodeId) return
@@ -407,7 +651,19 @@ function InteractionBacktrackSetup() {
   )
 }
 
-function InteractionComposer() {
+function InteractionComposer({
+  dialogueMode,
+  setDialogueMode,
+  onManualNext,
+  manualWaiting,
+  showDialogueControls,
+}: {
+  dialogueMode: DialogueDisplayMode
+  setDialogueMode: (mode: DialogueDisplayMode) => void
+  onManualNext: () => void
+  manualWaiting: boolean
+  showDialogueControls: boolean
+}) {
   const { state, dispatch, ws } = useChronoFork()
   const { t } = useI18n()
   const isWS = state.connectionStatus === "connected"
@@ -417,10 +673,26 @@ function InteractionComposer() {
   const activeRole = state.activeRoleId ? roles.find((r) => r.id === state.activeRoleId) : null
   const roleName = userRoleName ?? state.activeRoleName ?? activeRole?.name ?? activeRole?.shortName ?? "You"
   const targetRoles = roles.filter((r) => r.id !== "facilitator" && r.id !== state.activeRoleId)
-  const serverTargets = (state.serverConfig?.cast_data ?? []).filter((c) => c.name !== userRoleName)
+  const serverTargets = (state.serverConfig?.cast_data ?? []).filter((c) => c.name !== roleName)
   const [targetId, setTargetId] = useState<string | null>(null)
-  const pc = "var(--chrono-amber)"
+  const pc = phaseColor(state.phase)
   const tone = phaseTone(state.phase)
+
+  // Auto-select target when a specific agent sends an input_request to the user
+  useEffect(() => {
+    if (state.inputRequest?.from_name) {
+      setTargetId(state.inputRequest.from_name)
+    }
+  }, [state.inputRequest?.from_name])
+
+  // Apply tip fill: set text + target when TacticalHUDDock selects an option
+  useEffect(() => {
+    if (state.pendingTipFill) {
+      setText(state.pendingTipFill.text)
+      setTargetId(state.pendingTipFill.targetName)
+      dispatch({ type: "CLEAR_PENDING_TIP_FILL" })
+    }
+  }, [state.pendingTipFill, dispatch])
 
   const handleSend = () => {
     if (!text.trim()) return
@@ -466,15 +738,20 @@ function InteractionComposer() {
   const showCheckPrevious = state.ui.analysisViewed && !state.ui.showAnalysis && (state.analysis.available || !!state.analysisHtml)
 
   /* Show input_request prompt from server */
-  const inputPrompt = state.inputRequest?.msg
-
   return (
     <div className="flex flex-col gap-2.5">
       {/* Input request prompt from server */}
-      {inputPrompt && (
+      {state.inputRequest && (
         <div className="rounded-lg px-2.5 py-1.5 text-xs italic text-foreground/80"
           style={{ backgroundColor: "color-mix(in oklch, var(--chrono-amber) 8%, transparent)", borderLeft: "3px solid var(--chrono-amber)" }}>
-          {inputPrompt}
+          {state.inputRequest.from_name ? (
+            <>
+              <span className="font-bold not-italic">{state.inputRequest.from_name}</span>
+              {t(" is talking to you.")} {t("Respond or select another character.")}
+            </>
+          ) : (
+            state.inputRequest.msg
+          )}
         </div>
       )}
       {/* Target person buttons */}
@@ -517,6 +794,27 @@ function InteractionComposer() {
       </div>
       <div className="flex items-end justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 flex-wrap">
+          {showDialogueControls && (
+            <DialogueDisplayModeControls
+              mode={dialogueMode}
+              setMode={setDialogueMode}
+              onManualNext={onManualNext}
+              manualWaiting={manualWaiting}
+              phaseColor={pc}
+              tone={tone}
+            />
+          )}
+          {isWS && (
+            <Button
+              size="sm"
+              variant="outline"
+              tone={tone}
+              className="text-xs h-7 px-2.5 gap-1 border-border/40"
+              onClick={() => dispatch({ type: "BACK_TO_INTERVENE" })}
+            >
+              <Target className="w-3.5 h-3.5" /> {t("Jump to another node")}
+            </Button>
+          )}
           <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40"
             disabled={state.tipLoading}
             onClick={handleRequestTip}>
@@ -840,7 +1138,19 @@ function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
 }
 
 /* ── Main Interaction Console Card (bottom center) ── */
-function InteractionConsole() {
+function InteractionConsole({
+  dialogueMode,
+  setDialogueMode,
+  onManualNext,
+  manualWaiting,
+  showDialogueControls,
+}: {
+  dialogueMode: DialogueDisplayMode
+  setDialogueMode: (mode: DialogueDisplayMode) => void
+  onManualNext: () => void
+  manualWaiting: boolean
+  showDialogueControls: boolean
+}) {
   const { state, dispatch } = useChronoFork()
   const { t } = useI18n()
   const { phase } = state
@@ -860,11 +1170,27 @@ function InteractionConsole() {
   if (phase === "observe_idle") {
     content = <InteractionIdle />
   } else if (phase === "observe_playing") {
-    content = <InteractionObserving />
+    content = (
+      <InteractionObserving
+        dialogueMode={dialogueMode}
+        setDialogueMode={setDialogueMode}
+        onManualNext={onManualNext}
+        manualWaiting={manualWaiting}
+        showDialogueControls={showDialogueControls}
+      />
+    )
   } else if (phase === "observe_complete" || phase === "intervene_idle") {
     content = <InteractionBacktrackSetup />
   } else if (phase === "intervene_active") {
-    content = <InteractionComposer />
+    content = (
+      <InteractionComposer
+        dialogueMode={dialogueMode}
+        setDialogueMode={setDialogueMode}
+        onManualNext={onManualNext}
+        manualWaiting={manualWaiting}
+        showDialogueControls={showDialogueControls}
+      />
+    )
   } else if (phase === "divergence_running") {
     content = (
       <div className="flex items-center justify-center gap-2.5 py-6">
@@ -875,7 +1201,15 @@ function InteractionConsole() {
   } else if (phase === "branch_complete") {
     content = <ReflectionPrompt onViewReport={handleViewReport} />
   } else if (phase === "divergence_ready") {
-    content = <InteractionComposer />
+    content = (
+      <InteractionComposer
+        dialogueMode={dialogueMode}
+        setDialogueMode={setDialogueMode}
+        onManualNext={onManualNext}
+        manualWaiting={manualWaiting}
+        showDialogueControls={showDialogueControls}
+      />
+    )
   } else if (phase === "reflection_open") {
     content = <ReflectionPrompt onViewReport={handleViewReport} />
   }
@@ -904,10 +1238,51 @@ function InteractionConsole() {
 }
 
 /* ── Main CenterStage ��─ */
+function NodeUpdateToast({ msg }: { msg: { id?: string; meta?: { from_id?: string; to_id?: string } } }) {
+  const { t } = useI18n()
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    setVisible(true)
+    const timer = setTimeout(() => setVisible(false), 3500)
+    return () => clearTimeout(timer)
+  }, [msg.id])
+
+  const isStart = msg.meta?.from_id === "start"
+  const nodeLabel = msg.meta?.to_id
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          key="node-update-toast"
+          initial={{ opacity: 0, scale: 0.9, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+        >
+          <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-xl border border-border/50 shadow-xl flex items-center gap-2">
+            <span className="text-lg">{isStart ? "🌱" : "📍"}</span>
+            <h2 className="text-xs font-bold font-mono tracking-wider text-foreground whitespace-nowrap">
+              {isStart
+                ? t("Story begins from node ") + nodeLabel + t(" starts")
+                : t("Path transition: ") + msg.meta?.from_id + " ➔ " + nodeLabel}
+            </h2>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 export function CenterStage() {
-  const { state } = useChronoFork()
-  const { setLocale } = useI18n()
+  const { state, ws, dispatch } = useChronoFork()
+  const { setLocale, t } = useI18n()
   const rm = state.ui.reducedMotion
+  const [dialogueMode, setDialogueMode] = useState<DialogueDisplayMode>("manual")
+  const [manualWaiting, setManualWaiting] = useState(false)
+  const [lastSeenMessageId, setLastSeenMessageId] = useState<string | null>(null)
+  const showDialogueControls = state.stage === 1
   const isDisconnected = state.connectionStatus === "disconnected"
   const currentScene = scenes[state.currentSceneIndex]
 
@@ -923,7 +1298,7 @@ export function CenterStage() {
   const sceneBeats = currentScene ? dialogueBeats.filter((d) => d.sceneId === currentScene.id) : []
   const currentBeat = sceneBeats[state.currentDialogueIndex]
   const speakingRole = currentBeat ? roles.find((r) => r.id === currentBeat.speakerId) : null
-  const tableRoles = roles.filter((r) => r.id !== "facilitator")
+  const tableRoles = roles.filter((r) => r.id !== "facilitator") as StageRole[]
   const speakingIdx = speakingRole ? tableRoles.findIndex((r) => r.id === speakingRole.id) : -1
   const isTopRow = speakingIdx >= 0 && speakingIdx < 3
   const speakingFaction = speakingRole ? getFaction(speakingRole) : "neutral"
@@ -936,10 +1311,74 @@ export function CenterStage() {
     ? state.facilitatorBlocks[state.facilitatorBlocks.length - 1]
     : null
   const serverFacilitatorText = latestFacilitatorBlock?.text
+  const wsSpeakableMessages = state.chatHistory.filter((m) => m.type === "dialogue" || m.type === "user_chat" || m.type === "user_diverge")
+  const latestWsSpeakableMessage = wsSpeakableMessages.length > 0 ? wsSpeakableMessages[wsSpeakableMessages.length - 1] : null
+
+  useEffect(() => {
+    ws.setMessageProcessingMode(dialogueMode)
+    if (dialogueMode === "auto") {
+      setManualWaiting(false)
+    }
+  }, [dialogueMode, ws])
+
+  useEffect(() => {
+    if (state.stage !== 1 && dialogueMode !== "auto") {
+      setDialogueMode("auto")
+      setManualWaiting(false)
+    }
+  }, [state.stage, dialogueMode])
+
+  useEffect(() => {
+    if (!latestWsSpeakableMessage?.id) return
+    if (latestWsSpeakableMessage.id !== lastSeenMessageId) {
+      setLastSeenMessageId(latestWsSpeakableMessage.id)
+      if (manualWaiting) {
+        setManualWaiting(false)
+      }
+    }
+  }, [latestWsSpeakableMessage?.id, lastSeenMessageId, manualWaiting])
+
+  const handleManualNext = () => {
+    if (dialogueMode !== "manual") return
+
+    if (state.connectionStatus === "connected") {
+      ws.stepMessageQueue()
+      setManualWaiting(true)
+      return
+    }
+
+    // Mock mode manual stepping keeps existing local behavior.
+    if (state.phase === "observe_playing") {
+      dispatch({ type: "ADVANCE_DIALOGUE" })
+      return
+    }
+  }
+
+  const displayMessage = latestWsSpeakableMessage
+
+  const facilitatorInteractionMessage = state.connectionStatus === "connected" && displayMessage && (
+    displayMessage.speakerName === "Facilitator" || displayMessage.targetName === "Facilitator"
+  )
+    ? displayMessage
+    : null
+  const facilitatorIsSpeaking = facilitatorInteractionMessage?.speakerName === "Facilitator"
+  const facilitatorIsListening = !!facilitatorInteractionMessage && !facilitatorIsSpeaking
 
   const facilitatorBeat = sceneBeats.find((b) => b.speakerId === "facilitator")
-  const facilitatorText = serverFacilitatorText
-    ?? (isFacilitator ? currentBeat?.text : (facilitatorBeat?.text ?? currentScene?.directorCaption))
+  const mockFacilitatorText = isFacilitator ? currentBeat?.text : (facilitatorBeat?.text ?? currentScene?.directorCaption)
+  const facilitatorText = state.connectionStatus === "connected"
+    ? (facilitatorIsSpeaking ? facilitatorInteractionMessage?.text : serverFacilitatorText)
+    : mockFacilitatorText
+  const facilitatorStripInteraction = facilitatorInteractionMessage
+    ? {
+        isSpeaking: facilitatorIsSpeaking,
+        counterpart:
+          facilitatorIsSpeaking
+            ? (facilitatorInteractionMessage.targetName ? `Facilitator -> ${facilitatorInteractionMessage.targetName}` : "")
+            : `${facilitatorInteractionMessage.speakerName} -> Facilitator`,
+      }
+    : undefined
+  const showFacilitatorStrip = !isIdle && (state.connectionStatus === "connected" ? (!!facilitatorText || facilitatorIsListening) : !!facilitatorText)
 
   return (
     <div className="flex flex-col h-full relative center-spotlight">
@@ -951,7 +1390,7 @@ export function CenterStage() {
       {/* TOP: Scene meta chips -- hidden in idle */}
       {!isIdle && currentScene && (
         <div className="flex items-center gap-2 px-4 py-2.5 flex-wrap justify-center shrink-0 border-b border-border/10">
-          <Badge variant="outline" className="text-xs font-mono gap-1 border-border/30 text-muted-foreground bg-card/50 px-2.5 py-1">
+          {/* <Badge variant="outline" className="text-xs font-mono gap-1 border-border/30 text-muted-foreground bg-card/50 px-2.5 py-1">
             <Clock className="w-3 h-3" /> {currentScene.time}
           </Badge>
           <Badge variant="outline" className="text-xs font-mono gap-1 border-border/30 text-muted-foreground bg-card/50 px-2.5 py-1">
@@ -959,12 +1398,12 @@ export function CenterStage() {
           </Badge>
           <Badge variant="outline" className="text-xs font-mono gap-1 border-border/30 text-foreground/70 bg-card/50 px-2.5 py-1 font-semibold">
             {currentScene.topic}
-          </Badge>
+          </Badge> */}
         </div>
       )}
 
-      {/* Facilitator strip -- standard glass card */}
-      {!isIdle && facilitatorText && <FacilitatorStrip text={facilitatorText} />}
+      {/* Facilitator strip -- standard top position */}
+      {showFacilitatorStrip && <FacilitatorStrip text={facilitatorText!} interaction={facilitatorStripInteraction} />}
 
       {/* Middle: Round table + speech bubble */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 pb-32 relative overflow-hidden -translate-y-8">
@@ -974,6 +1413,7 @@ export function CenterStage() {
             <div className="flex items-end justify-center gap-8 mb-3 relative z-10">
               {tableRoles.slice(0, 3).map((role) => (
                 <Avatar key={role.id} role={role} isSpeaking={currentBeat?.speakerId === role.id}
+                  isListening={false}
                   latestEmotion={sceneBeats.slice(0, state.currentDialogueIndex + 1).filter((b) => b.speakerId === role.id).pop()?.emotion}
                 />
               ))}
@@ -1000,7 +1440,7 @@ export function CenterStage() {
                       <span className="text-sm font-semibold" style={{ color: fs.ring }}>{speakingRole.shortName}</span>
                       <EmotionDot emotion={currentBeat.emotion} />
                     </div>
-                    <p className="text-base leading-relaxed text-foreground">{currentBeat.text}</p>
+                    <p className="text-sm leading-relaxed text-foreground">{currentBeat.text}</p>
                   </div>
                   {!isTopRow && (
                     <div className="flex justify-center mt-[-1px]">
@@ -1020,6 +1460,7 @@ export function CenterStage() {
             <div className="flex items-start justify-center gap-8 mt-3 relative z-10">
               {tableRoles.slice(3).map((role) => (
                 <Avatar key={role.id} role={role} isSpeaking={currentBeat?.speakerId === role.id}
+                  isListening={false}
                   latestEmotion={sceneBeats.slice(0, state.currentDialogueIndex + 1).filter((b) => b.speakerId === role.id).pop()?.emotion}
                 />
               ))}
@@ -1028,37 +1469,127 @@ export function CenterStage() {
         )}
 
         {/* WS connected mode: show latest streaming message as speech bubble */}
-        {!isIdle && state.connectionStatus === "connected" && state.chatHistory.length > 0 && (
+        {!isIdle && state.connectionStatus === "connected" && displayMessage && (
           <div className="flex flex-col items-center w-full max-w-lg relative">
             {(() => {
-              const lastMsg = state.chatHistory[state.chatHistory.length - 1]
+              const lastMsg = displayMessage
+              if (!lastMsg) return null;
+              
+              const serverRoles: StageRole[] = (state.serverConfig?.cast_data ?? []).map((c) => ({
+                id: c.name,
+                name: c.name,
+                title: c.title,
+                shortName: c.name.split("·").pop() || c.name,
+                stanceTags: ["neutral"],
+                portrait: "var(--chrono-teal)",
+                avatarEmoji: c.avatar || "👤",
+              }))
+
+              const availableRoles: StageRole[] = serverRoles.length > 0 ? serverRoles : tableRoles
+              const speakingRole = availableRoles.find((r) => r.name === lastMsg.speakerName || r.shortName === lastMsg.speakerName)
+              const listeningRole =
+                lastMsg.targetName &&
+                lastMsg.targetName !== "Facilitator" &&
+                lastMsg.targetName !== "System" &&
+                lastMsg.targetName !== "User"
+                  ? availableRoles.find((r) => r.name === lastMsg.targetName)
+                  : null
+              const speakingIdx = speakingRole ? availableRoles.findIndex((r) => r.id === speakingRole.id) : -1
+              const isTopRow = speakingIdx >= 0 && speakingIdx < Math.ceil(availableRoles.length / 2)
+              const topRoles = availableRoles.slice(0, Math.ceil(availableRoles.length / 2))
+              const bottomRoles = availableRoles.slice(Math.ceil(availableRoles.length / 2))
+              const speakingFaction = speakingRole ? getFaction(speakingRole) : "neutral"
+              const fs = factionStyle(speakingFaction)
+              const isFacilitatorSpeakingTurn = lastMsg.speakerName === "Facilitator"
+              
               return (
-                <motion.div
-                  key={lastMsg.id}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="max-w-md w-full"
-                >
-                  <div className="bg-card border border-border/50 rounded-xl px-5 py-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-sm font-semibold" style={{ color: "var(--chrono-teal)" }}>{lastMsg.speakerName}</span>
-                      {lastMsg.targetName && (
-                        <span className="text-xs text-muted-foreground">
-                          {"-> "}{lastMsg.targetName}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-base leading-relaxed text-foreground">{lastMsg.text}</p>
+                <>
+                  {/* Top row avatars */}
+                  <div className="flex items-end justify-center gap-8 mb-3 relative z-10">
+                    {topRoles.map((role) => (
+                      <Avatar
+                        key={role.id}
+                        role={role}
+                        isSpeaking={speakingRole?.id === role.id}
+                        isListening={listeningRole?.id === role.id && speakingRole?.id !== role.id}
+                      />
+                    ))}
                   </div>
-                </motion.div>
+
+                  {/* Speech bubble */}
+                  <AnimatePresence mode="wait">
+                    {!isFacilitatorSpeakingTurn && speakingRole && lastMsg.text && (
+                      <motion.div
+                        key={lastMsg.id}
+                        initial={rm ? { opacity: 1 } : { opacity: 0, y: isTopRow ? -4 : 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={rm ? { opacity: 0 } : { opacity: 0 }}
+                        transition={{ duration: rm ? 0 : 0.2 }}
+                        className={`relative z-20 max-w-md w-full ${isTopRow ? "mb-1" : "mt-1"}`}
+                      >
+                        {isTopRow && (
+                          <div className="flex justify-center mb-[-1px]">
+                            <div className="w-2.5 h-2.5 rotate-45 border-t border-l bg-card" style={{ borderColor: "var(--border)" }} />
+                          </div>
+                        )}
+                        <div className="bg-card border border-border/50 rounded-xl px-5 py-4 shadow-sm">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-sm font-semibold" style={{ color: fs.ring }}>{speakingRole.shortName}</span>
+                            {lastMsg.targetName && (
+                              <span className="text-xs text-muted-foreground font-mono">
+                                {"->"} {lastMsg.targetName}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm leading-relaxed text-foreground">{lastMsg.text}</p>
+                        </div>
+                        {!isTopRow && (
+                          <div className="flex justify-center mt-[-1px]">
+                            <div className="w-2.5 h-2.5 rotate-45 border-b border-r bg-card" style={{ borderColor: "var(--border)" }} />
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+
+                  </AnimatePresence>
+
+                  {/* Desk divider */}
+                  <div className="relative w-full flex items-center justify-center py-1.5 z-0">
+                    <div className="w-full max-w-xs h-px rounded-full" style={{ background: "linear-gradient(90deg, transparent, var(--border), var(--chrono-teal-dim), var(--border), transparent)", opacity: 0.25 }} />
+                  </div>
+
+                  {/* Bottom row avatars */}
+                  <div className="flex items-start justify-center gap-8 mt-3 relative z-10">
+                    {bottomRoles.map((role) => (
+                      <Avatar
+                        key={role.id}
+                        role={role}
+                        isSpeaking={speakingRole?.id === role.id}
+                        isListening={listeningRole?.id === role.id && speakingRole?.id !== role.id}
+                      />
+                    ))}
+                  </div>
+                </>
               )
             })()}
           </div>
         )}
+
+        {/* Node update toast (auto-dismisses after 3.5s) */}
+        {!isIdle && state.connectionStatus === "connected" && (() => {
+          const latestNodeUpdate = state.chatHistory.filter((m) => m.type === "node_update").pop()
+          return latestNodeUpdate ? <NodeUpdateToast key={latestNodeUpdate.id} msg={latestNodeUpdate} /> : null
+        })()}
       </div>
 
       {/* Interaction Console Card */}
-      <InteractionConsole />
+      <InteractionConsole
+        dialogueMode={dialogueMode}
+        setDialogueMode={setDialogueMode}
+        onManualNext={handleManualNext}
+        manualWaiting={manualWaiting}
+        showDialogueControls={showDialogueControls}
+      />
     </div>
   )
 }

@@ -110,9 +110,9 @@ export function FlowHeader() {
                   {ss === "done" ? <Check className="w-3.5 h-3.5" /> : ss === "locked" ? <Lock className="w-3 h-3" /> : <Icon className="w-3.5 h-3.5" />}
                   <span className="hidden md:inline">{segLabel[seg.id]}</span>
                   {/* Percentage shown inline on observe pill */}
-                  {isObsActive && (
+                  {/* {isObsActive && (
                     <span className="text-[10px] font-mono ml-1 opacity-80">{state.observeProgress}%</span>
-                  )}
+                  )} */}
                 </div>
               </div>
               {i < segments.length - 1 && (

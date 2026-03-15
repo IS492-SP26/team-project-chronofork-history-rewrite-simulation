@@ -64,8 +64,12 @@ export const initialState: RunState = {
   inputRequest: null,
 
   /* ── UI ── */
-  ui: {
-    docks: { leftOpen: false, rightOpen: false },
+    /* ── Pending tip fill ── */
+    pendingTipFill: null,
+
+    /* ── UI ── */
+    ui: {
+    docks: { leftOpen: true, rightOpen: false },
     reducedMotion: false,
     showNodeDetail: false,
     showHelpPanel: false,
@@ -243,7 +247,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
     case "ACTION_UPDATE_DIVERGENCE_COMPLETE":
       return {
         ...state,
-        phase: "branch_complete",
+        phase: state.canReflect ? "branch_complete" : "intervene_active",
         divergence: { ...state.divergence, exists: true, inProgress: false },
         analysisHtml: action.data.report,
         ui: { ...state.ui, showAnalysis: true, analysisViewed: true },
@@ -256,7 +260,11 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       return { ...state, reflectionHtml: action.data.html }
 
     case "ENABLE_REFLECTION":
-      return { ...state, canReflect: true }
+      return {
+        ...state,
+        canReflect: true,
+        phase: state.divergence.exists ? "branch_complete" : state.phase,
+      }
 
     case "SET_SAVE_EXPORT":
       return { ...state, saveExport: action.data }
@@ -273,7 +281,13 @@ export function runReducer(state: RunState, action: RunAction): RunState {
     case "SET_INPUT_REQUEST":
       return { ...state, inputRequest: action.data, currentStreamKey: null, currentStreamMessageId: null }
 
-    case "COMPLETE_HISTORY_REVIEW":
+      case "SET_PENDING_TIP_FILL":
+        return { ...state, pendingTipFill: action.data }
+
+      case "CLEAR_PENDING_TIP_FILL":
+        return { ...state, pendingTipFill: null }
+
+      case "COMPLETE_HISTORY_REVIEW":
       // Stage2 history replay ended -- enable interaction
       const divMsg: ChatMessage = {
         id: `history_divider_${Date.now()}`,

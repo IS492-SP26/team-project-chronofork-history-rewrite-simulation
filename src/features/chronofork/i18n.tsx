@@ -12,6 +12,16 @@ interface I18nContextValue {
 }
 
 const zhDict: Record<string, string> = {
+  "Story begins from node ": "故事从节点 ",
+  " starts": " 开始",
+  "Reached ending (node ": "到达结局（节点 ",
+  ")": "）",
+  "Path transition: ": "流转：",
+  "Backtrack complete": "回溯完成",
+  "Backtracked as ": "已以 ",
+  " to node ": " 身份回溯到节点 ",
+  "。": "。",
+  "Previous interaction context": "之前的交互上下文",
   "Back to Console": "返回控制台",
   "Help Center": "帮助中心",
   "Learn how to use the ChronoFork Historical Simulator Console.": "了解如何使用 ChronoFork 历史模拟控制台。",
@@ -147,6 +157,16 @@ const zhDict: Record<string, string> = {
   "Mock: Moment bookmarked": "模拟：关键时刻已标记",
   "Repeat Intervene-Reflect from different nodes. The DAG on the left shows all branches.": "从不同节点重复“干预-复盘”流程。左侧 DAG 会展示全部分支。",
   "Selected Node: ": "已选节点：",
+  "Jump to another node": "重新选择跳转节点",
+  "Dialogue Display": "对话展示",
+  "Auto": "自动",
+  "Manual": "手动",
+  "Show Next Dialogue": "显示下一条对话",
+  "Waiting for next dialogue...": "等待下一条对话...",
+  " is talking to you.": " 正在和你说话。",
+  "Respond or select another character.": "请回应或选择其他角色。",
+  "Speaking": "说话中",
+  "Listening": "正在听",
 }
 
 const I18nContext = createContext<I18nContextValue>({

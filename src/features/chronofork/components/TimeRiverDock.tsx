@@ -44,14 +44,70 @@ interface GraphLayout {
   pos: Record<string, { x: number; y: number }>
 }
 
+function formatNodeStatus(status: UnifiedNodeStatus): string {
+  if (status === "in_progress") return "IN_PROGRESS"
+  if (status === "unfinished") return "UNFINISHED"
+  if (status === "suspended") return "SUSPENDED"
+  if (status === "divergent") return "DIVERGENT"
+  return "COMPLETED"
+}
+
 /* ── Node colors ── */
-function nodeColor(n: { branch: "canonical" | "divergent"; status: UnifiedNodeStatus }, isBacktracked: boolean) {
+function nodeColor(n: { branch: "canonical" | "divergent" }, isBacktracked: boolean) {
   if (isBacktracked) return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
-  if (n.branch === "divergent") return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
-  if (n.status === "completed") return { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)" }
-  if (n.status === "in_progress") return { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)" }
-  if (n.status === "suspended") return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
-  return { fill: "transparent", stroke: "var(--border)" }
+  return n.branch === "divergent"
+    ? { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
+    : { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)" }
+}
+
+function parseBranchFromId(id: string): "canonical" | "divergent" {
+  const suffix = id.split(".").pop()
+  if (!suffix) return "canonical"
+  const n = Number(suffix)
+  if (Number.isNaN(n)) return "canonical"
+  return n === 0 ? "canonical" : "divergent"
+}
+
+function mapEdgeLabelsByPosition(graph: ServerGraphData): string[] {
+  const labels = graph.edge_label_data ?? []
+  if (labels.length === 0) {
+    return graph.edges.map(() => "Path transition")
+  }
+
+  const edgeMidpoints = graph.edges.map(([from, to]) => {
+    const fromPos = graph.pos[from]
+    const toPos = graph.pos[to]
+    if (!fromPos || !toPos) return null
+    return {
+      x: (fromPos[0] + toPos[0]) / 2,
+      y: (fromPos[1] + toPos[1]) / 2,
+    }
+  })
+
+  const used = new Set<number>()
+  return edgeMidpoints.map((mid, idx) => {
+    if (!mid) return labels[idx]?.text || "Path transition"
+
+    let bestIdx = -1
+    let bestDist = Number.POSITIVE_INFINITY
+    for (let i = 0; i < labels.length; i++) {
+      if (used.has(i)) continue
+      const dx = labels[i].x - mid.x
+      const dy = labels[i].y - mid.y
+      const dist = dx * dx + dy * dy
+      if (dist < bestDist) {
+        bestDist = dist
+        bestIdx = i
+      }
+    }
+
+    if (bestIdx >= 0) {
+      used.add(bestIdx)
+      return labels[bestIdx].text || "Path transition"
+    }
+
+    return labels[idx]?.text || "Path transition"
+  })
 }
 
 /* ── Edge tooltip content ── */
@@ -90,8 +146,23 @@ function computeGraphLayout(graph: UnifiedGraph): GraphLayout {
     return { svgW: minSvgW, svgH: minSvgH, pos: {} }
   }
 
-  const allX = posEntries.map(([, p]) => p[0])
-  const allY = posEntries.map(([, p]) => p[1])
+  // Detect if coordinates are raw grid coordinates from server (e.g., [0, -1], [1, -1])
+  const rawX = posEntries.map(([, p]) => p[0])
+  const rawY = posEntries.map(([, p]) => p[1])
+  const isGridCoords = (Math.max(...rawX) - Math.min(...rawX) < 20) && (Math.max(...rawY) - Math.min(...rawY) < 20)
+  
+  const mappedPosEntries = posEntries.map(([id, p]) => {
+    let x = p[0]
+    let y = p[1]
+    if (isGridCoords) {
+      x = p[0] * 120
+      y = -p[1] * 80 // Invert Y so -1 becomes 80, -2 becomes 160 (going down)
+    }
+    return [id, x, y] as [string, number, number]
+  })
+
+  const allX = mappedPosEntries.map(([, x]) => x)
+  const allY = mappedPosEntries.map(([, , y]) => y)
   const minX = Math.min(...allX)
   const maxX = Math.max(...allX)
   const minY = Math.min(...allY)
@@ -101,10 +172,10 @@ function computeGraphLayout(graph: UnifiedGraph): GraphLayout {
   const svgW = Math.max(minSvgW, rangeX + padX * 2 + labelW)
   const svgH = Math.max(minSvgH, rangeY + padY * 2 + 20)
 
-  const pos = Object.fromEntries(posEntries.map(([id, p]) => {
-    const x = rangeX === 0 ? svgW / 2 : padX + labelW / 2 + (p[0] - minX)
-    const y = rangeY === 0 ? svgH / 2 : padY + (p[1] - minY)
-    return [id, { x, y }]
+  const pos = Object.fromEntries(mappedPosEntries.map(([id, x, y]) => {
+    const finalX = rangeX === 0 ? svgW / 2 : padX + labelW / 2 + (x - minX)
+    const finalY = rangeY === 0 ? svgH / 2 : padY + (y - minY)
+    return [id, { x: finalX, y: finalY }]
   }))
 
   return { svgW, svgH, pos }
@@ -124,7 +195,7 @@ function buildMockGraph(phase: string, divergence: { exists: boolean; inProgress
       branch: node.branch,
       hoverTitle: node.hoverTitle,
       hoverDesc: node.hoverDesc,
-      isClickable: canSelect && node.branch === "canonical" && (node.status === "completed" || node.status === "in_progress"),
+      isClickable: canSelect && node.branch === "canonical" && (node.status === "completed" || node.status === "in_progress" || node.status === "suspended"),
     })),
     edges: visibleEdges.map((edge) => ({
       ...edge,
@@ -137,6 +208,7 @@ function buildMockGraph(phase: string, divergence: { exists: boolean; inProgress
 
 function buildServerGraph(graph: ServerGraphData, phase: string): UnifiedGraph {
   const canSelect = ["observe_complete", "intervene_idle"].includes(phase)
+  const edgeLabels = mapEdgeLabelsByPosition(graph)
   return {
     nodes: graph.nodes.map((node) => ({
       id: node.id,
@@ -149,18 +221,18 @@ function buildServerGraph(graph: ServerGraphData, phase: string): UnifiedGraph {
             : node.status === "SUSPENDED"
               ? "suspended"
               : "unfinished",
-      branch: "canonical",
+      branch: parseBranchFromId(node.id),
       hoverTitle: node.hover_title,
       hoverDesc: node.hover_desc,
-      isClickable: canSelect && (node.status === "COMPLETED" || node.status === "IN_PROGRESS"),
+      isClickable: canSelect && (node.status === "COMPLETED" || node.status === "IN_PROGRESS" || node.status === "SUSPENDED"),
     })),
-    edges: graph.edges.map(([from, to]) => ({
+    edges: graph.edges.map(([from, to], idx) => ({
       from,
       to,
-      branch: "canonical" as const,
+      branch: parseBranchFromId(to),
       tooltip: {
         title: "Choice",
-        desc: "Path transition",
+        desc: edgeLabels[idx] || "Path transition",
       },
     })),
     pos: graph.pos,
@@ -176,7 +248,7 @@ function UnifiedDAGVisualization({ graph }: { graph: UnifiedGraph }) {
   const [hoveredEdge, setHoveredEdge] = useState<UnifiedEdge | null>(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
   const layout = computeGraphLayout(graph)
-  const r = 12
+  const r = 15
 
   const updateTooltipPos = useCallback((cx: number, cy: number) => {
     setTooltipPos({ x: cx + 14, y: cy - 8 })
@@ -233,10 +305,10 @@ function UnifiedDAGVisualization({ graph }: { graph: UnifiedGraph }) {
               onMouseEnter={(e) => onNodeEnter(e, node)} onMouseMove={onNodeMove} onMouseLeave={onLeave}
               onClick={() => { if (node.isClickable) dispatch({ type: "SELECT_NODE", data: { nodeId: isSelected ? null : node.id } }) }}
             >
-              <text x={x} y={y - r - 5} textAnchor="middle" dominantBaseline="auto"
-                fill={node.status === "unfinished" ? "var(--muted-foreground)" : "var(--foreground)"}
-                fontSize="10" fontFamily="var(--font-mono)" fontWeight="600"
-                opacity={node.status === "unfinished" ? 0.4 : 0.85}>
+              <text x={x} y={y - r - 6} textAnchor="middle" dominantBaseline="auto"
+                fill="var(--foreground)"
+                fontSize="11" fontFamily="var(--font-mono)" fontWeight="700"
+                opacity={0.85}>
                 {node.label}
               </text>
 
@@ -246,26 +318,29 @@ function UnifiedDAGVisualization({ graph }: { graph: UnifiedGraph }) {
               {(hoveredNode?.id === node.id || isSelected) && !(isActive && node.status === "in_progress") && (
                 <circle cx={x} cy={y} r={r + 4} fill="none" stroke={colors.stroke} strokeWidth="0.8" opacity={0.25} />
               )}
+              {isSelected && (
+                <>
+                  <circle cx={x} cy={y} r={r + 7} fill="none" stroke="var(--foreground)" strokeWidth="2" opacity={0.55} />
+                  <circle cx={x} cy={y} r={r + 10} fill="none" stroke={colors.stroke} strokeWidth="1.2" strokeDasharray="3 2" opacity={0.65} />
+                </>
+              )}
 
               <circle cx={x} cy={y} r={r}
-                fill={node.status === "unfinished" || node.status === "suspended" ? "var(--background)" : colors.fill}
+                fill={colors.fill}
                 stroke={colors.stroke} strokeWidth={isSelected ? 2 : 1.2}
-                opacity={node.status === "unfinished" ? 0.35 : 1} />
+                opacity={1} />
 
-              {node.status === "completed" && !isBacktracked && !isDivergent && (
-                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="10" fontWeight="bold">&#x2713;</text>
+              {node.status === "completed" && (
+                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="11" fontWeight="bold">&#x2713;</text>
               )}
-              {node.status === "in_progress" && !isBacktracked && (
-                <circle cx={x} cy={y} r={3} fill="var(--background)" />
+              {node.status === "in_progress" && (
+                <circle cx={x} cy={y} r={3.5} fill="var(--background)" />
               )}
-              {isBacktracked && (
-                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="9" fontWeight="bold">&#x21A9;</text>
-              )}
-              {isDivergent && !isBacktracked && (
-                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="9" fontWeight="bold">&#x2442;</text>
+              {node.status === "suspended" && (
+                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="10" fontWeight="bold">&#x23F8;</text>
               )}
               {node.status === "unfinished" && (
-                <circle cx={x} cy={y} r={2.5} fill="var(--border)" opacity={0.4} />
+                <circle cx={x} cy={y} r={3} fill="var(--background)" opacity={0.8} />
               )}
             </g>
           )
@@ -276,7 +351,10 @@ function UnifiedDAGVisualization({ graph }: { graph: UnifiedGraph }) {
       <PortalTooltip show={!!hoveredNode}>
         <div className="fixed z-[200] pointer-events-none" style={{ left: tooltipPos.x, top: tooltipPos.y, maxWidth: 240 }}>
           <div className="bg-popover text-popover-foreground border border-border rounded-lg px-3 py-2.5 shadow-2xl">
-            <p className="text-xs font-semibold text-foreground leading-tight">{hoveredNode?.hoverTitle}</p>
+            <p className="text-xs font-semibold text-foreground leading-tight">
+              {hoveredNode?.hoverTitle}
+              {hoveredNode && <span className="text-[10px] font-mono text-muted-foreground"> {" · "}[{formatNodeStatus(hoveredNode.status)}]</span>}
+            </p>
             <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{hoveredNode?.hoverDesc}</p>
             {hoveredTn && (
               <p className="text-xs mt-1 font-medium" style={{ color: "var(--chrono-teal)" }}>
@@ -329,7 +407,7 @@ export function TimeRiverDock() {
   }, [activeGraph, isOpen, state.activeNodeId])
 
   return (
-    <div className="absolute left-3 top-3 z-30" style={{ width: isOpen ? "auto" : "auto", maxWidth: 260 }}>
+    <div className="absolute left-3 top-3 z-30" style={{ width: isOpen ? "auto" : "auto", maxWidth: 380 }}>
       <div className="glass-panel rounded-xl shadow-lg transition-all duration-300 overflow-hidden">
         <button
           onClick={() => dispatch({ type: "TOGGLE_DOCK", data: { dock: "left" } })}
@@ -351,14 +429,15 @@ export function TimeRiverDock() {
               <div className="border-t border-border/20" />
               <div
                 ref={scrollRef}
-                className="overflow-auto max-h-[55vh] max-w-[260px] px-2 py-2"
+                className="overflow-auto max-h-[55vh] px-2 py-2"
+                style={{ maxWidth: "380px" }}
                 onWheel={(e) => {
                   const container = e.currentTarget
                   if (e.deltaX !== 0) container.scrollLeft += e.deltaX
                   if (e.deltaY !== 0) container.scrollTop += e.deltaY
                 }}
               >
-                <div className="grid min-w-full place-items-center">
+                <div className="min-w-full w-max">
                   <UnifiedDAGVisualization graph={activeGraph} />
                 </div>
               </div>
