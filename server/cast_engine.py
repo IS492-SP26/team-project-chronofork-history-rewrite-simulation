@@ -1017,12 +1017,12 @@ class CastEngine:
                     <div class="progress-fill" style="width: {score}%; background-color: {bar_color};"></div>
                 </div>
             </div>
-            <div class="drivers-grid">
-                <div class="driver-col">
+            <div class="drivers-grid" style="display:flex; flex-direction:column; gap:10px;">
+                <div class="driver-col" style="width:100%;">
                     <h4>🚀 Core Drivers</h4>
                     <ul>{drivers_html}</ul>
                 </div>
-                <div class="driver-col">
+                <div class="driver-col" style="width:100%;">
                     <h4>🚧 Constraints</h4>
                     <ul>{constraints_html}</ul>
                 </div>

@@ -283,7 +283,7 @@ branch_storyline 规则
 - decision：当前节点的开放式 dilemma/question（<=10 词），不要写选项列表；最后一条固定为 "None"。
 - choice：可视化短标签（<=6 词），表示上一检查点最可能选择/结果。
   - 第 1 条的 choice 需从 <interaction> 提取并压缩 learner 的分歧动作。
-- desc：2-4 句；符合史实逻辑；至少包含两方视角；每条至少点名 2 个 <cast> 人物。
+- desc：1-3 句；符合史实逻辑；至少包含两方视角；每条至少点名 2 个 <cast> 人物；严格精炼。
   - 逻辑为：由 choice 起笔，叙述后果与约束，再引出当前节点 decision（最后收束节点除外）。
 
 只返回 JSON
@@ -336,7 +336,7 @@ Field rules
 - decision: open dilemma/question for the current node (<=10 words), not option lists; final node must be "None".
 - choice: short visualization label (<=6 words) for previous likely action/outcome.
   - For node 1, extract/compress learner divergence action from <interaction>.
-- desc: 2-4 sentences; historically coherent; include at least two viewpoints and at least two names from <cast>.
+- desc: 1-3 sentences; historically coherent; include at least two viewpoints and at least two names from <cast>; Be CONCISE.
   - Start from choice, explain consequences/constraints/reactions, then lead to the current decision (except final resolution).
 
 Return JSON only
