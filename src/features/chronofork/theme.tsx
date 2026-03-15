@@ -12,7 +12,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem("chrono-theme") as Theme | null
     if (stored === "dark" || stored === "light") setTheme(stored)
-    else if (window.matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark")
   }, [])
 
   useEffect(() => {

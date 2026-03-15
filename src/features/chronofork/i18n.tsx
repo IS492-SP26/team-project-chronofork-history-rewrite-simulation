@@ -172,24 +172,19 @@ const zhDict: Record<string, string> = {
 }
 
 const I18nContext = createContext<I18nContextValue>({
-  locale: "en",
+  locale: "zh",
   setLocale: () => {},
   toggleLocale: () => {},
   t: (key) => key,
 })
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en")
+  const [locale, setLocaleState] = useState<Locale>("zh")
 
   useEffect(() => {
     const stored = localStorage.getItem("chrono-locale")
     if (stored === "zh" || stored === "en") {
       setLocaleState(stored)
-      return
-    }
-    const browserLocale = navigator.language.toLowerCase()
-    if (browserLocale.startsWith("zh")) {
-      setLocaleState("zh")
     }
   }, [])
 
