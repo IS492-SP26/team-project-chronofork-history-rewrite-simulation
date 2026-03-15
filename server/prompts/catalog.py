@@ -410,7 +410,7 @@ Output format (strict):
 """,
     },
     "facilitator.tips": {
-        "zh": """你是用户的“历史战略顾问”。Learner 正在进行「{episode_title}」的历史模拟。已进行故事线为 <context>，参与角色在 <cast>，最近对话在 <logs>（重点关注最后一句提问）。你需要根据局势给出 2 或 4 个行动选项 `options`，用于探索不同历史可能性或改写历史。要求精炼，目标是训练历史思维（权衡利弊、预判后果）。
+        "zh": """你是用户的“历史战略顾问”。Learner 正在进行「{episode_title}」的历史模拟。已进行故事线为 <context>，参与角色在 <cast>，最近对话在 <logs>（重点关注最后一句提问）。你需要根据局势给出 2 或 4 个行动选项 `options`，用于探索不同历史可能性或改写历史。要求**严格精炼**，目标是训练历史思维（权衡利弊、预判后果）。
 
 <context>{history_prefix_str}</context>
 <cast>{cast_str}</cast>
@@ -432,7 +432,7 @@ Output format (strict):
   ]
 }}
 """,
-        "en": """You are the user's historical strategy advisor. The learner is running the simulation "{episode_title}". Completed storyline is <context>, participants are <cast>, and recent dialogue is <logs> (focus on the final question). Provide 2 or 4 concise action options in `options` to explore alternative trajectories or rewrite outcomes. Goal: strengthen historical thinking (tradeoffs and consequence forecasting).
+        "en": """You are the user's historical strategy advisor. The learner is running the simulation "{episode_title}". Completed storyline is <context>, participants are <cast>, and recent dialogue is <logs> (focus on the final question). Provide 2 or 4 concise action options in `options` to explore alternative trajectories or rewrite outcomes. Goal: strengthen historical thinking (tradeoffs and consequence forecasting). BE STRICTLY CONCISE.
 
 <context>{history_prefix_str}</context>
 <cast>{cast_str}</cast>
@@ -457,15 +457,15 @@ Output strict JSON:
     },
     
     "reflection.worker_a": {
-        "zh": """你是 Scenario Analyst。Learner 完成了「{episode}」历史模拟，已走过路径见 <history>，分歧重点在 {divergence_node_id}。请生成 Reflection 报告中的 Decision Context 部分。
+        "zh": """你是 Scenario Analyst。Learner 完成了「{episode}」历史模拟，已走过路径见 <history>，分歧重点在 {divergence_node_id}。请生成 Reflection 报告中的 Decision Context 部分，要求**严格精炼**。
 
 <history>{history_prefix}</history>
 
 内容要求：
-- Trade-off Map：提炼关键权衡维度（如安全升级、联盟信誉、国内政治、时间压力、信息可靠性、伦理约束），不超过 6 个。
-- Stakeholders & Constraints：提炼关键角色/群体的目标、底线、杠杆、约束，不超过 6 个。
+- Trade-off Map：提炼关键权衡维度（如安全升级、联盟信誉、国内政治、时间压力、信息可靠性、伦理约束）。
+- Stakeholders & Constraints：提炼关键角色/群体的目标、底线、杠杆、约束。
 
-输出严格 JSON。字段需极简以降低阅读负担：
+输出严格 JSON。字段需极简以降低阅读负担，列表元素不超过4个：
 {{
   "tradeoff_map": [
     {{
@@ -486,15 +486,15 @@ Output strict JSON:
   ]
 }}
 """,
-        "en": """You are Scenario Analyst. The learner completed the "{episode}" simulation. The traversed path is <history>, with key divergence at {divergence_node_id}. Generate the Decision Context section of the Reflection report.
+        "en": """You are Scenario Analyst. The learner completed the "{episode}" simulation. The traversed path is <history>, with key divergence at {divergence_node_id}. Generate the Decision Context section of the Reflection report. Be strictly concise.
 
 <history>{history_prefix}</history>
 
 Requirements:
-- Trade-off Map: extract key pre-decision tensions (e.g., escalation risk, alliance credibility, domestic politics, time pressure, information reliability, ethics), up to 6.
-- Stakeholders & Constraints: extract goals, red lines, levers, and constraints for key actors/groups, up to 6.
+- Trade-off Map: extract key pre-decision tensions (e.g., escalation risk, alliance credibility, domestic politics, time pressure, information reliability, ethics).
+- Stakeholders & Constraints: extract goals, red lines, levers, and constraints for key actors/groups.
 
-Output strict JSON. Keep each field concise to reduce reading load:
+Output strict JSON. Keep each field concise to reduce reading load. Max 4 items per list:
 {{
   "tradeoff_map": [
     {{
@@ -517,7 +517,7 @@ Output strict JSON. Keep each field concise to reduce reading load:
 """,
     },
     "reflection.worker_b": {
-        "zh": """你是 Branch Forensics。Learner 完成了「{episode}」模拟：主线前缀为 <history_prefix>，因分歧进入了 <branch_line>。结合交互记录 <branch_logs>，生成 Reflection 的 Outcome Analysis 部分。
+        "zh": """你是 Branch Forensics。Learner 完成了「{episode}」模拟：主线前缀为 <history_prefix>，因分歧进入了 <branch_line>。结合交互记录 <branch_logs>，生成 Reflection 的 Outcome Analysis 部分，要求**严格精炼**。
 
 <history_prefix>{history_prefix}</history_prefix>
 <branch_line>{branch_line}</branch_line>
@@ -528,7 +528,7 @@ Output strict JSON. Keep each field concise to reduce reading load:
 - Causal Chain：给出关键因果链与 turning points（从结果回溯到节点）。
 - Plausibility：说明该路径在当时语境下为何可能/不太可能，并列出关键假设。
 
-输出严格 JSON。字段需极简。：
+输出严格 JSON。字段需极简。列表元素不超过4个：
 {{
   "outcome_dashboard": [
     {{
@@ -555,7 +555,7 @@ Output strict JSON. Keep each field concise to reduce reading load:
   }}
 }}
 """,
-        "en": """You are Branch Forensics. In the "{episode}" simulation, canonical prefix is <history_prefix>, but divergence led to <branch_line>. Use interaction logs <branch_logs> to generate the Outcome Analysis section.
+        "en": """You are Branch Forensics. In the "{episode}" simulation, canonical prefix is <history_prefix>, but divergence led to <branch_line>. Use interaction logs <branch_logs> to generate the Outcome Analysis section. Be strictly concise.
 
 <history_prefix>{history_prefix}</history_prefix>
 <branch_line>{branch_line}</branch_line>
@@ -566,7 +566,7 @@ Requirements:
 - Causal Chain: provide key causal links and turning points (backtracking from outcomes to checkpoints).
 - Plausibility: explain why this path is plausible/implausible in period context and list key assumptions.
 
-Output strict JSON. Keep fields concise:
+Output strict JSON. Keep fields concise. Max 4 items per list:
 {{
   "outcome_dashboard": [
     {{
@@ -595,7 +595,7 @@ Output strict JSON. Keep fields concise:
 """,
     },
     "reflection.worker_c": {
-        "zh": """你是 Historical Thinking Coach。Learner 在「{episode}」中从 <history_prefix> 分歧到 <branch_line>。结合 <branch_logs> 生成 Reflection 的 Information Limits 与 Structure vs Agency。
+        "zh": """你是 Historical Thinking Coach。Learner 在「{episode}」中从 <history_prefix> 分歧到 <branch_line>。结合 <branch_logs> 生成 Reflection 的 Information Limits 与 Structure vs Agency，要求**严格精炼**。
 
 <history_prefix>{history_prefix}</history_prefix>
 <branch_line>{branch_line}</branch_line>
@@ -607,7 +607,7 @@ Output strict JSON. Keep fields concise:
 - Effective Leverage Points：哪些行动真正改变轨迹。
 - Structural Constraints：哪些结构性力量难以撼动。
 
-输出严格 JSON。字段极简，且列表元素最多 6 个：
+输出严格 JSON。字段极简，且列表元素不超过 4 个：
 {{
   "what_was_knowable_then": {{
     "available_information": ["String"],
@@ -638,7 +638,7 @@ Output strict JSON. Keep fields concise:
   }}
 }}
 """,
-        "en": """You are Historical Thinking Coach. In "{episode}", the learner diverged from <history_prefix> to <branch_line>. Use <branch_logs> to produce Information Limits and Structure vs Agency.
+        "en": """You are Historical Thinking Coach. In "{episode}", the learner diverged from <history_prefix> to <branch_line>. Use <branch_logs> to produce Information Limits and Structure vs Agency. Be strictly concise .
 
 <history_prefix>{history_prefix}</history_prefix>
 <branch_line>{branch_line}</branch_line>
@@ -650,7 +650,7 @@ Requirements:
 - Effective Leverage Points: which actions truly changed trajectory.
 - Structural Constraints: which macro constraints were hard to move.
 
-Output strict JSON. Keep concise; max 6 items per list:
+Output strict JSON. Keep concise. Max 4 items per list:
 {{
   "what_was_knowable_then": {{
     "available_information": ["String"],
@@ -683,18 +683,18 @@ Output strict JSON. Keep concise; max 6 items per list:
 """,
     },
     "reflection.worker_d": {
-        "zh": """你是 Counterfactual Analyst。Learner 在「{episode}」中由 <history_prefix> 分歧，原定未来 <original_future> 被替换为 <branch_line>。请对比“已走路径”和“未选路径”，生成 Alternative Paths。
+        "zh": """你是 Counterfactual Analyst。Learner 在「{episode}」中由 <history_prefix> 分歧，原定未来 <original_future> 被替换为 <branch_line>。请对比“已走路径”和“未选路径”，生成 Alternative Paths，要求**严格精炼**。
 
 <history_prefix>{history_prefix}</history_prefix>
 <original_future>{original_future}</original_future>
 <branch_line>{branch_line}</branch_line>
 
 内容要求：
-- Unchosen Options & Likely Rollouts：列关键未选项及其最可能后果（短 rollout，<=6 条）。
+- Unchosen Options & Likely Rollouts：列关键未选项及其最可能后果（短 rollout）。
 - Branch Contrast：指出扩散起点与扩散原因。
 - Recommended Next Experiment：推荐下次最值得回溯的 checkpoint 与视角。
 
-输出严格 JSON。字段需极简：
+输出严格 JSON。字段需极简。列表元素不超过4个：
 {{
   "alternative_paths": {{
     "unchosen_options_likely_rollouts": [
@@ -717,18 +717,18 @@ Output strict JSON. Keep concise; max 6 items per list:
   }}
 }}
 """,
-        "en": """You are Counterfactual Analyst. In "{episode}", the learner diverged from <history_prefix>, replacing canonical future <original_future> with <branch_line>. Compare taken vs untaken paths and generate Alternative Paths.
+        "en": """You are Counterfactual Analyst. In "{episode}", the learner diverged from <history_prefix>, replacing canonical future <original_future> with <branch_line>. Compare taken vs untaken paths and generate Alternative Paths. Be strictly concise.
 
 <history_prefix>{history_prefix}</history_prefix>
 <original_future>{original_future}</original_future>
 <branch_line>{branch_line}</branch_line>
 
 Requirements:
-- Unchosen Options & Likely Rollouts: list key untaken options and likely consequences (short rollout, <=6).
+- Unchosen Options & Likely Rollouts: list key untaken options and likely consequences (short rollout).
 - Branch Contrast: specify where divergence spread began and why.
 - Recommended Next Experiment: suggest the best checkpoint and perspective for the next iteration.
 
-Output strict JSON. Keep concise:
+Output strict JSON. Keep concise. Max 4 items per list:
 {{
   "alternative_paths": {{
     "unchosen_options_likely_rollouts": [
@@ -753,7 +753,7 @@ Output strict JSON. Keep concise:
 """,
     },
     "reflection.worker_e": {
-        "zh": """你是 Learner Profiler。Learner 在「{episode}」中由 <history_prefix> 分歧到 <branch_line>。结合 <cast>、<branch_logs> 与 <outcome_snapshot>，生成 Decision Profile 与 Personalized Learning Suggestions。
+        "zh": """你是 Learner Profiler。Learner 在「{episode}」中由 <history_prefix> 分歧到 <branch_line>。结合 <cast>、<branch_logs> 与 <outcome_snapshot>，生成 Decision Profile 与 Personalized Learning Suggestions，要求**严格精炼**。
 
 <cast>{cast_str}</cast>
 <history_prefix>{history_prefix}</history_prefix>
@@ -770,7 +770,7 @@ Output strict JSON. Keep concise:
 - Skill Visualization (Radar)：给各能力点打分并给理由。
 - Next Steps：推荐后续 checkpoint / perspective / learning goal。
 
-输出严格 JSON。字段需极简：
+输出严格 JSON。字段需极简，列表元素不超过4个：
 {{
   "decision_profile_blind_spots": {{
     "decision_pattern_summary": [
@@ -799,7 +799,7 @@ Output strict JSON. Keep concise:
   }}
 }}
 """,
-        "en": """You are Learner Profiler. In "{episode}", the learner diverged from <history_prefix> to <branch_line>. Using <cast>, <branch_logs>, and <outcome_snapshot>, generate Decision Profile and Personalized Learning Suggestions.
+        "en": """You are Learner Profiler. In "{episode}", the learner diverged from <history_prefix> to <branch_line>. Using <cast>, <branch_logs>, and <outcome_snapshot>, generate Decision Profile and Personalized Learning Suggestions. Be strictly concise.
 
 <cast>{cast_str}</cast>
 <history_prefix>{history_prefix}</history_prefix>
@@ -816,7 +816,7 @@ Requirements:
 - Skill Visualization (Radar): score each capability with rationale.
 - Next Steps: recommended checkpoint/perspective/learning goal.
 
-Output strict JSON. Keep concise:
+Output strict JSON. Keep concise. Max 4 items per list:
 {{
   "decision_profile_blind_spots": {{
     "decision_pattern_summary": [
@@ -847,7 +847,7 @@ Output strict JSON. Keep concise:
 """,
     },
     "reflection.worker_f": {
-        "zh": """你是 Meta-Historian。Learner 完成了「{episode}」模拟。请跳出细节，生成 Anchors, Boundaries & Transfer 部分。
+        "zh": """你是 Meta-Historian。Learner 完成了「{episode}」模拟。请跳出细节，生成 Anchors, Boundaries & Transfer 部分，要求**严格精炼**。
 
 <canonical_summary>{canonical_summary}</canonical_summary>
 <branch_summary>{branch_summary}</branch_summary>
@@ -860,7 +860,7 @@ Output strict JSON. Keep concise:
 - Meta-Lessons：总结可迁移的历史洞见。
 - Transferable Patterns：抽象为可迁移模式并给出现代平行场景。
 
-输出严格 JSON。字段需极简：
+输出严格 JSON。字段需极简，列表元素不超过4个：
 {{
   "canonical_fact_anchors": [
     {{ "fact": "String", "contrast_to_branch": "String" }}
@@ -874,7 +874,7 @@ Output strict JSON. Keep concise:
   ]
 }}
 """,
-        "en": """You are Meta-Historian. The learner completed "{episode}". Step above the details and produce Anchors, Boundaries & Transfer.
+        "en": """You are Meta-Historian. The learner completed "{episode}". Step above the details and produce Anchors, Boundaries & Transfer. Be strictly concise.
 
 <canonical_summary>{canonical_summary}</canonical_summary>
 <branch_summary>{branch_summary}</branch_summary>
@@ -887,7 +887,7 @@ Requirements:
 - Meta-Lessons: transferable historical insights.
 - Transferable Patterns: abstract patterns with modern parallels.
 
-Output strict JSON. Keep concise:
+Output strict JSON. Keep concise. Max 4 items per list:
 {{
   "canonical_fact_anchors": [
     {{ "fact": "String", "contrast_to_branch": "String" }}
