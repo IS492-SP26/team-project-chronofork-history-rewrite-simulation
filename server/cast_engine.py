@@ -188,7 +188,7 @@ class CastEngine:
                         break
 
                     self.current_speaker = next_speaker
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(1)
 
             # --- STAGE 2 LOGIC (Backtrack Session) ---
             elif self.stage == 2:
