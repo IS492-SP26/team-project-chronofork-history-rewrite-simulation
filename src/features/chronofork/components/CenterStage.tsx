@@ -819,7 +819,7 @@ function InteractionComposer({
             disabled={state.tipLoading}
             onClick={handleRequestTip}>
             {state.tipLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
-            {t("Tips")}
+            {t("Tips (Take ~10s)")}
           </Button>
           {showCheckPrevious && (
             <Button size="sm" variant="outline" tone={tone} className="text-xs h-7 px-2.5 gap-1 border-border/40"
@@ -922,7 +922,7 @@ function ReflectionPrompt({ onViewReport }: { onViewReport: () => void }) {
       <div className="text-center">
         <p className="text-base font-semibold text-foreground">
           {loading
-            ? t("Generating Reflection...")
+            ? t("Generating Reflection... (Take ~30s)")
             : ready
               ? t("Reflection Report Ready")
               : reflectionEnabled
@@ -1007,6 +1007,83 @@ function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
   const hasServerHtml = !!state.reflectionHtml
   const isWS = state.connectionStatus === "connected"
 
+  const handleDownloadReportHtml = () => {
+    const escapeHtml = (value: string) =>
+      value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;")
+
+    const html = hasServerHtml
+      ? state.reflectionHtml!
+      : `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(report.episode)} - Reflection Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 24px; line-height: 1.6; color: #1f2937; }
+      h1 { margin-bottom: 4px; }
+      h2 { margin-top: 28px; margin-bottom: 8px; }
+      .meta { color: #6b7280; margin-bottom: 20px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; }
+      ul { margin: 8px 0 0 18px; }
+    </style>
+  </head>
+  <body>
+    <h1>${escapeHtml(report.episode)}</h1>
+    <div class="meta">${escapeHtml(report.duration)} | Forks: ${report.forksCreated} | Fork Node: ${escapeHtml(report.forkNode)}</div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>${escapeHtml(t("Canonical"))}</h2>
+        <ul>
+          <li>U-2 Photos Revealed</li>
+          <li>ExComm Deliberations</li>
+          <li>Quarantine Decision</li>
+          <li>Address to Nation</li>
+          <li>Black Saturday</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>${escapeHtml(t("Your Timeline"))}</h2>
+        <ul>
+          <li>U-2 Photos Revealed</li>
+          <li>ExComm Deliberations</li>
+          <li>Early Backchannel (Fork)</li>
+          <li>Quiet Diplomacy</li>
+          <li>Accelerated Resolution</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>${escapeHtml(t("Trade-offs"))}</h2>
+    <ul>${report.tradeoffs.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+
+    <h2>${escapeHtml(t("Overlooked"))}</h2>
+    <ul>${report.overlooked.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+
+    <h2>${escapeHtml(t("Suggestions"))}</h2>
+    <ul>${report.recommendations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+  </body>
+</html>`
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = objectUrl
+    link.download = `chronofork-reflection-${Date.now()}.html`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(objectUrl)
+    toast.success(t("Report HTML downloaded."))
+  }
+
   const handleExportSave = () => {
     if (!isWS) {
       toast.info(t("Export functionality coming soon."))
@@ -1047,6 +1124,10 @@ function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
                 <div className="flex items-center justify-center gap-3 pt-6 border-t border-border/20 mt-6">
                   <Button variant="outline" size="default" tone="reflection" className="gap-2 text-sm" onClick={onReturn}>
                     <ArrowLeft className="w-4 h-4" /> {t("Return to Console")}
+                  </Button>
+                  <Button variant="outline" size="default" tone="reflection" className="gap-2 text-sm"
+                    onClick={handleDownloadReportHtml}>
+                    <Download className="w-4 h-4" /> {t("Download Report HTML")}
                   </Button>
                   <Button variant="outline" size="default" tone="observe" className="gap-2 text-sm"
                     onClick={handleExportSave}>
@@ -1121,6 +1202,10 @@ function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
                   <div className="flex items-center justify-center gap-3 pt-2 pb-4">
                     <Button variant="outline" size="default" tone="reflection" className="gap-2 text-sm" onClick={onReturn}>
                       <ArrowLeft className="w-4 h-4" /> {t("Return to Console")}
+                    </Button>
+                    <Button variant="outline" size="default" tone="reflection" className="gap-2 text-sm"
+                      onClick={handleDownloadReportHtml}>
+                      <Download className="w-4 h-4" /> {t("Download Report HTML")}
                     </Button>
                     <Button variant="outline" size="default" tone="observe" className="gap-2 text-sm"
                       onClick={handleExportSave}>

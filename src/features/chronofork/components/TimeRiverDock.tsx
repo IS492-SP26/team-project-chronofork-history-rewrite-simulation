@@ -138,8 +138,12 @@ function computeGraphLayout(graph: UnifiedGraph): GraphLayout {
   const posEntries = Object.entries(graph.pos)
   const padX = 30
   const padY = 30
-  const labelW = 60
-  const minSvgW = 180
+  // Reserve enough horizontal space for centered node labels.
+  const maxLabelChars = graph.nodes.reduce((max, node) => Math.max(max, node.label.length), 0)
+  const approxCharPx = 7
+  const maxLabelWidth = Math.max(56, maxLabelChars * approxCharPx)
+  const labelPad = Math.ceil(maxLabelWidth / 2) + 10
+  const minSvgW = 260
   const minSvgH = 200
 
   if (posEntries.length === 0) {
@@ -155,7 +159,7 @@ function computeGraphLayout(graph: UnifiedGraph): GraphLayout {
     let x = p[0]
     let y = p[1]
     if (isGridCoords) {
-      x = p[0] * 120
+      x = p[0] * 160
       y = -p[1] * 80 // Invert Y so -1 becomes 80, -2 becomes 160 (going down)
     }
     return [id, x, y] as [string, number, number]
@@ -169,11 +173,11 @@ function computeGraphLayout(graph: UnifiedGraph): GraphLayout {
   const maxY = Math.max(...allY)
   const rangeX = maxX - minX
   const rangeY = maxY - minY
-  const svgW = Math.max(minSvgW, rangeX + padX * 2 + labelW)
+  const svgW = Math.max(minSvgW, rangeX + padX * 2 + labelPad * 2)
   const svgH = Math.max(minSvgH, rangeY + padY * 2 + 20)
 
   const pos = Object.fromEntries(mappedPosEntries.map(([id, x, y]) => {
-    const finalX = rangeX === 0 ? svgW / 2 : padX + labelW / 2 + (x - minX)
+    const finalX = rangeX === 0 ? svgW / 2 : padX + labelPad + (x - minX)
     const finalY = rangeY === 0 ? svgH / 2 : padY + (y - minY)
     return [id, { x: finalX, y: finalY }]
   }))
