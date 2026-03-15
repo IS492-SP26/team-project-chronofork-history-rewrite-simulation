@@ -7,7 +7,7 @@ import { useRef, useCallback, useEffect } from "react"
 import type { Dispatch } from "react"
 import type { RunAction, ConnectionStatus, ServerConfig, ServerGraphData, ServerTipData } from "../state/types"
 
-const DEFAULT_WS_URL = "ws://localhost:8000/ws"
+const DEFAULT_WS_URL = "ws://143.244.176.215:8000/ws"
 
 export interface UseWebSocketReturn {
   connect: (url?: string) => void

@@ -332,7 +332,7 @@ function FacilitatorStrip({
 function PreStartOverlay() {
   const { state, connectToServer, useMockData } = useChronoFork()
   const { t } = useI18n()
-  const [wsUrl, setWsUrl] = useState("ws://localhost:8000/ws")
+  const [wsUrl, setWsUrl] = useState("ws://143.244.176.215:8000/ws")
   const isConnecting = state.connectionStatus === "connecting"
 
   return (
@@ -372,7 +372,7 @@ function PreStartOverlay() {
               value={wsUrl}
               onChange={(e) => setWsUrl(e.target.value)}
               className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-card/80 border border-border/40 text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="ws://localhost:8000/ws"
+              placeholder="ws://143.244.176.215:8000/ws"
               disabled={isConnecting}
             />
           </div>
