@@ -257,6 +257,12 @@ class StoryGraph(Viewer):
                     "UNFINISHED": "🔒",
                 }.get(status, "")
                 label_text = f"{emoji} {nid}"
+                
+            hover_title = data.get("hover_title", "")
+            if hover_title == "None":
+                hover_title = ""
+            else:
+                hover_title = f"Decision: {hover_title}"
 
             G.nodes[nid].update(
                 {
@@ -265,7 +271,8 @@ class StoryGraph(Viewer):
                     "final_color": final_color,
                     "line_color": line_color,
                     "line_width": line_width,
-                    "hover_title": data.get("hover_title", ""),
+                    "title": data.get("label_id", ""),
+                    "hover_title": hover_title,
                     "hover_desc": data.get("hover_desc", ""),
                 }
             )
@@ -274,8 +281,8 @@ class StoryGraph(Viewer):
         hover = HoverTool(
             tooltips="""
             <div style="font-family: sans-serif; max-width: 300px; white-space: normal; word-wrap: break-word;">
+                <div style="font-size: 12px; margin-bottom: 5px; line-height: 1.2;">@hover_desc</div>
                 <b>@hover_title</b> (@status_label)<br>
-                <div style="font-size: 12px; margin-top: 5px; line-height: 1.2;">@hover_desc</div>
             </div>
         """
         )
@@ -325,7 +332,7 @@ class StoryGraph(Viewer):
                 "y": [pos[n][1] for n in G],
                 "text": [
                     (
-                        f"{G.nodes[n]['hover_title']}\n\n"
+                        f"{G.nodes[n]['title']}\n\n"
                         if n != "0.0"
                         else ""
                     )

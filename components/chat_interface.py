@@ -368,7 +368,7 @@ class ChatInterface(Viewer):
     # --- Formatting Helpers ---
     def _format_name_display(self, name):
         """Append (User) if the name matches user role"""
-        if name == self.user_role_name:
+        if name == self.user_role_name and self.current_stage == 2:
             return f"{name} {self.t['display_user_suffix']}"
         if name == "User":
             return self.t["user_name"]
