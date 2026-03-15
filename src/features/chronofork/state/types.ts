@@ -93,6 +93,11 @@ export interface FacilitatorBlock {
   complete: boolean
 }
 
+export interface SaveExportPayload {
+  filename: string
+  json_content: string
+}
+
 export interface RunState {
   /* ── Connection ── */
   connectionStatus: ConnectionStatus
@@ -117,6 +122,7 @@ export interface RunState {
 
   /* ── Streaming state ── */
   currentStreamKey: string | null   // "agent::target" key for the current streaming message
+  currentStreamMessageId: string | null
   facilitatorBlocks: FacilitatorBlock[]
 
   /* ── Divergence ── */
@@ -139,6 +145,7 @@ export interface RunState {
   analysisHtml: string | null
   reflectionHtml: string | null
   canReflect: boolean
+  saveExport: SaveExportPayload | null
 
   /* ── Tips ── */
   tipData: ServerTipData | null
@@ -205,8 +212,8 @@ export type RunAction =
   | { type: "SET_ANALYSIS_HTML"; data: { html: string } }
   | { type: "SET_REFLECTION_HTML"; data: { html: string } }
   | { type: "ENABLE_REFLECTION" }
+  | { type: "SET_SAVE_EXPORT"; data: SaveExportPayload }
   | { type: "SET_TIP_DATA"; data: ServerTipData }
   | { type: "SET_TIP_ERROR"; data: { msg: string } }
   | { type: "SET_TIP_LOADING"; data: { loading: boolean } }
   | { type: "SET_INPUT_REQUEST"; data: { msg: string; from_name: string } | null }
-  | { type: "COMPLETE_HISTORY_REVIEW" }

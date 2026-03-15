@@ -42,6 +42,7 @@ export const initialState: RunState = {
 
   /* ── Streaming state ── */
   currentStreamKey: null,
+  currentStreamMessageId: null,
   facilitatorBlocks: [],
 
   /* ── Divergence ── */
@@ -52,6 +53,7 @@ export const initialState: RunState = {
   analysisHtml: null,
   reflectionHtml: null,
   canReflect: false,
+  saveExport: null,
 
   /* ── Tips ── */
   tipData: null,
@@ -96,6 +98,8 @@ export function runReducer(state: RunState, action: RunAction): RunState {
           phase: "observe_complete",
           observeProgress: 100,
           decisionPointReached: true,
+          currentStreamKey: null,
+          currentStreamMessageId: null,
           ui: { ...state.ui, docks: { leftOpen: true, rightOpen: true } },
         }
       }
@@ -116,17 +120,21 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       const history = [...state.chatHistory]
 
       // If this is a continuation of the same stream, append to last message
-      if (state.currentStreamKey === streamKey && history.length > 0) {
-        const last = { ...history[history.length - 1] }
-        last.text = last.text + token
-        history[history.length - 1] = last
-        return { ...state, chatHistory: history }
+      if (state.currentStreamKey === streamKey && state.currentStreamMessageId) {
+        const lastIdx = history.findIndex((msg) => msg.id === state.currentStreamMessageId)
+        if (lastIdx >= 0) {
+          const last = { ...history[lastIdx] }
+          last.text = last.text + token
+          history[lastIdx] = last
+          return { ...state, chatHistory: history }
+        }
       }
 
       // New stream -- create a new message
+      const newMessageId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
       const speakerRole = roles.find((r) => r.name === agent || r.shortName === agent)
       const newMsg: ChatMessage = {
-        id: `stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: newMessageId,
         type: "dialogue",
         speakerId: speakerRole?.id,
         speakerName: agent,
@@ -138,6 +146,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
         ...state,
         chatHistory: [...history, newMsg],
         currentStreamKey: streamKey,
+        currentStreamMessageId: newMessageId,
       }
     }
 
@@ -183,9 +192,23 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       newHistory.push(sysMsg)
 
       if (to_id === "end") {
-        return { ...state, phase: "observe_complete", observeProgress: 100, decisionPointReached: true, chatHistory: newHistory }
+        return {
+          ...state,
+          phase: "observe_complete",
+          observeProgress: 100,
+          decisionPointReached: true,
+          chatHistory: newHistory,
+          currentStreamKey: null,
+          currentStreamMessageId: null,
+        }
       }
-      return { ...state, activeNodeId: to_id, chatHistory: newHistory }
+      return {
+        ...state,
+        activeNodeId: to_id,
+        chatHistory: newHistory,
+        currentStreamKey: null,
+        currentStreamMessageId: null,
+      }
     }
 
     case "ACTION_UPDATE_BACKTRACK":
@@ -204,7 +227,9 @@ export function runReducer(state: RunState, action: RunAction): RunState {
         activeRoleName: action.data.new_role,
         divergence: { ...state.divergence, backtrackedNodeId: action.data.new_node_id },
         ui: { ...state.ui, showNodeDetail: false, rightDockTab: "transcript", showTips: false, showAnalysis: false },
-        chatHistory: [backMsg] // Clear previous history and set the backtrack message
+        chatHistory: [backMsg], // Clear previous history and set the backtrack message
+        currentStreamKey: null,
+        currentStreamMessageId: null,
       }
 
     case "ACTION_UPDATE_DIVERGENCE_IN_PROGRESS":
@@ -233,6 +258,9 @@ export function runReducer(state: RunState, action: RunAction): RunState {
     case "ENABLE_REFLECTION":
       return { ...state, canReflect: true }
 
+    case "SET_SAVE_EXPORT":
+      return { ...state, saveExport: action.data }
+
     case "SET_TIP_DATA":
       return { ...state, tipData: action.data, tipLoading: false, tipError: null, ui: { ...state.ui, showTips: true } }
 
@@ -243,7 +271,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       return { ...state, tipLoading: action.data.loading }
 
     case "SET_INPUT_REQUEST":
-      return { ...state, inputRequest: action.data }
+      return { ...state, inputRequest: action.data, currentStreamKey: null, currentStreamMessageId: null }
 
     case "COMPLETE_HISTORY_REVIEW":
       // Stage2 history replay ended -- enable interaction
@@ -254,7 +282,13 @@ export function runReducer(state: RunState, action: RunAction): RunState {
         text: "── 📝 之前的交互上下文 ──",
         timestamp: Date.now()
       }
-      return { ...state, phase: "intervene_active", chatHistory: [...state.chatHistory, divMsg] }
+      return {
+        ...state,
+        phase: "intervene_active",
+        chatHistory: [...state.chatHistory, divMsg],
+        currentStreamKey: null,
+        currentStreamMessageId: null,
+      }
 
     /* ═══════════════════════════════════════════════
        Local / mock-driven actions (preserved from R1)
@@ -324,7 +358,13 @@ export function runReducer(state: RunState, action: RunAction): RunState {
         id: `user-chat-${Date.now()}`, type: "user_chat",
         speakerName: action.data.speakerName, targetName: action.data.targetName, text: action.data.text, timestamp: Date.now(),
       }
-      return { ...state, chatHistory: [...state.chatHistory, msg], inputRequest: null }
+      return {
+        ...state,
+        chatHistory: [...state.chatHistory, msg],
+        inputRequest: null,
+        currentStreamKey: null,
+        currentStreamMessageId: null,
+      }
     }
 
     case "SEND_DIVERGE": {
@@ -373,6 +413,8 @@ export function runReducer(state: RunState, action: RunAction): RunState {
         ...state, phase: "intervene_idle", selectedNodeId: null,
         divergence: { exists: false, inProgress: false }, analysis: { available: false },
         analysisHtml: null, tipData: null,
+        currentStreamKey: null,
+        currentStreamMessageId: null,
         ui: { ...state.ui, showNodeDetail: false, rightDockTab: "transcript", showTips: false, showAnalysis: false, analysisViewed: false },
       }
 
@@ -381,7 +423,9 @@ export function runReducer(state: RunState, action: RunAction): RunState {
         ...state, phase: "observe_complete", selectedNodeId: null,
         divergence: { exists: false, inProgress: false }, analysis: { available: false },
         activeRoleId: null, activeRoleName: null,
-        analysisHtml: null, tipData: null, reflectionHtml: null, canReflect: false,
+        analysisHtml: null, tipData: null, reflectionHtml: null, canReflect: false, saveExport: null,
+        currentStreamKey: null,
+        currentStreamMessageId: null,
         ui: { ...state.ui, docks: { leftOpen: true, rightOpen: true }, showNodeDetail: false, rightDockTab: "transcript", showTips: false, showAnalysis: false, analysisViewed: false },
       }
 

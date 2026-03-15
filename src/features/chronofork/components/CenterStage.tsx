@@ -308,8 +308,9 @@ function InteractionBacktrackSetup() {
   const { state, dispatch, ws } = useChronoFork()
   const { t } = useI18n()
   const isWS = state.connectionStatus === "connected"
-  const isMock = state.connectionStatus === "mock"
   const playableRoles = roles.filter((r) => r.id !== "facilitator")
+  const userRoleName = state.serverConfig?.user_role?.name
+  const selectableServerRoles = (state.serverConfig?.cast_data ?? []).filter((c) => c.name !== userRoleName)
   const hasNode = !!state.selectedNodeId
   const hasRole = !!state.activeRoleId
   const pc = phaseColor(state.phase)
@@ -345,9 +346,9 @@ function InteractionBacktrackSetup() {
         {t("Select a node (left panel) and a character below to backtrack.")}
       </p>
       {/* Show server cast_data if connected, otherwise local roles */}
-      {isWS && state.serverConfig?.cast_data ? (
+      {isWS && selectableServerRoles.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {state.serverConfig.cast_data.map((c, i) => {
+          {selectableServerRoles.map((c, i) => {
             const isActive = state.activeRoleName === c.name
             return (
               <button
@@ -411,9 +412,12 @@ function InteractionComposer() {
   const { t } = useI18n()
   const isWS = state.connectionStatus === "connected"
   const [text, setText] = useState("")
+  const userRoleName = state.serverConfig?.user_role?.name
+  const userRoleTitle = state.serverConfig?.user_role?.title
   const activeRole = state.activeRoleId ? roles.find((r) => r.id === state.activeRoleId) : null
-  const roleName = state.activeRoleName ?? activeRole?.shortName ?? "You"
+  const roleName = userRoleName ?? state.activeRoleName ?? activeRole?.name ?? activeRole?.shortName ?? "You"
   const targetRoles = roles.filter((r) => r.id !== "facilitator" && r.id !== state.activeRoleId)
+  const serverTargets = (state.serverConfig?.cast_data ?? []).filter((c) => c.name !== userRoleName)
   const [targetId, setTargetId] = useState<string | null>(null)
   const pc = "var(--chrono-amber)"
   const tone = phaseTone(state.phase)
@@ -422,9 +426,11 @@ function InteractionComposer() {
     if (!text.trim()) return
 
     if (isWS) {
-      // Send via WebSocket
-      const targetRole = targetId ? roles.find((r) => r.id === targetId) : null
-      const targetName = targetRole?.name ?? (targetId || "")
+      const targetName = targetId ?? ""
+      if (!targetName) {
+        toast.error(t("Select a recipient before sending."))
+        return
+      }
       ws.send("user_message", { content: text.trim(), target: targetName })
       dispatch({ type: "SEND_CHAT", data: { text: text.trim(), speakerName: roleName, targetName } })
       setText("")
@@ -474,8 +480,8 @@ function InteractionComposer() {
       {/* Target person buttons */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="text-xs text-muted-foreground font-mono shrink-0">{t("TO:")}</span>
-        {isWS && state.serverConfig?.cast_data ? (
-          state.serverConfig.cast_data.map((c, i) => {
+        {isWS && serverTargets.length > 0 ? (
+          serverTargets.map((c, i) => {
             const isT = targetId === c.name
             return (
               <button key={i} onClick={() => setTargetId(isT ? null : c.name)}
@@ -504,7 +510,7 @@ function InteractionComposer() {
         <Textarea
           tone={tone}
           value={text} onChange={(e) => setText(e.target.value)}
-          placeholder={`${t("Type in character as")} ${roleName}...`}
+          placeholder={`${t("Type in character as")} ${userRoleTitle ? `${roleName} (${userRoleTitle})` : roleName}...`}
           className="min-h-[52px] w-full text-sm bg-card/50 border-border/30 resize-none leading-relaxed" rows={2}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() } }}
         />
@@ -566,6 +572,7 @@ function ReflectionPrompt({ onViewReport }: { onViewReport: () => void }) {
   const { state, ws, dispatch } = useChronoFork()
   const { t } = useI18n()
   const isWS = state.connectionStatus === "connected"
+  const reflectionEnabled = !isWS || state.canReflect || !!state.reflectionHtml
   const [loading, setLoading] = useState(false)
   const [ready, setReady] = useState(false)
 
@@ -578,6 +585,7 @@ function ReflectionPrompt({ onViewReport }: { onViewReport: () => void }) {
   }, [loading, state.reflectionHtml])
 
   const handleRequest = () => {
+    if (!reflectionEnabled) return
     setLoading(true)
     if (isWS) {
       ws.send("request_reflection", {})
@@ -615,13 +623,25 @@ function ReflectionPrompt({ onViewReport }: { onViewReport: () => void }) {
       </div>
       <div className="text-center">
         <p className="text-base font-semibold text-foreground">
-          {loading ? t("Generating Reflection...") : ready ? t("Reflection Report Ready") : t("Reflection Available")}
+          {loading
+            ? t("Generating Reflection...")
+            : ready
+              ? t("Reflection Report Ready")
+              : reflectionEnabled
+                ? t("Reflection Available")
+                : t("Waiting for reflection export to be enabled by the server.")}
         </p>
         <p className="text-sm text-muted-foreground mt-1">
-          {loading ? t("Analyzing your intervention and computing outcomes...") : ready ? t("Your report is ready. Click below to review.") : t("Your intervention run is complete. Request the analysis report.")}
+          {loading
+            ? t("Analyzing your intervention and computing outcomes...")
+            : ready
+              ? t("Your report is ready. Click below to review.")
+              : reflectionEnabled
+                ? t("Your intervention run is complete. Request the analysis report.")
+                : t("Reflection export will unlock when the server enables it.")}
         </p>
       </div>
-      {!loading && !ready && (
+      {!loading && !ready && reflectionEnabled && (
         <Button size="default" tone="reflection" className="text-sm font-semibold text-primary-foreground gap-2"
           onClick={handleRequest}>
           <BookOpen className="w-4 h-4" /> {t("Request Reflection Report")}
@@ -683,10 +703,20 @@ function RadarVisualization({ dimensions }: { dimensions: typeof mockReportData.
 }
 
 function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
-  const { state } = useChronoFork()
+  const { state, ws } = useChronoFork()
   const { t } = useI18n()
   const report = mockReportData
   const hasServerHtml = !!state.reflectionHtml
+  const isWS = state.connectionStatus === "connected"
+
+  const handleExportSave = () => {
+    if (!isWS) {
+      toast.info(t("Export functionality coming soon."))
+      return
+    }
+    ws.send("export_save", {})
+    toast.success(t("Save export requested..."))
+  }
 
   return (
     <motion.div
@@ -721,8 +751,8 @@ function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
                     <ArrowLeft className="w-4 h-4" /> {t("Return to Console")}
                   </Button>
                   <Button variant="outline" size="default" tone="observe" className="gap-2 text-sm"
-                    onClick={() => toast.info(t("Export functionality coming soon."))}>
-                    <Download className="w-4 h-4" /> {t("Export Report")}
+                    onClick={handleExportSave}>
+                    <Download className="w-4 h-4" /> {t("Export Save")}
                   </Button>
                 </div>
               </div>
@@ -795,8 +825,8 @@ function ReflectionReportOverlay({ onReturn }: { onReturn: () => void }) {
                       <ArrowLeft className="w-4 h-4" /> {t("Return to Console")}
                     </Button>
                     <Button variant="outline" size="default" tone="observe" className="gap-2 text-sm"
-                      onClick={() => toast.info(t("Export functionality coming soon."))}>
-                      <Download className="w-4 h-4" /> {t("Export Report")}
+                      onClick={handleExportSave}>
+                      <Download className="w-4 h-4" /> {t("Export Save")}
                     </Button>
                   </div>
                 </div>
@@ -876,9 +906,18 @@ function InteractionConsole() {
 /* ── Main CenterStage ��─ */
 export function CenterStage() {
   const { state } = useChronoFork()
+  const { setLocale } = useI18n()
   const rm = state.ui.reducedMotion
   const isDisconnected = state.connectionStatus === "disconnected"
   const currentScene = scenes[state.currentSceneIndex]
+
+  useEffect(() => {
+    const promptLang = state.serverConfig?.prompt_lang
+    if (promptLang === "zh" || promptLang === "en") {
+      setLocale(promptLang)
+    }
+  }, [setLocale, state.serverConfig?.prompt_lang])
+
   if (!currentScene && !isDisconnected) return null
 
   const sceneBeats = currentScene ? dialogueBeats.filter((d) => d.sceneId === currentScene.id) : []

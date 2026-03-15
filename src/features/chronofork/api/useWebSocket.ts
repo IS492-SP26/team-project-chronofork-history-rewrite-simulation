@@ -5,7 +5,7 @@
 
 import { useRef, useCallback, useEffect } from "react"
 import type { Dispatch } from "react"
-import type { RunAction, ConnectionStatus } from "../state/types"
+import type { RunAction, ConnectionStatus, ServerConfig, ServerGraphData, ServerTipData } from "../state/types"
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws"
 
@@ -14,6 +14,29 @@ export interface UseWebSocketReturn {
   disconnect: () => void
   send: (type: string, data?: Record<string, unknown>) => void
   isConnected: () => boolean
+}
+
+interface EnvelopeMessage {
+  type: string
+  data?: Record<string, unknown>
+}
+
+function downloadSaveExport(filename: string, jsonContent: string) {
+  if (typeof window === "undefined") return
+
+  const blob = new Blob([jsonContent], { type: "application/json" })
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = objectUrl
+  link.download = filename.split("/").pop() || "chronofork-save.json"
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(objectUrl)
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" ? value : null
 }
 
 /**
@@ -37,7 +60,7 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
   /* ── Message Router (Server -> Client) ── */
   const routeMessage = useCallback(
     (raw: string) => {
-      let msg: { type: string; data: any }
+      let msg: EnvelopeMessage
       try {
         msg = JSON.parse(raw)
       } catch {
@@ -45,13 +68,13 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
         return
       }
 
-      const { type, data } = msg
+      const { type, data = {} } = msg
 
       switch (type) {
         /* ── system_init ── */
         case "system_init": {
           if (data.status === "ready" && data.config) {
-            dispatch({ type: "SET_SERVER_CONFIG", data: { config: data.config } })
+            dispatch({ type: "SET_SERVER_CONFIG", data: { config: data.config as ServerConfig } })
           } else if (data.status === "error_no_config") {
             console.error("[ChronoFork WS] Server config error")
           }
@@ -60,19 +83,25 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
 
         /* ── graph_update ── */
         case "graph_update": {
-          dispatch({ type: "SET_SERVER_GRAPH", data: { graph: data } })
+          dispatch({ type: "SET_SERVER_GRAPH", data: { graph: data as unknown as ServerGraphData } })
           break
         }
 
         /* ── stage_update ── */
         case "stage_update": {
-          dispatch({ type: "SET_STAGE", data: { stage: data.stage } })
+          if (data.stage === 1 || data.stage === 2) {
+            dispatch({ type: "SET_STAGE", data: { stage: data.stage } })
+          }
           break
         }
 
         /* ── node_update ── */
         case "node_update": {
-          dispatch({ type: "NODE_UPDATE", data: { from_id: data.from_id, to_id: data.to_id } })
+          const fromId = asString(data.from_id)
+          const toId = asString(data.to_id)
+          if (fromId && toId) {
+            dispatch({ type: "NODE_UPDATE", data: { from_id: fromId, to_id: toId } })
+          }
           break
         }
 
@@ -86,25 +115,37 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
 
         /* ── stream_token ── */
         case "stream_token": {
-          dispatch({
-            type: "STREAM_TOKEN",
-            data: { agent: data.agent, token: data.token, target: data.target },
-          })
+          const agent = asString(data.agent)
+          const token = asString(data.token)
+          const target = asString(data.target)
+          if (agent && token && target) {
+            dispatch({
+              type: "STREAM_TOKEN",
+              data: { agent, token, target },
+            })
+          }
           break
         }
 
         /* ── input_request ── */
         case "input_request": {
-          dispatch({
-            type: "SET_INPUT_REQUEST",
-            data: { msg: data.msg, from_name: data.from_name },
-          })
+          const msgText = asString(data.msg)
+          const fromName = asString(data.from_name)
+          if (msgText && fromName) {
+            dispatch({
+              type: "SET_INPUT_REQUEST",
+              data: { msg: msgText, from_name: fromName },
+            })
+          }
           break
         }
 
         /* ── facilitator_stream ── */
         case "facilitator_stream": {
-          dispatch({ type: "FACILITATOR_STREAM", data: { token: data.token } })
+          const token = asString(data.token)
+          if (token) {
+            dispatch({ type: "FACILITATOR_STREAM", data: { token } })
+          }
           break
         }
 
@@ -117,16 +158,21 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
         /* ── action_update ── */
         case "action_update": {
           if (data.action === "backtrack_complete") {
+            const newNodeId = asString(data.new_node_id)
+            const newRole = asString(data.new_role)
+            if (!newNodeId || !newRole) break
             dispatch({
               type: "ACTION_UPDATE_BACKTRACK",
-              data: { new_node_id: data.new_node_id, new_role: data.new_role },
+              data: { new_node_id: newNodeId, new_role: newRole },
             })
           } else if (data.action === "divergence_in_progress") {
             dispatch({ type: "ACTION_UPDATE_DIVERGENCE_IN_PROGRESS" })
           } else if (data.action === "divergence_complete") {
+            const report = asString(data.report)
+            if (!report) break
             dispatch({
               type: "ACTION_UPDATE_DIVERGENCE_COMPLETE",
-              data: { report: data.report },
+              data: { report },
             })
           }
           break
@@ -140,25 +186,41 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
 
         /* ── reflection_report ── */
         case "reflection_report": {
-          dispatch({ type: "SET_REFLECTION_HTML", data: { html: data.report } })
+          const report = asString(data.report)
+          if (report) {
+            dispatch({ type: "SET_REFLECTION_HTML", data: { html: report } })
+          }
           break
         }
 
         /* ── save_complete ── */
         case "save_complete": {
-          console.log("[ChronoFork WS] Save complete:", data.filename)
+          const filename = typeof data.filename === "string" ? data.filename : "chronofork-save.json"
+          const jsonContent = typeof data.json_content === "string" ? data.json_content : ""
+          dispatch({
+            type: "SET_SAVE_EXPORT",
+            data: {
+              filename,
+              json_content: jsonContent,
+            },
+          })
+          downloadSaveExport(filename, jsonContent)
+          console.log("[ChronoFork WS] Save complete:", filename)
           break
         }
 
         /* ── tip_data ── */
         case "tip_data": {
-          dispatch({ type: "SET_TIP_DATA", data })
+          dispatch({ type: "SET_TIP_DATA", data: data as unknown as ServerTipData })
           break
         }
 
         /* ── tip_error ── */
         case "tip_error": {
-          dispatch({ type: "SET_TIP_ERROR", data: { msg: data.msg } })
+          const msgText = asString(data.msg)
+          if (msgText) {
+            dispatch({ type: "SET_TIP_ERROR", data: { msg: msgText } })
+          }
           break
         }
 
