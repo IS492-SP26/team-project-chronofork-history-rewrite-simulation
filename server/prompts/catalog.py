@@ -16,7 +16,11 @@ PROMPT_CATALOG: Dict[str, Dict[str, str]] = {
     },
     
     "config.theme_to_episodes": {
-        "zh": """基于历史主题“{selected_theme}”，推荐 5 个彼此不同、影响力高的“历史事件（Episode）”。
+        "zh": """基于历史主题“{selected_theme}”，推荐历史事件（Episode）。
+
+      规则：
+      - 若用户输入已是“具体历史事件”（如“古巴导弹危机”“攻占巴士底狱”），仅返回该 1 个事件。
+      - 若用户输入是“历史主题/时期”（如“冷战”“法国大革命”），返回 5 个彼此不同、影响力高的事件。
 
 仅输出 JSON（不要额外文本）：
 [
@@ -25,7 +29,11 @@ PROMPT_CATALOG: Dict[str, Dict[str, str]] = {
 ]
 
 要求：title 必须简洁且有辨识度。""",
-        "en": """Based on the historical theme "{selected_theme}", recommend 5 distinct high-leverage Episodes.
+        "en": """Based on the input "{selected_theme}", recommend Episodes.
+
+      Rules:
+      - If the user input is already a specific historical event (e.g., "Cuban Missile Crisis", "Storming of the Bastille"), return ONLY that single event.
+      - If the user input is a broader theme/period (e.g., "Cold War", "French Revolution"), return 5 distinct high-leverage Episodes.
 
 Output ONLY JSON (no extra text):
 [
@@ -42,25 +50,26 @@ Requirement: each title must be concise and descriptive.""",
 
 输出格式（仅合法 JSON，无额外文本）：
 [
-  {{"title": "...", "choice": "...", "desc": "..."}},
+  {{"title": "...", "desc": "...", "decision": "...", "choice": "..."}},
   ...
 ]
 
 字段要求
-- title：当前节点的开放式决策问题（8-12 字内）。
-  - 必须是开放问题。
-  - 最后一个节点不再提问，而是进行总结收束，如："最终收束: （陈述）"。
-- choice：上一节点问题的“历史主线真实选择”。
-  - 第 1 节点固定为 "None"。
-  - 需短（<= 6 词）以便可视化。
-- desc：2-4 句，精炼易读。
+- title：当前节点的概括标题。
+- desc：1-3 句，**精炼**易读。
   - 需符合史实，包含多视角冲突与关键人物。
   - 不写对话，不写镜头指令，只写故事线叙述。
+- decision：当前节点引出的开放式决策问题（8-12 字内）。
+  - 必须是开放问题。
+  - 最后一个节点固定为 "None"。
+- choice：**上一节点** decision 的历史主线真实选择。
+  - 第 1 节点固定为 "None"。
+  - 需短（< 10 词）以便可视化。
 
 desc 逻辑（因 -> 果 -> 下一问）
-- 节点1：只写背景（时间/地点/背景力量 + 关键人物 + 张力），结尾引出节点1标题的问题。
+- 节点1：只写背景（时间/地点/背景力量 + 关键人物 + 张力），结尾引出该节点 decision 的问题。
   - 不得提前透露 choice。
-- 节点 i>1：第 1 句必须明确写出“上一节点的历史选择”，再写其后果如何导向当前问题。
+- 节点 i>1：第 1 句必须明确写出对上一节点问题的历史真实选择（本节点的choice），再写其后果如何导向当前节点的问题（decision）。
 
 内容要求
 - 时间线、人物、地点准确且符合史实，避免时代错置与无依据推测。
@@ -69,37 +78,38 @@ desc 逻辑（因 -> 果 -> 下一问）
 - 保持线性推进：每个节点自然导向下一个节点。
 
 只返回 JSON。""",
-        "en": """Create a historically grounded linear Storyline for episode {episode_title} as a JSON array of 4-6 nodes.
+        "en": """Create a historically grounded, linearly progressing Storyline for episode {episode_title} as a JSON array of 4-6 nodes.
 
-Each node is a decision checkpoint (or final Resolution) for downstream casting and scene expansion.
+Each node is a decision checkpoint (or final resolution) for downstream casting and scene expansion.
 
 Output format (ONLY valid JSON, no extra text):
 [
-  {{"title": "...", "choice": "...", "desc": "..."}},
+  {{"title": "...", "desc": "...", "decision": "...", "choice": "..."}},
   ...
 ]
 
 Field requirements
-- title: open-ended dilemma/question for this checkpoint (8-12 words max).
+- title: a concise summary title for the current node.
+- desc: 1-3 CONCISE, readable sentences.
+  - Must be historically coherent and include multi-perspective tension plus key figures.
+  - No dialogue and no scene directions; storyline narration only.
+- decision: the open-ended decision question raised by the current node (8-12 words max).
   - Must be an open question.
-  - Last node no longer poses questions but instead concludes with a summary, such as "Resolution: (statement)."
-- choice: canonical real-history choice made at the previous node.
-  - Node 1 must be "None".
-  - Keep short (<= 6 words) for visualization.
-- desc: 2-4 concise sentences.
-  - Historically coherent, multi-perspective, character-rich.
-  - No dialogue and no scene directions; storyline narrative only.
+  - The last node must use "None".
+- choice: the canonical real-history choice made for the PREVIOUS node's decision.
+  - Node 1 MUST be "None".
+  - Keep it short (< 10 words) for visualization.
 
 Desc logic (cause -> effect -> next question)
-- Node 1: background only (time/place/context + key figures + tensions), ending by setting up Node's question in title.
-  - Do not reveal choice here.
-- Node i>1: first sentence must explicitly state the previous node's canonical choice, then narrate consequences leading to current dilemma.
+- Node 1: background only (time/place/context + major forces + key figures + tensions), ending by setting up this node's decision question.
+  - Do not reveal the choice in advance.
+- Node i>1: the first sentence must explicitly state the previous node's historical choice, then explain how its consequences lead to the current node's decision.
 
 Content requirements
-- Correct chronology, actors, and locations; avoid anachronism and unsupported speculation.
-- At least two perspectives per node (e.g., leaders vs advisors, allies vs opponents, domestic vs international).
-- Prefer at least 2 named figures per desc and 4-6 distinct figures across the full storyline.
-- Keep linear progression across nodes: each node should naturally lead to the next decision checkpoint (or Resolution).
+- Maintain accurate chronology, actors, and locations; avoid anachronism and unsupported speculation.
+- Each node should reflect at least two perspectives (e.g., leaders vs advisors, allies vs opponents, domestic vs international).
+- Prefer naming at least 2 key figures per desc and covering 4-6 distinct figures across the full storyline.
+- Preserve linear progression: each node should naturally lead to the next decision checkpoint.
 
 Return JSON only.""",
     },
@@ -163,7 +173,7 @@ Output JSON only:
     "cast.agent_system": {
         "zh": """你是“{agent_name}”，正在扮演 {agent_title}，场景来自「{episode_title}」。信息如下：
 
-<active_node>{active_node_title}(nodeid={active_node_id}): {active_node_desc}</active_node>
+<active_node>{active_node_decision}(nodeid={active_node_id}): {active_node_desc}</active_node>
 <next_node>{next_node_desc}</next_node>
 <cast>{cast_str}</cast>
 
@@ -178,12 +188,12 @@ Output JSON only:
     - 若无法直接接触（如远方对手），targetName 设为 "Facilitator"，且台词必须是想获取的该角色的信息，以疑问句结尾。
 - 节奏控制：
   - 每个节点严格 3-4 轮。
-  - 开头先铺垫冲突与动机，不要立刻触达 node.title 的 dilemma；第 2-4 轮再推进决策/收束。
+  - 开头先铺垫冲突与动机，不要立刻触达 node.decision 的 dilemma；第 2-4 轮再推进决策/收束。
   - 遇到决策点，立即执行 <next_node> 行动，不反复拉扯。
   - 若他人做出偏离史实的选择，通常应允许并鼓励；仅在极其荒谬时简短拒绝并转向可行路径。
 
 输出（严格，仅 1 条）
-<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，中文）
+<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，**保持精炼**，中文）
 
 Meta 说明
 - targetName：必须是 <cast> 中精确名字或 "Facilitator"。
@@ -194,7 +204,7 @@ Meta 说明
 """,
         "en": """You are "{agent_name}", role-playing {agent_title} in "{episode_title}". Context:
 
-<active_node>{active_node_title}(nodeid={active_node_id}): {active_node_desc}</active_node>
+<active_node>{active_node_decision}(nodeid={active_node_id}): {active_node_desc}</active_node>
 <next_node>{next_node_desc}</next_node>
 <cast>{cast_str}</cast>
 
@@ -214,7 +224,7 @@ Rules (strict)
   - Generally allow and encourage choices deviating from historical facts; only briefly reject and redirect to feasible paths when choices are extremely absurd.
 
 Output (strict, exactly one item)
-<meta targetName="..." nodeid="..." /> Character line (natural spoken style, 1-3 concise sentences, English)
+<meta targetName="..." nodeid="..." /> Character line (natural spoken style, 1-3 CONCISE sentences, English)
 
 Meta
 - targetName: exact name in <cast> or "Facilitator".
@@ -235,7 +245,7 @@ Meta
 4. 以“最可能走向”为主，生成分歧后的线性分支（2-5 节点，直到明确收束）。
 
 <cast>{cast_str}</cast>
-<current_node>{active_node_title}: {active_node_desc}</current_node>
+<current_node>{active_node_decision}: {active_node_desc}</current_node>
 <canonical_next>{canonical_next}</canonical_next>
 <interaction>{context_str}</interaction>
 
@@ -256,7 +266,7 @@ OUTPUT FORMAT（严格）
     {{ "label": "Worst-case", "summary": "<1-2句>" }}
   ],
   "branch_storyline": [
-    {{ "title": "...", "choice": "...", "desc": "..." }},
+    {{ "title": "...", "desc": "...", "decision": "...", "choice": "..." }},
     ...
   ]
 }}
@@ -269,11 +279,12 @@ branch_storyline 规则
 - 每个节点是一个决策检查点或最终收束。
 
 字段规则
-- title：开放式 dilemma/question（<=10 词），不要写选项列表；最后一条可为 "Resolution: (陈述句)"。
+- title：当前节点概括标题。
+- decision：当前节点的开放式 dilemma/question（<=10 词），不要写选项列表；最后一条固定为 "None"。
 - choice：可视化短标签（<=6 词），表示上一检查点最可能选择/结果。
   - 第 1 条的 choice 需从 <interaction> 提取并压缩 learner 的分歧动作。
 - desc：2-4 句；符合史实逻辑；至少包含两方视角；每条至少点名 2 个 <cast> 人物。
-  - 逻辑为：由 choice 起笔，叙述后果与约束，再引出当前节点 dilemma（Resolution 除外）。
+  - 逻辑为：由 choice 起笔，叙述后果与约束，再引出当前节点 decision（最后收束节点除外）。
 
 只返回 JSON
 """,
@@ -287,7 +298,7 @@ branch_storyline 规则
 4. Generate a linear post-divergence branch (2-5 nodes) centered on the most likely rollout.
 
 <cast>{cast_str}</cast>
-<current_node>{active_node_title}: {active_node_desc}</current_node>
+<current_node>{active_node_decision}: {active_node_desc}</current_node>
 <canonical_next>{canonical_next}</canonical_next>
 <interaction>{context_str}</interaction>
 
@@ -308,7 +319,7 @@ OUTPUT FORMAT (strict)
     {{ "label": "Worst-case", "summary": "<1-2 sentences>" }}
   ],
   "branch_storyline": [
-    {{ "title": "...", "choice": "...", "desc": "..." }},
+    {{ "title": "...", "desc": "...", "decision": "...", "choice": "..." }},
     ...
   ]
 }}
@@ -321,11 +332,12 @@ branch_storyline rules
 - Each node is a decision checkpoint or final resolution.
 
 Field rules
-- title: open dilemma/question (<=10 words), not option lists; final node may be "Resolution: (Statement)".
+- title: concise summary title for the current node.
+- decision: open dilemma/question for the current node (<=10 words), not option lists; final node must be "None".
 - choice: short visualization label (<=6 words) for previous likely action/outcome.
   - For node 1, extract/compress learner divergence action from <interaction>.
 - desc: 2-4 sentences; historically coherent; include at least two viewpoints and at least two names from <cast>.
-  - Start from choice, explain consequences/constraints/reactions, then lead to the current dilemma (except resolution).
+  - Start from choice, explain consequences/constraints/reactions, then lead to the current decision (except final resolution).
 
 Return JSON only
 """,
@@ -358,7 +370,7 @@ Output: 1-2 short spoken sentences in one line, starting with an emoji. Do not l
     "facilitator.bridge": {
         "zh": """任务：你需要作为导演切换镜头，目标是在最少轮次内推进 <active_node> 收束并进入 <next_node>。
 
-<active_node>{active_node_title}: {active_node_desc}</active_node>
+<active_node>{active_node_decision}: {active_node_desc}</active_node>
 <next_node>{next_node_desc}</next_node>
 <cast>{cast_str}</cast>
 
@@ -378,7 +390,7 @@ Output: 1-2 short spoken sentences in one line, starting with an emoji. Do not l
 """,
         "en": """Task: As the scene director, switch the camera so <active_node> closes in as few turns as possible and transitions into <next_node>.
 
-<active_node>{active_node_title}: {active_node_desc}</active_node>
+<active_node>{active_node_decision}: {active_node_desc}</active_node>
 <next_node>{next_node_desc}</next_node>
 <cast>{cast_str}</cast>
 

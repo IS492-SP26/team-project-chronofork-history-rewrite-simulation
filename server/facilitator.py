@@ -101,6 +101,7 @@ class Facilitator:
                 "facilitator.bridge",
                 self.lang,
                 active_node_title=active_node["title"],
+                active_node_decision=active_node.get("decision", active_node["title"]),
                 active_node_desc=active_node["desc"],
                 next_node_desc=("end" if not next_node_desc else next_node_desc),
                 cast_str=self.cast_str,

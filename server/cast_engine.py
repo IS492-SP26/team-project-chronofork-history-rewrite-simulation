@@ -188,7 +188,7 @@ class CastEngine:
                         break
 
                     self.current_speaker = next_speaker
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(2)
 
             # --- STAGE 2 LOGIC (Backtrack Session) ---
             elif self.stage == 2:
@@ -933,6 +933,7 @@ class CastEngine:
             agent_title=agent.profile["title"],
             episode_title=self.episode.get("title", ""),
             active_node_title=active_node["title"],
+            active_node_decision=active_node.get("decision", active_node["title"]),
             active_node_id=active_node["id"],
             active_node_desc=active_node["desc"],
             next_node_desc=("nodeid=end" if not next_node_desc else next_node_desc),
@@ -959,6 +960,7 @@ class CastEngine:
             episode_title=episode_title,
             cast_str=cast_str,
             active_node_title=active_node["title"],
+            active_node_decision=active_node.get("decision", active_node["title"]),
             active_node_desc=active_node["desc"],
             canonical_next=("end" if not next_node_desc else next_node_desc),
             context_str=context_str,

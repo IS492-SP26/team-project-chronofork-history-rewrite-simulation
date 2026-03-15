@@ -19,6 +19,7 @@ class ReflectionWorker:
         return {
             "id": node_id,
             "title": node['title'],
+            "decision": node.get('decision', node['title']),
             "choice": node['choice'],
             "desc": node['desc']
         }
@@ -147,9 +148,9 @@ class ReflectionWorker:
             else:
                 break
         
-        canon_summary_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n['title']})" for n in [self._get_node_data(nid) for nid in canonical_nodes]])
+        canon_summary_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n.get('decision', n['title'])})" for n in [self._get_node_data(nid) for nid in canonical_nodes]])
 
-        branch_summary_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n['title']})" for n in branch_nodes_data])
+        branch_summary_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n.get('decision', n['title'])})" for n in branch_nodes_data])
 
         user_path_data = [self._get_node_data(nid) for nid in user_path_ids]
 

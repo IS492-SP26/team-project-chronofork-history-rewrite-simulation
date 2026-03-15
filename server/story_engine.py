@@ -15,7 +15,13 @@ class StoryGraph:
         self.edge_choices: Dict[Tuple[str, str], str] = {} 
         
         # 根节点初始化
-        self.nodes["0.0"] = {'title': "ROOT", 'desc': "System Start", 'choice': "Start", 'parent_id': None}
+        self.nodes["0.0"] = {
+            'title': "ROOT",
+            'desc': "System Start",
+            'decision': "ROOT",
+            'choice': "Start",
+            'parent_id': None,
+        }
 
     def to_dict(self):
         """序列化图数据"""
@@ -34,6 +40,9 @@ class StoryGraph:
     def load_from_dict(self, data):
         """反序列化"""
         self.nodes = data["nodes"]
+        for node in self.nodes.values():
+            if "decision" not in node:
+                node["decision"] = node.get("title", "")
         self.edges = [tuple(e) for e in data["edges"]] # list -> tuple
         self.max_variant = data["max_variant"]
         
@@ -47,7 +56,7 @@ class StoryGraph:
             u, target = k.split("|")
             self.edge_choices[(u, target)] = v
 
-    def add_node(self, title, desc, choice, parent_id=None, specific_id=None):
+    def add_node(self, title, desc, decision, choice, parent_id=None, specific_id=None):
         new_id = specific_id
         if not new_id:
             if not parent_id or parent_id == "0.0":
@@ -56,7 +65,13 @@ class StoryGraph:
                 p_depth, p_variant = map(int, parent_id.split('.'))
                 new_id = f"{p_depth + 1}.{p_variant}"
 
-        self.nodes[new_id] = {'title': title, 'desc': desc, 'choice': choice, 'parent_id': parent_id}
+        self.nodes[new_id] = {
+            'title': title,
+            'desc': desc,
+            'decision': decision,
+            'choice': choice,
+            'parent_id': parent_id,
+        }
         
         if parent_id:
             self.edges.append((parent_id, new_id))
@@ -107,6 +122,7 @@ class StoryEngine:
             self._graph.add_node(
                 title=item.get('title', ''),
                 desc=item.get('desc', ''),
+                decision=item.get('decision', item.get('title', '')),
                 choice=item.get('choice', ''),
                 parent_id=prev_id,
                 specific_id=specific_id
@@ -168,18 +184,22 @@ class StoryEngine:
         edge_label_data = []
         
         for nid, data in self._graph.nodes.items():
+            if nid == "0.0":  # 虚拟根节点特殊处理
+                continue
             depth, variant = map(int, nid.split('.'))
             status = self._node_statuses.get(nid, "UNFINISHED")
             
             G.add_node(nid, 
-                       label_id=nid, 
-                       hover_title=data['title'], 
+                       label_id=data['title'], 
+                       hover_title=data.get('decision', data['title']),
                        hover_desc=data['desc'], 
                        status=status)
             
             pos[nid] = (variant, -depth)
 
         for src, dst in self._graph.edges:
+            if src not in pos or dst not in pos:
+                continue
             G.add_edge(src, dst)
             lbl = self._graph.edge_choices.get((src, dst), "")
             if lbl:
@@ -268,6 +288,7 @@ class StoryEngine:
         self._graph.add_node(
             title=head_data.get('title', ''),
             desc=head_data.get('desc', ''),
+            decision=head_data.get('decision', head_data.get('title', '')),
             choice=head_data.get('choice', ''),
             parent_id=current_node,
             specific_id=branch_head_id
@@ -284,6 +305,7 @@ class StoryEngine:
             self._graph.add_node(
                 title=item.get('title', ''),
                 desc=item.get('desc', ''),
+                decision=item.get('decision', item.get('title', '')),
                 choice=item.get('choice', ''),
                 parent_id=prev_auto_id,
                 specific_id=next_auto_id
@@ -374,6 +396,7 @@ class StoryEngine:
         self._graph.add_node(
             title=head_data.get('title', 'Divergence'),
             desc=head_data.get('desc', ''),
+            decision=head_data.get('decision', head_data.get('title', 'Divergence')),
             choice=head_data.get('choice', 'New Path'),
             parent_id=parent_id,
             specific_id=branch_head_id
@@ -395,6 +418,7 @@ class StoryEngine:
             self._graph.add_node(
                 title=item.get('title', ''),
                 desc=item.get('desc', ''),
+                decision=item.get('decision', item.get('title', '')),
                 choice=item.get('choice', ''),
                 parent_id=prev_auto_id,
                 specific_id=next_auto_id
@@ -459,6 +483,7 @@ class StoryEngine:
             path_nodes.append({
                 "id": nid,
                 "title": node['title'],
+                "decision": node.get('decision', node['title']),
                 "choice": node['choice'],
                 "desc": node['desc'],
                 "status": "History" if nid != self._current_node_id else "Active"
@@ -474,6 +499,7 @@ class StoryEngine:
             path_nodes.append({
                 "id": cid,
                 "title": node['title'],
+                "decision": node.get('decision', node['title']),
                 "choice": node['choice'],
                 "desc": node['desc'],
                 "status": "Future/Option"

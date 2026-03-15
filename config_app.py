@@ -484,19 +484,21 @@ class ConfigPage(pn.viewable.Viewer):
             
             # --- 1. 准备文本内容 ---
 
-            # 卡片 Header (灰色小标题)
-            if is_first:
-                header_text = f"🟢 🚩 {scenario_title} {self._t('start_suffix')}"
-            else:
-                header_text = f"🟢 ⚖️ {self._t('choice_prefix')}: {node.get('choice')}"
+            # 卡片 Header：显示节点 title
+            node_title = node.get('title') or f"{scenario_title} {self._t('start_suffix')}"
+            header_text = f"🟢 {node_title}"
 
-            # 卡片 Body (描述)
-            body_text = node.get('desc')
+            # 卡片 Body：显示 choice + 描述
+            choice_text = node.get('choice', 'None')
+            if choice_text == 'None':
+                body_text = f"<div style='margin-top:8px;'>{node.get('desc', '')}</div>"
+            else:
+                body_text = f"<div><strong>{self._t('choice_prefix')}:</strong> {choice_text}</div><div style='margin-top:8px;'>{node.get('desc', '')}</div>"
 
             # 卡片 Footer (决策问题) - 最后一个节点没有
             footer_html = ""
             if not is_last:
-                decision_question = node.get('title')
+                decision_question = node.get('decision', node.get('title'))
                 footer_html = f"""
                 <div class="node-decision">
                     🤔 {self._t('decision_prefix')}: {decision_question}
