@@ -824,18 +824,20 @@ class CastEngine:
                 json.dump(report_data, f, indent=2, ensure_ascii=False)
             
             # 2. 渲染成 HTML (需要更新 html_renderer 以适配新的 report_data 结构)
-            html_report = render_reflection_report(report_data)
+            html_report = render_reflection_report(report_data, lang=self.prompt_lang)
 
             await self.output_queue.put({
                 "type": "reflection_report",
                 "data": {"report": html_report}
             })
 
-            html_file =f"""<!DOCTYPE html><html lang="en">
+            html_lang = "zh-CN" if self.prompt_lang == "zh" else "en"
+            report_title = "ChronoFork 历史反思报告" if self.prompt_lang == "zh" else "ChronoFork Reflection Report"
+            html_file =f"""<!DOCTYPE html><html lang="{html_lang}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChronoFork Reflection Report - {timestamp}</title>
+    <title>{report_title} - {timestamp}</title>
     <style>
         /* 给整个页面一个浅灰背景，这样白色的 Report 卡片会更突出 */
         body {{ 

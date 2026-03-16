@@ -190,10 +190,10 @@ Output JSON only:
   - 每个节点严格 3-4 轮。
   - 开头先铺垫冲突与动机，不要立刻触达 node.decision 的 dilemma；第 2-4 轮再推进决策/收束。
   - 遇到决策点，立即执行 <next_node> 行动，不反复拉扯。
-  - 若他人做出偏离史实的选择，通常应允许并鼓励；仅在极其荒谬时简短拒绝并转向可行路径。
+  - 若他人做出偏离史实的选择，应积极允许并鼓励；仅在**极其**荒谬时简短拒绝并转向可行路径。
 
 输出（严格，仅 1 条）
-<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，**保持精炼**，中文）
+<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，**保持精炼**，现代中文）
 
 Meta 说明
 - targetName：必须是 <cast> 中精确名字或 "Facilitator"。
@@ -221,10 +221,10 @@ Rules (strict)
   - Strictly limit each node to 3-4 turns.
   - Start with motive/tension setup; do not hit the node dilemma immediately. Push decision/closure by turn 2-4.
   - At decision point, execute <next_node> immediately without prolonged back-and-forth.
-  - Generally allow and encourage choices deviating from historical facts; only briefly reject and redirect to feasible paths when choices are extremely absurd.
+  - Generally allow and encourage choices deviating from historical facts; only briefly reject and redirect to feasible paths when choices are EXTREMELY absurd.
 
 Output (strict, exactly one item)
-<meta targetName="..." nodeid="..." /> Character line (natural spoken style, 1-3 CONCISE sentences, English)
+<meta targetName="..." nodeid="..." /> Character line (natural spoken style, 1-3 CONCISE sentences, Modern English)
 
 Meta
 - targetName: exact name in <cast> or "Facilitator".
