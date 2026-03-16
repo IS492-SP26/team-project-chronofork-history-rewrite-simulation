@@ -7,7 +7,16 @@ import { useRef, useCallback, useEffect } from "react"
 import type { Dispatch } from "react"
 import type { RunAction, ConnectionStatus, ServerConfig, ServerGraphData, ServerTipData } from "../state/types"
 
-const DEFAULT_WS_URL = "ws://143.244.176.215:8000/ws"
+export const DEFAULT_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "wss://app.chronofork.me/ws"
+
+function resolveDefaultWsUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_WS_URL
+  if (envUrl && envUrl.trim().length > 0) return envUrl.trim()
+
+  return DEFAULT_WS_URL
+}
+
+const FALLBACK_WS_URL = resolveDefaultWsUrl()
 
 export interface UseWebSocketReturn {
   connect: (url?: string) => void
@@ -430,7 +439,7 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
         wsRef.current = null
       }
 
-      const wsUrl = url || DEFAULT_WS_URL
+      const wsUrl = url || FALLBACK_WS_URL
       statusRef.current = "connecting"
       dispatch({ type: "SET_CONNECTION_STATUS", data: { status: "connecting" } })
 

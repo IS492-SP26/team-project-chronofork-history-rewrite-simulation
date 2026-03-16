@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { DEFAULT_WS_URL } from "@features/chronofork/api/useWebSocket"
 import { useChronoFork } from "@features/chronofork/state/context"
 import { useI18n } from "@features/chronofork/i18n"
 import { phaseColor, phaseTone } from "@features/chronofork/phaseColor"
@@ -332,7 +333,7 @@ function FacilitatorStrip({
 function PreStartOverlay() {
   const { state, connectToServer, useMockData } = useChronoFork()
   const { t } = useI18n()
-  const [wsUrl, setWsUrl] = useState("ws://143.244.176.215:8000/ws")
+  const [wsUrl, setWsUrl] = useState(DEFAULT_WS_URL)
   const isConnecting = state.connectionStatus === "connecting"
 
   return (
@@ -372,7 +373,7 @@ function PreStartOverlay() {
               value={wsUrl}
               onChange={(e) => setWsUrl(e.target.value)}
               className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-card/80 border border-border/40 text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="ws://143.244.176.215:8000/ws"
+              placeholder={DEFAULT_WS_URL}
               disabled={isConnecting}
             />
           </div>
