@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { DEFAULT_WS_URL } from "@features/chronofork/api/useWebSocket"
 import { useChronoFork } from "@features/chronofork/state/context"
 import { useI18n } from "@features/chronofork/i18n"
 import { phaseColor, phaseTone } from "@features/chronofork/phaseColor"
@@ -62,10 +61,28 @@ type StageRole = Role & {
 
 type DialogueDisplayMode = "auto" | "manual"
 
+function getRoleAvatarEmoji(role: StageRole): string {
+  if (role.avatarEmoji) return role.avatarEmoji
+
+  const emojiMap: Record<string, string> = {
+    jfk: "🦅",
+    rfk: "⚖️",
+    mcnamara: "📊",
+    lemay: "🛩️",
+    khrushchev: "🌾",
+    facilitator: "🎙️",
+  }
+
+  return emojiMap[role.id] ?? "👤"
+}
+
 function Avatar({ role, isSpeaking, isListening, latestEmotion }: { role: StageRole; isSpeaking: boolean; isListening?: boolean; latestEmotion?: DialogueBeat["emotion"] }) {
   const { t } = useI18n()
   const ringColor = getSpeakerColor(role.name)
   const active = isSpeaking || !!isListening
+  const displayName = role.shortName || role.name
+  const displayTitle = role.title
+  const avatarEmoji = getRoleAvatarEmoji(role)
   return (
     <div
       className={`flex flex-col items-center gap-1 transition-all duration-300 ${
@@ -74,7 +91,7 @@ function Avatar({ role, isSpeaking, isListening, latestEmotion }: { role: StageR
       style={{ opacity: active ? 1 : 0.28, filter: isSpeaking ? "none" : undefined }}
     >
       <div
-        className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold transition-all ${isSpeaking ? "animate-breathe" : ""}`}
+        className={`w-24 h-24 rounded-full flex flex-col items-center justify-center px-3 py-3 text-center transition-all overflow-hidden ${isSpeaking ? "animate-breathe" : ""}`}
         style={{
           backgroundColor: isSpeaking
             ? `color-mix(in oklch, ${ringColor} 15%, var(--card))`
@@ -94,13 +111,43 @@ function Avatar({ role, isSpeaking, isListening, latestEmotion }: { role: StageR
             : "none",
         }}
       >
-        <span>{role.avatarEmoji ?? role.shortName.slice(0, 2)}</span>
+        <span className="text-[15px] leading-none mb-3">{avatarEmoji}</span>
+        <span
+          className="max-w-full px-1 text-[17px] font-black tracking-[-0.02em] leading-[1.02] text-center overflow-hidden"
+          style={{ color: isSpeaking ? ringColor : isListening ? "var(--chrono-amber)" : "var(--foreground)" }}
+          title={displayName}
+        >
+          <span
+            className="block overflow-hidden"
+            style={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 2,
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+            }}
+          >
+            {displayName}
+          </span>
+        </span>
       </div>
       <span
-        className="text-xs font-semibold max-w-[64px] truncate text-center leading-tight"
+        className="max-w-[108px] px-1 text-[11px] font-medium text-center leading-[1.2] text-muted-foreground overflow-hidden"
         style={{ color: isSpeaking ? ringColor : isListening ? "var(--chrono-amber)" : "var(--muted-foreground)" }}
+        title={displayTitle}
       >
-        {role.shortName}
+        <span
+          className="block overflow-hidden"
+          style={{
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 2,
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+          }}
+        >
+          {displayTitle}
+        </span>
       </span>
       {isSpeaking && (
         <span
@@ -333,7 +380,7 @@ function FacilitatorStrip({
 function PreStartOverlay() {
   const { state, connectToServer, useMockData } = useChronoFork()
   const { t } = useI18n()
-  const [wsUrl, setWsUrl] = useState(DEFAULT_WS_URL)
+  const [wsUrl, setWsUrl] = useState("ws://143.244.176.215:8000/ws")
   const isConnecting = state.connectionStatus === "connecting"
 
   return (
@@ -373,7 +420,7 @@ function PreStartOverlay() {
               value={wsUrl}
               onChange={(e) => setWsUrl(e.target.value)}
               className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-card/80 border border-border/40 text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder={DEFAULT_WS_URL}
+              placeholder="ws://143.244.176.215:8000/ws"
               disabled={isConnecting}
             />
           </div>
@@ -1387,8 +1434,6 @@ export function CenterStage() {
   const tableRoles = roles.filter((r) => r.id !== "facilitator") as StageRole[]
   const speakingIdx = speakingRole ? tableRoles.findIndex((r) => r.id === speakingRole.id) : -1
   const isTopRow = speakingIdx >= 0 && speakingIdx < 3
-  const speakingFaction = speakingRole ? getFaction(speakingRole) : "neutral"
-  const fs = factionStyle(speakingFaction)
   const isIdle = state.phase === "observe_idle"
   const isFacilitator = currentBeat?.speakerId === "facilitator"
 
@@ -1523,7 +1568,7 @@ export function CenterStage() {
                   )}
                   <div className="bg-card border border-border/50 rounded-xl px-5 py-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-sm font-semibold" style={{ color: fs.ring }}>{speakingRole.shortName}</span>
+                      <span className="text-sm font-semibold" style={{ color: getSpeakerColor(speakingRole.name) }}>{speakingRole.shortName}</span>
                       <EmotionDot emotion={currentBeat.emotion} />
                     </div>
                     <p className="text-sm leading-relaxed text-foreground">{currentBeat.text}</p>
@@ -1584,8 +1629,6 @@ export function CenterStage() {
               const isTopRow = speakingIdx >= 0 && speakingIdx < Math.ceil(availableRoles.length / 2)
               const topRoles = availableRoles.slice(0, Math.ceil(availableRoles.length / 2))
               const bottomRoles = availableRoles.slice(Math.ceil(availableRoles.length / 2))
-              const speakingFaction = speakingRole ? getFaction(speakingRole) : "neutral"
-              const fs = factionStyle(speakingFaction)
               const isFacilitatorSpeakingTurn = lastMsg.speakerName === "Facilitator"
               
               return (
@@ -1620,7 +1663,7 @@ export function CenterStage() {
                         )}
                         <div className="bg-card border border-border/50 rounded-xl px-5 py-4 shadow-sm">
                           <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-sm font-semibold" style={{ color: fs.ring }}>{speakingRole.shortName}</span>
+                            <span className="text-sm font-semibold" style={{ color: getSpeakerColor(speakingRole.name) }}>{speakingRole.shortName}</span>
                             {lastMsg.targetName && (
                               <span className="text-xs text-muted-foreground font-mono">
                                 {"->"} {lastMsg.targetName}
