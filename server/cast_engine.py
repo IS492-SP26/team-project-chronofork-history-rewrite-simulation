@@ -412,13 +412,15 @@ class CastEngine:
             # 这里也需要 Strict Parsing 吗？最好保持一致，虽然 Intro 只有 Meta 没有 Target 变更
             if not meta_parsed:
                 buffer += token
-                if "/>" in buffer:
-                    t_name, _ = self._parse_meta_line(buffer)  # Reuse existing parser
+                meta_end_idx = self._find_meta_tag_end(buffer)
+                if meta_end_idx != -1:
+                    meta_segment = buffer[:meta_end_idx]
+                    t_name, _ = self._parse_meta_line(meta_segment)  # Reuse existing parser
                     if t_name:
                         target_name = t_name
 
                     # 发送剩余部分
-                    split_idx = buffer.find("/>") + 2
+                    split_idx = meta_end_idx
                     remaining = buffer[split_idx:].lstrip()
                     if remaining:
                         await self.output_queue.put(
@@ -541,8 +543,10 @@ class CastEngine:
                     if not meta_parsed:
                         buffer += token
                         # Strict Parsing: 只有找到 /> 才放行
-                        if "/>" in buffer:
-                            t_name, n_id = self._parse_meta_line(buffer)
+                        meta_end_idx = self._find_meta_tag_end(buffer)
+                        if meta_end_idx != -1:
+                            meta_segment = buffer[:meta_end_idx]
+                            t_name, n_id = self._parse_meta_line(meta_segment)
                             if t_name:
                                 target_name = t_name
                             if n_id:
@@ -550,7 +554,7 @@ class CastEngine:
                             meta_parsed = True
 
                             # 发送积压的 buffer 里的正文
-                            split_idx = buffer.find("/>") + 2
+                            split_idx = meta_end_idx
                             remaining = buffer[split_idx:].lstrip()
                             if remaining:
                                 full_content.append(remaining)
@@ -796,6 +800,16 @@ class CastEngine:
             return target_name, node_id
 
         return None, None
+
+    def _find_meta_tag_end(self, content: str) -> int:
+        """
+        返回第一个 <meta ...> 标签结束位置(切片终点，包含 '>')。
+        支持 <meta .../> 与 <meta ...> 两种写法。
+        """
+        meta_match = re.search(r'<meta\b[^>]*>', content)
+        if meta_match:
+            return meta_match.end()
+        return -1
 
     async def send_node_update(self, fromid: str, toid: str):
         await self.output_queue.put({"type": "node_update", "data": {"from_id": fromid, "to_id": toid}})
