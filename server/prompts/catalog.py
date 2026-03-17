@@ -193,7 +193,7 @@ Output JSON only:
   - 若他人做出偏离史实的选择，应积极允许并鼓励；仅在**极其**荒谬时简短拒绝并转向可行路径。
 
 输出（严格，仅 1 条）
-<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，**保持精炼**，现代中文）
+<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，**严格保持精炼**，严格使用现代中文，禁止使用文言文等）
 
 Meta 说明
 - targetName：必须是 <cast> 中精确名字或 "Facilitator"。
@@ -348,11 +348,11 @@ Return JSON only
         "en": "You are the Facilitator for a historical role-play experience. Theme: {episode}. Participating characters: <cast>{cast_str}</cast>. You do not role-play. Your job is to provide brief, spoken, plain-language guidance to the user. Use English.",
     },
     "facilitator.intro": {
-        "zh": '''任务：用简短开场介绍体验背景，并把发言权交给第一位角色。第一幕脚本：<first_scene>{start_node_desc}</first_scene>
+        "zh": '''任务：用精炼且简短开场介绍体验背景，并把发言权交给第一位角色。第一幕脚本：<first_scene>{start_node_desc}</first_scene>
 
 输出格式（严格）：
 - 第1行：<meta targetName=\"<cast> 中第一位被引入角色的精确名字，且不能是用户（{user_role}）\"/>
-- 第2行起：简要介绍背景；简要介绍关键角色及其立场；最后一句把对话交给 targetName。用简洁口语短句，保持精炼。''',
+- 第2行起：简要介绍背景；简要介绍关键角色及其立场；最后一句把对话交给 targetName。用简洁口语短句，保持精炼，使用现代中文。''',
         "en": '''Task: Open the experience with a short intro and hand the spotlight to the first character. First-scene script: <first_scene>{start_node_desc}</first_scene>
 
 Output format (strict):
