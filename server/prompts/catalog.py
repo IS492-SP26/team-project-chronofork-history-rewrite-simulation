@@ -11,15 +11,15 @@ def normalize_lang(lang: str | None) -> str:
 
 PROMPT_CATALOG: Dict[str, Dict[str, str]] = {
     "llm.system_json": {
-        "zh": "你是一个有帮助的历史助手。输出必须严格为 JSON 格式。使用中文。",
-        "en": "You are a helpful historical assistant. Output must be strictly valid JSON. Use English.",
+        "zh": "你是一个有帮助的叙事助手。输出必须严格为 JSON 格式。使用中文。",
+        "en": "You are a helpful narrative assistant. Output must be strictly valid JSON. Use English.",
     },
     
     "config.theme_to_episodes": {
-        "zh": """基于历史主题“{selected_theme}”，推荐历史事件（Episode）。
+        "zh": """基于主题“{selected_theme}”，推荐事件（Episode）。
 
       规则：
-      - 若用户输入已是“具体历史事件”（如“古巴导弹危机”“攻占巴士底狱”），仅返回该 1 个事件。
+      - 若用户输入已是“具体历史事件”（如“古巴导弹危机”“攻占巴士底狱”）或是具体文学作品 （如“哈利波特与死亡圣器”“西游记”），仅返回该 1 个事件。
       - 若用户输入是“历史主题/时期”（如“冷战”“法国大革命”），返回 5 个彼此不同、影响力高的事件。
 
 仅输出 JSON（不要额外文本）：
@@ -32,7 +32,7 @@ PROMPT_CATALOG: Dict[str, Dict[str, str]] = {
         "en": """Based on the input "{selected_theme}", recommend Episodes.
 
       Rules:
-      - If the user input is already a specific historical event (e.g., "Cuban Missile Crisis", "Storming of the Bastille"), return ONLY that single event.
+      - If the user input is already a specific historical event (e.g., "Cuban Missile Crisis", "Storming of the Bastille") or specific literary work, return ONLY that single event.
       - If the user input is a broader theme/period (e.g., "Cold War", "French Revolution"), return 5 distinct high-leverage Episodes.
 
 Output ONLY JSON (no extra text):
@@ -44,7 +44,7 @@ Output ONLY JSON (no extra text):
 Requirement: each title must be concise and descriptive.""",
     },
     "config.episode_to_storyline": {
-        "zh": """请围绕事件 {episode_title}，生成一个“有史实依据、线性推进”的 Storyline，输出为 4-6 个节点的 JSON 数组。
+        "zh": """请围绕事件 {episode_title}，生成一个“有史实/参考依据、线性推进”的 Storyline，输出为 4-6 个节点的 JSON 数组。
 
 每个节点代表一个决策检查点（或最终收束），供后续角色编排与场景扩展使用。
 
@@ -72,7 +72,7 @@ desc 逻辑（因 -> 果 -> 下一问）
 - 节点 i>1：第 1 句必须明确写出对上一节点问题的历史真实选择（本节点的choice），再写其后果如何导向当前节点的问题（decision）。
 
 内容要求
-- 时间线、人物、地点准确且符合史实，避免时代错置与无依据推测。
+- 时间线、人物、地点准确且符合史实/参考依据，避免时代错置与无依据推测。
 - 每个节点至少体现两种视角（如领导人与顾问、盟友与对手、国内与国际）。
 - 每个 desc 尽量点名至少 2 位关键人物；整条线尽量覆盖 4-6 位不同人物。
 - 保持线性推进：每个节点自然导向下一个节点。
@@ -177,7 +177,7 @@ Output JSON only:
 <next_node>{next_node_desc}</next_node>
 <cast>{cast_str}</cast>
 
-目标：与 <cast> 角色共同按照 <active_node> 进行宏观历史重演，并在 3-4 轮内推进到 <next_node>。
+目标：与 <cast> 角色共同按照 <active_node> 进行历史重演/叙事，并在 3-6 轮内推进到 <next_node>。
 
 规则（严格）
 - 故事线强绑定：只能使用 <active_node> 中已有事实与冲突，禁止扩展琐碎细节。
@@ -187,13 +187,13 @@ Output JSON only:
     - 若该角色历史上可接触，targetName 必须填该角色精确名称。
     - 若无法直接接触（如远方对手），targetName 设为 "Facilitator"，且台词必须是想获取的该角色的信息，以疑问句结尾。
 - 节奏控制：
-  - 每个节点严格 3-4 轮。
-  - 开头先铺垫冲突与动机，不要立刻触达 node.decision 的 dilemma；第 2-4 轮再推进决策/收束。
+  - 每个节点严格 3-6 轮。
+  - 开头先铺垫冲突与动机，不要立刻触达 node.decision 的 dilemma；第 2-6 轮再推进决策/收束。
   - 遇到决策点，立即执行 <next_node> 行动，不反复拉扯。
   - 若他人做出偏离史实的选择，应积极允许并鼓励；仅在**极其**荒谬时简短拒绝并转向可行路径。
 
 输出（严格，仅 1 条）
-<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，**严格保持精炼**，严格使用现代中文，禁止使用文言文等）
+<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，**严格保持精炼**，严格使用现代中文，禁止使用文言文等，禁止给选项式的发言）
 
 Meta 说明
 - targetName：必须是 <cast> 中精确名字或 "Facilitator"。
@@ -208,7 +208,7 @@ Meta 说明
 <next_node>{next_node_desc}</next_node>
 <cast>{cast_str}</cast>
 
-Goal: reenact macro historical dynamics around <active_node> with reachable members of <cast>, and advance to <next_node> within 3-4 turns.
+Goal: reenact macro historical dynamics around <active_node> with reachable members of <cast>, and advance to <next_node> within 3-6 turns.
 
 Rules (strict)
 - Storyline lock: only use facts/conflicts in <active_node>; do not add trivial detail.
@@ -218,8 +218,8 @@ Rules (strict)
     - If historically contactable, targetName must be that exact role name.
     - If direct contact is impossible (e.g., distant adversary), set targetName to “Facilitator” and frame dialogue as an inquiry seeking information about that character, ending with a question.
 - Pacing:
-  - Strictly limit each node to 3-4 turns.
-  - Start with motive/tension setup; do not hit the node dilemma immediately. Push decision/closure by turn 2-4.
+  - Strictly limit each node to 3-6 turns.
+  - Start with motive/tension setup; do not hit the node dilemma immediately. Push decision/closure by turn 2-6.
   - At decision point, execute <next_node> immediately without prolonged back-and-forth.
   - Generally allow and encourage choices deviating from historical facts; only briefly reject and redirect to feasible paths when choices are EXTREMELY absurd.
 
@@ -348,7 +348,7 @@ Return JSON only
         "en": "You are the Facilitator for a historical role-play experience. Theme: {episode}. Participating characters: <cast>{cast_str}</cast>. You do not role-play. Your job is to provide brief, spoken, plain-language guidance to the user. Use English.",
     },
     "facilitator.intro": {
-        "zh": '''任务：用精炼且简短开场介绍体验背景，并把发言权交给第一位角色。第一幕脚本：<first_scene>{start_node_desc}</first_scene>
+        "zh": '''任务：严格精炼且简短地开场介绍体验背景，并把发言权交给第一位角色。第一幕脚本：<first_scene>{start_node_desc}</first_scene>
 
 输出格式（严格）：
 - 第1行：<meta targetName=\"<cast> 中第一位被引入角色的精确名字，且不能是用户（{user_role}）\"/>
