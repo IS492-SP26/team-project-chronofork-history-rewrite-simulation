@@ -712,7 +712,9 @@ function InteractionComposer({
   const userRoleName = state.serverConfig?.user_role?.name
   const userRoleTitle = state.serverConfig?.user_role?.title
   const activeRole = state.activeRoleId ? roles.find((r) => r.id === state.activeRoleId) : null
-  const roleName = userRoleName ?? state.activeRoleName ?? activeRole?.name ?? activeRole?.shortName ?? "You"
+  const selectedRoleName = state.activeRoleName ?? activeRole?.name ?? activeRole?.shortName
+  const roleName = selectedRoleName ?? userRoleName ?? "You"
+  const roleTitle = selectedRoleName ? activeRole?.title : userRoleTitle
   const targetRoles = roles.filter((r) => r.id !== "facilitator" && r.id !== state.activeRoleId)
   const serverTargets = (state.serverConfig?.cast_data ?? []).filter((c) => c.name !== roleName)
   const [targetId, setTargetId] = useState<string | null>(null)
@@ -828,7 +830,7 @@ function InteractionComposer({
         <Textarea
           tone={tone}
           value={text} onChange={(e) => setText(e.target.value)}
-          placeholder={`${t("Type in character as")} ${userRoleTitle ? `${roleName} (${userRoleTitle})` : roleName}...`}
+          placeholder={`${t("Type in character as")} ${roleTitle ? `${roleName} (${roleTitle})` : roleName}...`}
           className="min-h-[52px] w-full text-sm bg-card/50 border-border/30 resize-none leading-relaxed" rows={2}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() } }}
         />
