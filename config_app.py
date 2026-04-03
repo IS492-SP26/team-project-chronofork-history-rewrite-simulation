@@ -659,8 +659,8 @@ class ConfigPage(pn.viewable.Viewer):
             char_badges_html = ''
             if characters:
                 badges = ''.join([
-                    f'<span class="char-badge">{c.get("avatar", cast_lookup.get(c.get("name"), "👤"))} {c.get("name", "")}</span>'
-                    for c in characters
+                    f'<span class="char-badge">{cast_lookup.get(name, "👤")} {name}</span>'
+                    for name in characters
                 ])
                 char_badges_html = f'<div class="char-badges">{badges}</div>'
 

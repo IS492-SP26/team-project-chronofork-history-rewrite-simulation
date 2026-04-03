@@ -84,7 +84,7 @@ Output JSON array only:
     "choice": "...",
     "decision": "...",
     "decision_maker": "...",
-    "characters": [{{"name": "..."}}]
+    "characters": ["name1", "name2"]
   }},
   ...
 ]
@@ -95,7 +95,7 @@ Output JSON array only:
 - choice：**上一节点** decision 的历史真实选择（< 8 词）；第 1 节点固定为 "None"。
 - decision：当前节点引出的开放式决策问题（8-12 字）；最后节点固定为 "None"。
 - decision_maker：面临该 decision 的 <cast> 人物名称；最后节点固定为 "None"。
-- characters：该节点直接涉及的 <cast> 人物列表，格式 [{{"name": "..."}}]，只用 <cast> 中已有人物。
+- characters：该节点直接涉及的 <cast> 人物名称列表，如 ["人物A", "人物B"]，只用 <cast> 中已有名称。
 
 desc 逻辑（因 → 果 → 下一问）
 - 节点 1：背景铺垫（时间/地点/张力），引出该节点 decision，不提前透露 choice。
@@ -116,7 +116,7 @@ Output format (ONLY valid JSON, no extra text):
     "choice": "...",
     "decision": "...",
     "decision_maker": "...",
-    "characters": [{{"name": "..."}}]
+    "characters": ["name1", "name2"]
   }},
   ...
 ]
@@ -127,7 +127,7 @@ Field requirements
 - choice: the canonical real-history choice for the PREVIOUS node's decision (< 8 words); Node 1 MUST be "None".
 - decision: the open-ended decision question this node raises (8-12 words); last node MUST be "None".
 - decision_maker: the name of the cast member who faces this decision; last node MUST be "None".
-- characters: list of cast members directly involved in this node as [{{"name": "..."}}]; use only names from <cast>.
+- characters: list of cast member names directly involved in this node, e.g. ["Name A", "Name B"]; use only names from <cast>.
 
 Desc logic (cause → effect → next question)
 - Node 1: background only (time/place/tensions), ending with this node's decision. Do not reveal the choice.
