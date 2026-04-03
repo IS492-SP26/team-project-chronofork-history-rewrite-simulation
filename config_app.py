@@ -51,26 +51,146 @@ css = """
     margin-bottom: -10px;
 }
 
-/* 新增：底部的决策问题样式 */
+/* 决策问题样式 */
 .node-decision {
-    background: #e8f5e9; /* 浅绿色背景 */
+    background: #e8f5e9;
     padding: 10px 15px;
     font-weight: bold;
     color: #155724;
     border-top: 1px solid #c3e6cb;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
+}
+.decision-maker-tag {
+    color: #0056b3;
+    font-weight: bold;
 }
 
+/* Timeline Styles */
+.timeline-container {
+    padding: 10px 10px 10px 10px;
+}
+.timeline-step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 34px;
+    flex-shrink: 0;
+}
+.step-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007bff, #28a745);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.85em;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.step-dot-last {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+.step-line {
+    width: 2px;
+    flex: 1;
+    min-height: 16px;
+    background: linear-gradient(to bottom, #007bff55, #dee2e6);
+}
+.step-content {
+    flex: 1;
+    margin-bottom: 0;
+}
+.choice-connector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 3px 0 5px 0;
+    padding: 5px 12px;
+    background: #f1f8ff;
+    border-left: 3px solid #007bff;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.88em;
+    color: #444;
+    font-style: italic;
+}
+.char-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 7px 14px;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+.char-badge {
+    display: inline-flex;
+    align-items: center;
+    background: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 12px;
+    padding: 2px 9px;
+    font-size: 0.82em;
+    white-space: nowrap;
+    gap: 3px;
+}
+
+/* Cast Grid */
+.cast-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    padding: 10px;
+}
+.cast-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 14px 12px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    transition: box-shadow 0.2s;
+}
+.cast-card:hover {
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+.cast-avatar-large {
+    font-size: 2.2em;
+    margin-bottom: 6px;
+}
+.cast-char-name {
+    font-weight: bold;
+    font-size: 1em;
+    margin-bottom: 3px;
+    color: #1a1a2e;
+}
+.cast-char-title {
+    color: #6c757d;
+    font-size: 0.8em;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+.cast-char-desc {
+    font-size: 0.8em;
+    color: #555;
+    text-align: left;
+    line-height: 1.45;
+}
 
 .highlight-card {
     border: 2px solid #28a745 !important;
     background-color: #f0fff4 !important;
 }
-
 .description-box {
-    font-size: 1.2em !important;  /* 增大描述文本字体 */
+    font-size: 1.2em !important;
     color: #444;
 }
 .bk-btn {
@@ -109,20 +229,16 @@ UI_TEXTS = {
         "theme_placeholder": "例如：春秋战国、二战、法国大革命...",
         "analyze_theme": "分析主题",
         "stage1_title": "阶段 1：配置",
-        "stage2_loading": "正在构建故事图...",
+        "stage2_loading": "正在生成角色阵容...",
         "stage2_select_first": "请先在阶段 1 中选择一个事件。",
+        "confirm_cast": "确认阵容",
         "confirm_storyline": "确认故事线",
         "back_to_episodes": "返回事件列表",
-        "stage2_title": "阶段 2：故事线",
-        "stage3_loading": "正在生成角色...",
-        "perspective_type": "视角类型",
-        "protagonists": "决策者",
-        "observers": "观察者",
-        "select_character": "选择角色",
-        "confirm_character_launch": "确认角色并启动",
-        "back_to_storyline": "返回故事线",
-        "reselect_character": "重新选择角色",
-        "stage3_title": "阶段 3：角色与视角",
+        "back_to_cast": "返回角色阵容",
+        "stage2_title": "阶段 2：角色阵容",
+        "stage3_loading": "正在生成故事线...",
+        "stage3_select_first": "请先在阶段 2 中确认角色阵容。",
+        "stage3_title": "阶段 3：故事线",
         "theme_input_heading": "### 主题输入",
         "retrieving_episodes": "正在检索历史事件...",
         "error_prefix": "错误",
@@ -136,15 +252,11 @@ UI_TEXTS = {
         "start_suffix": "开始",
         "choice_prefix": "选择",
         "decision_prefix": "决策",
+        "cast_confirmed": "✅ 角色阵容已确认",
+        "with_cast_members": "共 {count} 位角色",
         "storyline_confirmed": "✅ 故事线已确认",
         "with_storyline_nodes": "共 {count} 个节点",
-        "select_decision_maker": "选择决策者",
-        "select_historical_witness": "选择历史观察者",
-        "decision_maker_type": "🎯 决策者",
-        "historical_witness_type": "👁️ 历史观察者",
         "char_default": "角色",
-        "type_label": "类型",
-        "title_label": "身份",
         "saved_notice": "✅ 配置完成，已可进入体验。",
         "app_title": "ChronoFork · 配置",
     },
@@ -152,20 +264,16 @@ UI_TEXTS = {
         "theme_placeholder": "E.g., Ancient China, WWII, The French Revolution...",
         "analyze_theme": "Analyze Theme",
         "stage1_title": "Stage 1: Configuration",
-        "stage2_loading": "Constructing Story Graph...",
+        "stage2_loading": "Generating Cast...",
         "stage2_select_first": "Please select an episode in Stage 1.",
+        "confirm_cast": "Confirm Cast",
         "confirm_storyline": "Confirm Storyline",
         "back_to_episodes": "Back to Episodes",
-        "stage2_title": "Stage 2: Storyline",
-        "stage3_loading": "Casting Agents & Observers...",
-        "perspective_type": "Perspective Type",
-        "protagonists": "Protagonists",
-        "observers": "Observers",
-        "select_character": "Select Character",
-        "confirm_character_launch": "Confirm Character & Launch",
-        "back_to_storyline": "Back to Storyline",
-        "reselect_character": "Reselect Character",
-        "stage3_title": "Stage 3: Cast & Perspective",
+        "back_to_cast": "Back to Cast",
+        "stage2_title": "Stage 2: Cast",
+        "stage3_loading": "Constructing Story Graph...",
+        "stage3_select_first": "Please confirm the cast in Stage 2 first.",
+        "stage3_title": "Stage 3: Storyline",
         "theme_input_heading": "### Theme Input",
         "retrieving_episodes": "Retrieving Historical Episodes...",
         "error_prefix": "Error",
@@ -179,15 +287,11 @@ UI_TEXTS = {
         "start_suffix": "START",
         "choice_prefix": "Choice",
         "decision_prefix": "Decision",
+        "cast_confirmed": "✅ Cast Confirmed",
+        "with_cast_members": "With {count} cast members",
         "storyline_confirmed": "✅ Storyline Confirmed",
         "with_storyline_nodes": "With {count} storyline nodes",
-        "select_decision_maker": "Select Decision Maker",
-        "select_historical_witness": "Select Historical Witness",
-        "decision_maker_type": "🎯 Decision Maker",
-        "historical_witness_type": "👁️ Historical Witness",
         "char_default": "Character",
-        "type_label": "Type",
-        "title_label": "Title",
         "saved_notice": "✅ You’re all set! Enter the VR space.",
         "app_title": "ChronoFork · Configuration",
     },
@@ -198,9 +302,8 @@ class ConfigPage(pn.viewable.Viewer):
     selected_theme = param.String(default="")
     episode_list = param.List(default=[])
     selected_episode = param.Dict(default={})
-    storyline_data = param.List(default=[])
     cast_list = param.List(default=[])
-    selected_character = param.String(default="")
+    storyline_data = param.List(default=[])
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -230,88 +333,59 @@ class ConfigPage(pn.viewable.Viewer):
         )
         self.card1 = pn.Card(self.card1_content, title=self._t("stage1_title"), sizing_mode='stretch_both', collapsed=False,margin=(0, 10, 0, 0))
 
-        # --- STAGE 2: STORYLINE ---
-        self.loading_spinner = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), self._t("stage2_loading"),sizing_mode='stretch_width',visible=False)
-        self.graph_desc=pn.pane.HTML(self._t("stage2_select_first"), sizing_mode='stretch_both')
-        
-        self.graph_desc_container = pn.Column(self.loading_spinner, self.graph_desc, sizing_mode='stretch_both',scroll=True)
+        # --- STAGE 2: CAST ---
+        self.cast_loading = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), self._t("stage2_loading"), visible=False)
 
-        # Setup Footer Buttons
-        self.confirm_btn = pn.widgets.Button(name=self._t("confirm_storyline"), button_type='success', sizing_mode='stretch_width',visible=False)
+        self.cast_selector = pn.widgets.RadioButtonGroup(
+            button_type='primary',
+            button_style='outline',
+            orientation='vertical',
+            sizing_mode='stretch_both',
+            visible=False,
+        )
+        self.cast_detail_view = pn.pane.HTML("", sizing_mode='stretch_width', visible=False)
+        self.cast_confirmed_display = pn.pane.HTML("", sizing_mode='stretch_width', visible=False, margin=(5,0,5,0))
+
+        self.cast_confirm_btn = pn.widgets.Button(name=self._t("confirm_cast"), button_type='success', sizing_mode='stretch_width', visible=False)
+        self.cast_confirm_btn.on_click(self.on_cast_confirm_click)
+
+        self.cast_back_btn = pn.widgets.Button(name=self._t("back_to_episodes"), button_type='default', sizing_mode='stretch_width', visible=False)
+        self.cast_back_btn.on_click(self.back_to_stage1)
+
+        cast_btns_row = pn.Row(self.cast_confirm_btn, self.cast_back_btn, sizing_mode='stretch_width')
+
+        self.card2_content = pn.Column(
+            self.cast_loading,
+            self.cast_selector,
+            self.cast_detail_view,
+            self.cast_confirmed_display,
+            cast_btns_row,
+            sizing_mode='stretch_both'
+        )
+        self.card2 = pn.Card(self.card2_content, title=self._t("stage2_title"), sizing_mode='stretch_both', collapsed=True, margin=(0, 10, 0, 0))
+
+        # --- STAGE 3: STORYLINE ---
+        self.loading_spinner = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), self._t("stage3_loading"), sizing_mode='stretch_width', visible=False)
+        self.graph_desc = pn.pane.HTML(self._t("stage3_select_first"), sizing_mode='stretch_both')
+
+        self.graph_desc_container = pn.Column(self.loading_spinner, self.graph_desc, sizing_mode='stretch_both', scroll=True)
+
+        self.confirm_btn = pn.widgets.Button(name=self._t("confirm_storyline"), button_type='success', sizing_mode='stretch_width', visible=False)
         self.confirm_btn.on_click(partial(self.on_storyline_confirm))
-        
-        self.back_btn = pn.widgets.Button(name=self._t("back_to_episodes"), sizing_mode='stretch_width',visible=False)
-        self.back_btn.on_click(partial(self.back_to_stage1))
 
-        self.graph_ctrls_display = pn.pane.HTML("", sizing_mode='stretch_width',margin=(5,0,5,0))
+        self.back_btn = pn.widgets.Button(name=self._t("back_to_cast"), sizing_mode='stretch_width', visible=False)
+        self.back_btn.on_click(partial(self.back_to_stage2))
+
+        self.graph_ctrls_display = pn.pane.HTML("", sizing_mode='stretch_width', margin=(5,0,5,0))
 
         self.sl_btns_row = pn.Row(self.confirm_btn, self.back_btn, sizing_mode='stretch_width')
         self.graph_ctrls_container = pn.Column(self.graph_ctrls_display, self.sl_btns_row, sizing_mode='stretch_width')
-        
-        self.card2_content = pn.Column(
-            self.graph_desc_container,
-            self.graph_ctrls_container,sizing_mode='stretch_both'
-        )
-        self.card2 = pn.Card(self.card2_content, title=self._t("stage2_title"), sizing_mode='stretch_both', collapsed=True,margin=(0, 10, 0, 0))
-
-        # --- STAGE 3: CAST ---
-        self.cast_loading = pn.Row(pn.indicators.LoadingSpinner(value=True, size=30), self._t("stage3_loading"), visible=False)
-
-        # 1. 类别选择器 (互斥按钮组)
-        self.category_option_labels = {
-            "Protagonists": self._t("protagonists"),
-            "Observers": self._t("observers"),
-        }
-        category_options = {label: value for value, label in self.category_option_labels.items()}
-        self.category_selector = pn.widgets.RadioButtonGroup(
-            name=self._t("perspective_type"),
-            options=category_options, 
-            value='Protagonists',
-            button_type='default',
-            button_style='solid',
-            sizing_mode='stretch_width',
-            visible=False
-        )
-
-        # 2. 角色列表选择器 (RadioBoxGroup)
-        self.cast_selector = pn.widgets.RadioButtonGroup(
-            name=self._t("select_character"),
-            button_type='primary',
-            button_style='outline',
-            orientation='vertical', # 垂直排列名字
-            sizing_mode='stretch_both',
-            visible=False
-        )
-
-        # 3. 详情展示区域
-        self.cast_detail_view = pn.pane.Markdown(
-            "",
-            sizing_mode='stretch_width',
-            visible=False
-        )
-
-        # 5. 按钮组
-        self.cast_confirm_btn = pn.widgets.Button(name=self._t("confirm_character_launch"), button_type='success', sizing_mode='stretch_width',visible=False)
-        self.cast_confirm_btn.on_click(self.on_cast_confirm_click)
-
-        self.cast_back_btn = pn.widgets.Button(name=self._t("back_to_storyline"), button_type='default', sizing_mode='stretch_width',visible=False)
-        self.cast_back_btn.on_click(self.back_to_stage2)
-
-        self.cast_reselect_btn = pn.widgets.Button(name=self._t("reselect_character"), button_type='warning', sizing_mode='stretch_width', visible=False)
-        self.cast_reselect_btn.on_click(self.on_cast_reselect_click)
-
-
-        cast_ctrl_row=pn.Row(self.cast_confirm_btn, self.cast_back_btn, self.cast_reselect_btn, sizing_mode='stretch_width')
 
         self.card3_content = pn.Column(
-            self.cast_loading,
-            self.category_selector,
-            self.cast_selector,
-            self.cast_detail_view,
-            cast_ctrl_row,
+            self.graph_desc_container,
+            self.graph_ctrls_container,
             sizing_mode='stretch_both'
         )
-
         self.card3 = pn.Card(self.card3_content, title=self._t("stage3_title"), sizing_mode='stretch_both', collapsed=True)
 
         # Layout
@@ -444,24 +518,105 @@ class ConfigPage(pn.viewable.Viewer):
         # 替换 Markdown 内容为 HTML 样式
         self.episode_detail_view.object = highlight_html
         
-        # 4. 激活 Stage 2
+        # 4. 激活 Stage 2 (Cast)
         self.selected_episode = episode_data
         self.card2.collapsed = False
-        await self.generate_storyline()
+        await self.generate_cast()
 
 
 
     # ==========================================
-    # STAGE 2 LOGIC: EPISODE -> STORYLINE
+    # STAGE 2 LOGIC: EPISODE -> CAST
+    # ==========================================
+    async def generate_cast(self):
+        self.cast_loading.visible = True
+        self.cast_detail_view.object = ""
+
+        prompt = get_prompt(
+            "config.episode_to_cast",
+            self.prompt_lang,
+            episode_title=self.selected_episode["title"],
+        )
+        try:
+            cast_data = await call_llm(prompt, lang=self.prompt_lang)
+            self.cast_list = cast_data
+            self.render_cast(cast_data)
+        except Exception as e:
+            self.cast_loading.visible = False
+            self.cast_detail_view.object = f"{self._t('error_prefix')}: {str(e)}"
+            self.cast_detail_view.visible = True
+
+    def render_cast(self, cast_data):
+        self.cast_loading.visible = False
+
+        self.cast_map = {
+            f"{c.get('avatar', '👤')}  {c.get('name')}": c
+            for c in cast_data
+        }
+        options = list(self.cast_map.keys())
+        self.cast_selector.options = options
+        self.cast_selector.value = options[0] if options else None
+        self.cast_selector.visible = True
+        self.cast_detail_view.visible = True
+        self.cast_confirm_btn.visible = True
+        self.cast_back_btn.visible = True
+
+        def on_character_change(event):
+            self._refresh_cast_detail(event.new)
+        self.cast_selector.param.watch(on_character_change, 'value')
+
+        if options:
+            self._refresh_cast_detail(options[0])
+
+    def _refresh_cast_detail(self, selected_label):
+        char = self.cast_map.get(selected_label)
+        if not char:
+            return
+        self.cast_detail_view.object = f"""
+        <div style="background-color:#f5f5f5;border:1.5px solid #C5C5C7;padding:14px;border-radius:8px;margin-top:6px;">
+            <h3 style="margin-top:0;">{char.get('avatar','👤')} {char.get('name','')}</h3>
+            <p style="color:#6c757d;margin:0 0 8px 0;font-size:0.9em;font-style:italic;">{char.get('title','')}</p>
+            <p style="color:#444;margin:0;font-size:0.95em;line-height:1.5;">{char.get('desc','')}</p>
+        </div>"""
+
+    async def on_cast_confirm_click(self, event):
+        # 1. 冻结 UI
+        # self.cast_selector.disabled = True
+        self.cast_confirm_btn.disabled = True
+        self.cast_back_btn.disabled = True
+
+        # 2. 显示确认状态
+        self.cast_confirmed_display.object = f"""
+        <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px;">
+            <h3 style="margin-top:0; color: #28a745;">{self._t("cast_confirmed")}</h3>
+            <p style="color: #666; margin-bottom:0;">{self._t("with_cast_members").format(count=len(self.cast_list))}</p>
+        </div>
+        """
+
+        self.cast_confirmed_display.visible = True
+
+        # 3. 激活 Stage 3 (Storyline)
+        self.card3.collapsed = False
+        await self.generate_storyline()
+
+    def back_to_stage1(self, event):
+        self.card2.collapsed = True
+        self.card1.collapsed = False
+        self.render_episodes(self.episode_list)
+
+    # ==========================================
+    # STAGE 3 LOGIC: CAST -> STORYLINE
     # ==========================================
     async def generate_storyline(self):
         self.loading_spinner.visible = True
         self.graph_desc.object = ""
-        
+
+        cast_str = json.dumps(self.cast_list, ensure_ascii=False)
         prompt = get_prompt(
-            "config.episode_to_storyline",
+            "config.cast_to_storyline",
             self.prompt_lang,
             episode_title=self.selected_episode["title"],
+            cast_str=cast_str,
         )
         try:
             nodes = await call_llm(prompt, lang=self.prompt_lang)
@@ -473,213 +628,98 @@ class ConfigPage(pn.viewable.Viewer):
 
     def render_story_graph(self, nodes):
         self.loading_spinner.visible = False
-        html_content = '<div style="padding: 10px;">'
-        
-        scenario_title = self.selected_episode.get('title', self._t("scenario_default"))
+
+        # Build a lookup of cast for avatar resolution
+        cast_lookup = {c.get('name'): c.get('avatar', '👤') for c in self.cast_list}
+
+        html = '<div class="timeline-container">'
 
         for idx, node in enumerate(nodes):
-            is_last = (idx == len(nodes) - 1)
-            is_first = (idx == 0)
-            last_class = "last-node" if is_last else ""
-            
-            # --- 1. 准备文本内容 ---
+            is_last = idx == len(nodes) - 1
+            step_num = idx + 1
 
-            # 卡片 Header：显示节点 title
-            node_title = node.get('title') or f"{scenario_title} {self._t('start_suffix')}"
-            header_text = f"🟢 {node_title}"
+            # --- Choice connector between nodes ---
+            if idx > 0:
+                choice = node.get('choice', '')
+                if choice and choice not in ('None', None):
+                    html += f"""
+                    <div style="display:flex;gap:14px;align-items:stretch;">
+                        <div class="step-indicator">
+                            <div class="step-line"></div>
+                        </div>
+                        <div style="flex:1;">
+                            <div class="choice-connector">
+                                ✅ {self._t('choice_prefix')}: {choice}
+                            </div>
+                        </div>
+                    </div>"""
 
-            # 卡片 Body：显示 choice + 描述
-            choice_text = node.get('choice', 'None')
-            if choice_text == 'None':
-                body_text = f"<div style='margin-top:8px;'>{node.get('desc', '')}</div>"
+            # --- Character badges ---
+            characters = node.get('characters', [])
+            char_badges_html = ''
+            if characters:
+                badges = ''.join([
+                    f'<span class="char-badge">{c.get("avatar", cast_lookup.get(c.get("name"), "👤"))} {c.get("name", "")}</span>'
+                    for c in characters
+                ])
+                char_badges_html = f'<div class="char-badges">{badges}</div>'
+
+            # --- Decision footer ---
+            decision = node.get('decision', 'None')
+            decision_maker = node.get('decision_maker', 'None')
+            if is_last or not decision or decision == 'None':
+                footer_html = f'<div class="node-decision">🏁 {node.get("title", "")}</div>'
             else:
-                body_text = f"<div><strong>{self._t('choice_prefix')}:</strong> {choice_text}</div><div style='margin-top:8px;'>{node.get('desc', '')}</div>"
+                dm_avatar = cast_lookup.get(decision_maker, '👤')
+                dm_tag = f'<span class="decision-maker-tag">🤔 {decision_maker}</span>: ' if decision_maker and decision_maker != 'None' else ''
+                footer_html = f'<div class="node-decision">{dm_tag}{decision}</div>'
 
-            # 卡片 Footer (决策问题) - 最后一个节点没有
-            footer_html = ""
-            if not is_last:
-                decision_question = node.get('decision', node.get('title'))
-                footer_html = f"""
-                <div class="node-decision">
-                    🤔 {self._t('decision_prefix')}: {decision_question}
-                </div>
-                """
-            else:
-                footer_html = f"""
-                <div class="node-decision">
-                    🏁 {node.get('title')}
-                </div>
-                """
+            # --- Node title ---
+            node_title = node.get('title') or f"{self.selected_episode.get('title', self._t('scenario_default'))} {self._t('start_suffix')}"
+            dot_class = 'step-dot-last' if is_last else ''
+            line_html = '<div class="step-line"></div>' if not is_last else ''
 
-            # --- 2. 组装 HTML ---
-            
-            html_content += f"""
-            <div class="story-node {last_class}">
-                <div class="node-content">
-                    <div class="node-header">{header_text}</div>
-                    <div class="node-body">{body_text}</div>
-                    {footer_html}
+            html += f"""
+            <div class="timeline-step">
+                <div class="step-indicator">
+                    <div class="step-dot {dot_class}">{step_num}</div>
+                    {line_html}
                 </div>
-            </div>
-            """
-            
-        html_content += '</div>'
-        
-        self.graph_desc.object=html_content
+                <div class="step-content">
+                    <div class="node-content">
+                        <div class="node-header">{'🏁' if is_last else '🟢'} {node_title}</div>
+                        {char_badges_html}
+                        <div class="node-body">{node.get('desc', '')}</div>
+                        {footer_html}
+                    </div>
+                </div>
+            </div>"""
+
+        html += '</div>'
+        self.graph_desc.object = html
         self.confirm_btn.visible = True
         self.back_btn.visible = True
 
     async def on_storyline_confirm(self, event):
         self.confirm_btn.disabled = True
         self.back_btn.disabled = True
-        self.graph_ctrls_display.visible = True
         self.graph_ctrls_display.object = f"""
-        <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px; margin-left:5px; margin-right:5px;">
+        <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px;">
             <h3 style="margin-top:0; color: #28a745;">{self._t("storyline_confirmed")}</h3>
             <p style="color: #666; margin-bottom:0;">{self._t("with_storyline_nodes").format(count=len(self.storyline_data))}</p>
         </div>
         """
-        # Activate Stage 3
-        self.card3.collapsed = False
-        await self.generate_cast()
-        
-    def back_to_stage1(self, event):
-        self.card2.collapsed = True
-        self.card1.collapsed = False
-        # Reset Stage 1 UI to selection mode (simple reload of list or regeneration)
-        # For simplicity, we just re-enable the theme button to allow restart or re-render list
-        self.render_episodes(self.episode_list) # Re-trigger list generation logic or cached list
 
-    # ==========================================
-    # STAGE 3 LOGIC: STORYLINE -> CAST
-    # ==========================================
-    async def generate_cast(self):
-        self.cast_loading.visible = True
-        
-        storyline_str = json.dumps(self.storyline_data, ensure_ascii=False)
-
-        # 修改 Prompt 以请求两类角色
-        prompt = get_prompt(
-            "config.storyline_to_cast",
-            self.prompt_lang,
-            episode_title=self.selected_episode["title"],
-            storyline_str=storyline_str,
-        )
-        try:
-            cast_data = await call_llm(prompt, lang=self.prompt_lang)
-            self.full_cast_data = cast_data # 保存完整字典
-            self.cast_data=cast_data.get('protagonists',[])
-            self.render_cast(cast_data)
-        except Exception as e:
-            self.cast_detail_view.object = f"{self._t('error_prefix')}: {str(e)}"
-
-    # ==========================================
-    # STAGE 3 UI: CAST SELECTION
-    # ==========================================
-    def render_cast(self, cast_data):
-        self.cast_loading.visible = False
-        self.category_selector.visible = True
-        self.cast_selector.visible = True
-        self.cast_detail_view.visible = True
-        self.cast_confirm_btn.visible = True
-        self.cast_back_btn.visible = True
-
-        # A. 根据当前选中的类别，刷新下方的角色列表
-        def update_list_by_category(category_name):
-            # 转换 key (UI显示的大写 -> 数据的小写)
-            data_key = category_name.lower() 
-            current_list = self.full_cast_data.get(data_key, [])
-            
-            # 重建映射字典
-            self.cast_map = {f"{char.get('avatar','👤')} {char.get('name')} - {char.get('title')}": char for char in current_list}
-            new_options = list(self.cast_map.keys())
-            
-            # 更新列表组件
-            self.cast_selector.options = new_options
-            if new_options:
-                self.cast_selector.value = new_options[0] # 默认选中第一个
-                if category_name=='Protagonists':
-                    self.cast_selector.name=self._t("select_decision_maker")
-                    self.cast_selector.button_type='primary'
-                else:
-                    self.cast_selector.name=self._t("select_historical_witness")
-                    self.cast_selector.button_type='warning'
-            
-        # B. 监听类别切换
-        def on_category_change(event):
-            update_list_by_category(event.new)
-        
-        self.category_selector.param.watch(on_category_change, 'value')
-
-        # C. 监听角色切换 (更新详情)
-        def on_character_change(event):
-            selected_label = event.new
-            self.refresh_cast_list(selected_label)
-        self.cast_selector.param.watch(on_character_change, 'value')
-
-        # 4. 初始化一次界面 (默认加载 Protagonists)
-        update_list_by_category('Protagonists')
-
-    def refresh_cast_list(self,selected_label):
-        if selected_label in self.cast_map:
-            char_data = self.cast_map[selected_label]
-            # 区分显示不同类别的提示语
-            role_type = self.category_selector.value
-            prefix = self._t("decision_maker_type") if role_type == 'Protagonists' else self._t("historical_witness_type")
-            self.cast_detail_view.object = f'''
-        <div style="background-color: #f5f5f5; border: 2px solid #C5C5C7; padding: 15px; border-radius: 8px;">
-            <h3 style="margin-top:0;">{char_data.get('avatar','👤')} {char_data.get('name',self._t('char_default'))}:</h3>
-            <p style="font-size:1.1em;"><strong>{self._t('type_label')}:</strong> {prefix}</p>
-            <p style="font-size:1.1em;"><strong>{self._t('title_label')}:</strong> {char_data.get('title',self._t('char_default'))}</p>
-            <p style="color: #666; margin-bottom:0;font-size:1em;">{char_data.get('desc')}</p>
-        </div>'''
-
-
-
-    def back_to_stage2(self, event):
-        self.card3.collapsed = True
-        self.card2.collapsed = False
-        self.confirm_btn.disabled = False
-        self.back_btn.disabled = False
-
-    async def on_cast_confirm_click(self, event):
-        selected_label = self.cast_selector.value
-        character_data = self.cast_map[selected_label]
-        self.selected_character = character_data['name']
-        role_category = self.category_selector.value # 记录用户选的是主角还是观察者
-        
-        # 1. 冻结 UI
-        self.category_selector.disabled = True # 冻结类别切换
-        self.cast_selector.disabled = True     # 冻结角色选择
-        self.cast_confirm_btn.visible = False
-        self.cast_back_btn.visible = False
-        self.cast_reselect_btn.visible = True
-        
-        # 2. 高亮展示
-        highlight_html = f"""
-        <div style="background-color: #f0fff4; border: 2px solid #28a745; padding: 15px; border-radius: 8px;">
-            <h3 style="margin-top:0; color: #28a745;">{self._t("selected_prefix")}: {selected_label}</h3>
-            <p><strong>{self._t("type_label")}:</strong> {self.category_option_labels.get(role_category, role_category)}</p>
-            <p style="color: #666; margin-bottom:0;">{character_data.get('desc')}</p>
-        </div>
-        """
-        self.cast_detail_view.object = highlight_html
-
-        # 3. 准备 JSON (保存完整的 prompt output 以便系统后续使用其他 NPC)
         config_data = {
             "episode": self.selected_episode,
+            "cast": self.cast_list,
             "storyline": self.storyline_data,
-            "cast_data": self.cast_data,
-            "user_role": character_data
         }
-        
-        # 4. 保存
+
         if not os.path.exists('config'):
             os.makedirs('config')
         now = datetime.datetime.now()
-        date_str = now.strftime("%m-%d_%H-%M")
-        filename = f'config/{date_str}.json'
-        
+        filename = f'config/{now.strftime("%m-%d_%H-%M")}.json'
         try:
             with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(config_data, f, ensure_ascii=False, indent=4)
@@ -689,21 +729,13 @@ class ConfigPage(pn.viewable.Viewer):
 
         if pn.state.notifications:
             pn.state.notifications.success(self._t("saved_notice"), duration=5000)
-    
-    def on_cast_reselect_click(self, event):
-        # 1. 解锁
-        self.category_selector.disabled = False
+
+    def back_to_stage2(self, event):
+        self.card3.collapsed = True
+        self.card2.collapsed = False
         self.cast_selector.disabled = False
-        
-        # 2. 按钮复原
-        self.cast_reselect_btn.visible = False
-        self.cast_confirm_btn.visible = True
-        self.cast_back_btn.visible = True
-        
-        # 3. 恢复详情描述 (触发一次手动更新)
-        selected_label = self.cast_selector.value
-        if selected_label:
-            self.refresh_cast_list(selected_label)
+        self.cast_confirm_btn.disabled = False
+        self.cast_back_btn.disabled = False
 
 
 LANG = resolve_lang()

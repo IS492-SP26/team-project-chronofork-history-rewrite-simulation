@@ -16,11 +16,11 @@ PROMPT_CATALOG: Dict[str, Dict[str, str]] = {
     },
     
     "config.theme_to_episodes": {
-        "zh": """基于主题“{selected_theme}”，推荐事件（Episode）。
+        "zh": """基于主题"{selected_theme}"，推荐事件（Episode）。
 
       规则：
-      - 若用户输入已是“具体历史事件”（如“古巴导弹危机”“攻占巴士底狱”）或是具体文学作品 （如“哈利波特与死亡圣器”“西游记”），仅返回该 1 个事件。
-      - 若用户输入是“历史主题/时期”（如“冷战”“法国大革命”），返回 5 个彼此不同、影响力高的事件。
+      - 若用户输入已是"具体历史事件"（如"古巴导弹危机""攻占巴士底狱"）或是具体文学作品 （如"哈利波特与死亡圣器""西游记"），仅返回该 1 个事件。
+      - 若用户输入是"历史主题/时期"（如"冷战""法国大革命"），返回 5 个彼此不同、影响力高的事件。
 
 仅输出 JSON（不要额外文本）：
 [
@@ -43,135 +43,101 @@ Output ONLY JSON (no extra text):
 
 Requirement: each title must be concise and descriptive.""",
     },
-    "config.episode_to_storyline": {
-        "zh": """请围绕事件 {episode_title}，生成一个“有史实/参考依据、线性推进”的 Storyline，输出为 4-6 个节点的 JSON 数组。
+    "config.episode_to_cast": {
+        "zh": """基于事件「{episode_title}」，生成 4-6 个关键决策人物。
 
-每个节点代表一个决策检查点（或最终收束），供后续角色编排与场景扩展使用。
+要求：
+- 只返回有决策权、能影响剧情走向的历史人物。
+- name 和 title 简洁，desc 2-3 句概括其在本事件中的核心角色与动机。
+- 角色必须有史实依据，选择影响力差异明显的多元人物。
+
+仅输出 JSON 数组：
+[
+  {{"name": "拉法耶特", "title": "国民卫队指挥官", "desc": "掌控巴黎秩序的关键人物，游走于王室与革命派之间。", "avatar": "👮"}},
+  ...
+]""",
+        "en": """Based on episode "{episode_title}", generate 4-6 key decision-making figures.
+
+Requirements:
+- Only include historically grounded figures with real agency over the episode's outcome.
+- Keep name and title concise; desc should be 2-3 sentences on their role and motivation.
+- Select figures with meaningfully different power positions and perspectives.
+
+Output JSON array only:
+[
+  {{"name": "General LaFayette", "title": "Commander of the National Guard", "desc": "Controls order in Paris, balancing loyalty between the Crown and the revolutionary movement.", "avatar": "👮"}},
+  ...
+]""",
+    },
+    "config.cast_to_storyline": {
+        "zh": """基于事件「{episode_title}」和以下 <cast>，生成 4-6 节点的线性故事线 JSON。
+
+<cast>
+{cast_str}
+</cast>
 
 输出格式（仅合法 JSON，无额外文本）：
 [
-  {{"title": "...", "desc": "...", "decision": "...", "choice": "..."}},
+  {{
+    "title": "...",
+    "desc": "...",
+    "choice": "...",
+    "decision": "...",
+    "decision_maker": "...",
+    "characters": [{{"name": "..."}}]
+  }},
   ...
 ]
 
 字段要求
-- title：当前节点的概括标题。
-- desc：1-3 句，**精炼**易读。
-  - 需符合史实，包含多视角冲突与关键人物。
-  - 不写对话，不写镜头指令，只写故事线叙述。
-- decision：当前节点引出的开放式决策问题（8-12 字内）。
-  - 必须是开放问题。
-  - 最后一个节点固定为 "None"。
-- choice：**上一节点** decision 的历史主线真实选择。
-  - 第 1 节点固定为 "None"。
-  - 需短（< 10 词）以便可视化。
+- title：节点概括标题，简洁。
+- desc：1-3 句精炼叙述，包含史实与关键冲突，至少涉及 <cast> 中 2 位人物。不写对话，只写故事线叙述。
+- choice：**上一节点** decision 的历史真实选择（< 8 词）；第 1 节点固定为 "None"。
+- decision：当前节点引出的开放式决策问题（8-12 字）；最后节点固定为 "None"。
+- decision_maker：面临该 decision 的 <cast> 人物名称；最后节点固定为 "None"。
+- characters：该节点直接涉及的 <cast> 人物列表，格式 [{{"name": "..."}}]，只用 <cast> 中已有人物。
 
-desc 逻辑（因 -> 果 -> 下一问）
-- 节点1：只写背景（时间/地点/背景力量 + 关键人物 + 张力），结尾引出该节点 decision 的问题。
-  - 不得提前透露 choice。
-- 节点 i>1：第 1 句必须明确写出对上一节点问题的历史真实选择（本节点的choice），再写其后果如何导向当前节点的问题（decision）。
-
-内容要求
-- 时间线、人物、地点准确且符合史实/参考依据，避免时代错置与无依据推测。
-- 每个节点至少体现两种视角（如领导人与顾问、盟友与对手、国内与国际）。
-- 每个 desc 尽量点名至少 2 位关键人物；整条线尽量覆盖 4-6 位不同人物。
-- 保持线性推进：每个节点自然导向下一个节点。
+desc 逻辑（因 → 果 → 下一问）
+- 节点 1：背景铺垫（时间/地点/张力），引出该节点 decision，不提前透露 choice。
+- 节点 i>1：首句明确写出上一节点 decision 的历史真实选择，再写后果与当前问题。
 
 只返回 JSON。""",
-        "en": """Create a historically grounded, linearly progressing Storyline for episode {episode_title} as a JSON array of 4-6 nodes.
+        "en": """Based on episode "{episode_title}" and the <cast> below, generate a linear storyline as a JSON array of 4-6 nodes.
 
-Each node is a decision checkpoint (or final resolution) for downstream casting and scene expansion.
+<cast>
+{cast_str}
+</cast>
 
 Output format (ONLY valid JSON, no extra text):
 [
-  {{"title": "...", "desc": "...", "decision": "...", "choice": "..."}},
+  {{
+    "title": "...",
+    "desc": "...",
+    "choice": "...",
+    "decision": "...",
+    "decision_maker": "...",
+    "characters": [{{"name": "..."}}]
+  }},
   ...
 ]
 
 Field requirements
-- title: a concise summary title for the current node.
-- desc: 1-3 CONCISE, readable sentences.
-  - Must be historically coherent and include multi-perspective tension plus key figures.
-  - No dialogue and no scene directions; storyline narration only.
-- decision: the open-ended decision question raised by the current node (8-12 words max).
-  - Must be an open question.
-  - The last node must use "None".
-- choice: the canonical real-history choice made for the PREVIOUS node's decision.
-  - Node 1 MUST be "None".
-  - Keep it short (< 10 words) for visualization.
+- title: concise summary title for the node.
+- desc: 1-3 concise sentences of historically grounded narration involving at least 2 cast members. No dialogue; storyline narration only.
+- choice: the canonical real-history choice for the PREVIOUS node's decision (< 8 words); Node 1 MUST be "None".
+- decision: the open-ended decision question this node raises (8-12 words); last node MUST be "None".
+- decision_maker: the name of the cast member who faces this decision; last node MUST be "None".
+- characters: list of cast members directly involved in this node as [{{"name": "..."}}]; use only names from <cast>.
 
-Desc logic (cause -> effect -> next question)
-- Node 1: background only (time/place/context + major forces + key figures + tensions), ending by setting up this node's decision question.
-  - Do not reveal the choice in advance.
-- Node i>1: the first sentence must explicitly state the previous node's historical choice, then explain how its consequences lead to the current node's decision.
-
-Content requirements
-- Maintain accurate chronology, actors, and locations; avoid anachronism and unsupported speculation.
-- Each node should reflect at least two perspectives (e.g., leaders vs advisors, allies vs opponents, domestic vs international).
-- Prefer naming at least 2 key figures per desc and covering 4-6 distinct figures across the full storyline.
-- Preserve linear progression: each node should naturally lead to the next decision checkpoint.
+Desc logic (cause → effect → next question)
+- Node 1: background only (time/place/tensions), ending with this node's decision. Do not reveal the choice.
+- Node i>1: first sentence states the previous node's canonical choice, then explains consequences leading to the current decision.
 
 Return JSON only.""",
     },
-    "config.storyline_to_cast": {
-        "zh": """基于事件“{episode_title}”和给定的 <storyline>，请推荐两类角色：
-
-1. protagonists：有决策权并影响剧情走向的历史人物。
-2. observers：主要承受后果的普通人/边缘利益相关者/见证者（如商人、士兵家属、记者）。
-
-<storyline>
-{storyline_str}
-</storyline>
-
-要求：
-- 每类生成 2-5 个角色。
-- observers 的重点在其“所见、所感、所失”。
-- 角色必须有史实依据。
-- name 与 title 要简洁。
-
-仅输出 JSON：
-{{
-  "protagonists": [
-    {{"name": "拉法耶特", "title": "指挥官", "desc": "掌控国民卫队调度...", "avatar": "👮"}},
-    ...
-  ],
-  "observers": [
-    {{"name": "巴黎面包店女工", "title": "城市底层劳动者", "desc": "受粮价与骚乱直接冲击...", "avatar": "🥖"}},
-    ...
-  ]
-}}
-""",
-        "en": """Based on episode "{episode_title}" and the provided <storyline>, recommend two categories of characters:
-
-1. protagonists: historical figures with agency whose decisions shape the graph.
-2. observers: ordinary citizens/minor stakeholders/witnesses who mainly experience consequences (e.g., merchant, soldier's mother, journalist).
-
-<storyline>
-{storyline_str}
-</storyline>
-
-Requirements:
-- Generate 2-5 characters for each category.
-- For observers, emphasize what they see/feel/lose rather than formal political power.
-- All characters must be historically grounded.
-- Keep both name and title concise.
-
-Output JSON only:
-{{
-  "protagonists": [
-    {{"name": "General LaFayette", "title": "Commander", "desc": "Controls the city guard and key force deployment...", "avatar": "👮"}},
-    ...
-  ],
-  "observers": [
-    {{"name": "Paris Bread Vendor", "title": "Urban Civilian", "desc": "Directly affected by food price shocks and unrest...", "avatar": "🥖"}},
-    ...
-  ]
-}}
-""",
-    },
     
     "cast.agent_system": {
-        "zh": """你是“{agent_name}”，正在扮演 {agent_title}，场景来自「{episode_title}」。信息如下：
+        "zh": """你是"{agent_name}"，正在扮演 {agent_title}，场景来自「{episode_title}」。信息如下：
 
 <active_node>{active_node_decision}(nodeid={active_node_id}): {active_node_desc}</active_node>
 <next_node>{next_node_desc}</next_node>
@@ -216,7 +182,7 @@ Rules (strict)
   - Use only information reasonably accessible to the character's identity at this historical moment; no foresight of future events.
   - Speak ONLY to roles in <cast>, chosen by context.
     - If historically contactable, targetName must be that exact role name.
-    - If direct contact is impossible (e.g., distant adversary), set targetName to “Facilitator” and frame dialogue as an inquiry seeking information about that character, ending with a question.
+    - If direct contact is impossible (e.g., distant adversary), set targetName to "Facilitator" and frame dialogue as an inquiry seeking information about that character, ending with a question.
 - Pacing:
   - Strictly limit each node to 3-6 turns.
   - Start with motive/tension setup; do not hit the node dilemma immediately. Push decision/closure by turn 2-6.
@@ -242,7 +208,7 @@ Meta
    - 否则 target = "sibling"
 2. 严格评估该分歧在现实中的可行性（plausibility）。
 3. 极简给出结果走向（most likely / best-case / worst-case）。
-4. 以“最可能走向”为主，生成分歧后的线性分支（2-5 节点，直到明确收束）。
+4. 以"最可能走向"为主，生成分歧后的线性分支（2-5 节点，直到明确收束）。
 
 <cast>{cast_str}</cast>
 <current_node>{active_node_decision}: {active_node_desc}</current_node>
@@ -374,7 +340,7 @@ Output: 1-2 short spoken sentences in one line, starting with an emoji. Do not l
 <next_node>{next_node_desc}</next_node>
 <cast>{cast_str}</cast>
 
-角色“{agent_name}”请求切换镜头，上下文如下：「{context_str}」。
+角色"{agent_name}"请求切换镜头，上下文如下：「{context_str}」。
 
 决策逻辑（严格遵守）
 - 剧情推进：
@@ -410,7 +376,7 @@ Output format (strict):
 """,
     },
     "facilitator.tips": {
-        "zh": """你是用户的“历史战略顾问”。Learner 正在进行「{episode_title}」的历史模拟。已进行故事线为 <context>，参与角色在 <cast>，最近对话在 <logs>（重点关注最后一句提问）。你需要根据局势给出 2 或 4 个行动选项 `options`，用于探索不同历史可能性或改写历史。要求**严格精炼**，目标是训练历史思维（权衡利弊、预判后果）。
+        "zh": """你是用户的"历史战略顾问"。Learner 正在进行「{episode_title}」的历史模拟。已进行故事线为 <context>，参与角色在 <cast>，最近对话在 <logs>（重点关注最后一句提问）。你需要根据局势给出 2 或 4 个行动选项 `options`，用于探索不同历史可能性或改写历史。要求**严格精炼**，目标是训练历史思维（权衡利弊、预判后果）。
 
 <context>{history_prefix_str}</context>
 <cast>{cast_str}</cast>
@@ -683,7 +649,7 @@ Output strict JSON. Keep concise. Max 4 items per list:
 """,
     },
     "reflection.worker_d": {
-        "zh": """你是 Counterfactual Analyst。Learner 在「{episode}」中由 <history_prefix> 分歧，原定未来 <original_future> 被替换为 <branch_line>。请对比“已走路径”和“未选路径”，生成 Alternative Paths，要求**严格精炼**。
+        "zh": """你是 Counterfactual Analyst。Learner 在「{episode}」中由 <history_prefix> 分歧，原定未来 <original_future> 被替换为 <branch_line>。请对比"已走路径"和"未选路径"，生成 Alternative Paths，要求**严格精炼**。
 
 <history_prefix>{history_prefix}</history_prefix>
 <original_future>{original_future}</original_future>
