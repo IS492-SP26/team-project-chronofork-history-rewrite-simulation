@@ -40,6 +40,11 @@ function getSpeakerColor(name: string): string {
   return SPEAKER_COLORS[Math.abs(hash) % SPEAKER_COLORS.length]
 }
 
+/** Resolve shortName/display name → canonical role.name so colors stay consistent with CenterStage avatars */
+function resolveRoleName(name: string): string {
+  return roles.find((r) => r.name === name || r.shortName === name)?.name ?? name
+}
+
 function getSpeakerEmoji(name: string, config: any): string | undefined {
   if (!config || !name) return undefined
   
@@ -50,8 +55,8 @@ function getSpeakerEmoji(name: string, config: any): string | undefined {
   }
   
   // Try exact match or substring match for cast data
-  if (config.cast_data) {
-    const cast = config.cast_data.find((c: any) => 
+  if (config.cast) {
+    const cast = config.cast.find((c: any) => 
       c.name === name || name.includes(c.name) || c.name.includes(name)
     )
     if (cast) return cast.avatar
@@ -151,7 +156,7 @@ function groupBySpeakerPair(messages: ChatMessage[], config: any): MessageGroup[
     }
 
     const speakerName = msg.speakerName
-    let color = getSpeakerColor(speakerName)
+    let color = getSpeakerColor(resolveRoleName(speakerName))
     if (msg.type === "user_chat" || msg.type === "user_diverge") color = "var(--chrono-teal)"
     const emoji = getSpeakerEmoji(speakerName, config)
 
@@ -173,7 +178,7 @@ function groupBySpeakerPair(messages: ChatMessage[], config: any): MessageGroup[
       if (msg.targetName && msg.targetName !== speakerName && msg.targetName !== "System" && msg.targetName !== "User") {
         targetName = msg.targetName
         targetEmoji = getSpeakerEmoji(msg.targetName, config)
-        targetColor = getSpeakerColor(msg.targetName)
+        targetColor = getSpeakerColor(resolveRoleName(msg.targetName))
       } else if (msg.targetName === "User") {
         targetName = "User"
         targetEmoji = "👤"

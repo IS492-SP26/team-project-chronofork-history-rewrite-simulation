@@ -38,14 +38,17 @@ export interface ServerConfig {
     title: string
     choice: string
     desc: string
+    decision?: string
+    decision_maker?: string
+    characters?: string[]
   }[]
-  cast_data: {
+  cast: {
     name: string
     title: string
     desc: string
     avatar: string
   }[]
-  user_role: {
+  user_role?: {
     name: string
     title: string
     desc: string

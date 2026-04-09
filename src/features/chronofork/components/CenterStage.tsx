@@ -502,9 +502,9 @@ function InteractionIdle() {
         </div>
       )}
       {/* Show cast avatars from server config */}
-      {isWS && state.serverConfig?.cast_data && (
+      {isWS && state.serverConfig?.cast && (
         <div className="flex items-center justify-center gap-3 flex-wrap">
-          {state.serverConfig.cast_data.slice(0, 5).map((c, i) => (
+          {state.serverConfig.cast.slice(0, 5).map((c, i) => (
             <div key={i} className="flex flex-col items-center gap-1">
               <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg bg-secondary border border-border/30">
                 {c.avatar}
@@ -591,10 +591,10 @@ function InteractionBacktrackSetup() {
   const { state, dispatch, ws } = useChronoFork()
   const { t } = useI18n()
   const isWS = state.connectionStatus === "connected"
+  const storyline = state.serverConfig?.storyline ?? []
+  const castData = state.serverConfig?.cast ?? []
   const playableRoles = roles.filter((r) => r.id !== "facilitator")
-  const selectableServerRoles = state.serverConfig?.cast_data ?? []
   const hasNode = !!state.selectedNodeId
-  const hasRole = !!state.activeRoleId
   const pc = phaseColor(state.phase)
   const tone = phaseTone(state.phase)
   const selectedNodeLabel = state.selectedNodeId
@@ -607,7 +607,6 @@ function InteractionBacktrackSetup() {
   const handleBacktrack = () => {
     if (!state.selectedNodeId) return
     if (isWS) {
-      // Send backtrack_to via WebSocket
       const perspectiveAgent = state.activeRoleName ?? (state.activeRoleId ? roles.find((r) => r.id === state.activeRoleId)?.name ?? "" : "")
       ws.send("backtrack_to", {
         target_id: state.selectedNodeId,
@@ -615,12 +614,126 @@ function InteractionBacktrackSetup() {
       })
       toast.success(t("Backtrack request sent..."))
     } else {
-      // Mock mode: local dispatch
       dispatch({ type: "BACKTRACK_AND_INTERVENE", data: { nodeId: state.selectedNodeId } })
       toast.success(t("Backtracking..."))
     }
   }
 
+  // ── Connected mode: storyline-driven role assignment ──
+  if (isWS && storyline.length > 0) {
+    // Stage 0 is the observed stage; its decision is the question at the fork
+    const currentStage = storyline[0]
+    // Subsequent stages (those with a named choice) are the available branches
+    const branches = storyline.filter((s) => s.choice && s.choice !== "None")
+    const selectedCast = state.activeRoleName
+      ? castData.find((c) => c.name === state.activeRoleName)
+      : null
+    const hasRole = !!state.activeRoleName
+
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <GitFork className="w-4 h-4" style={{ color: pc }} />
+          <span className="text-sm font-semibold text-foreground">{t("Choose Your Path")}</span>
+        </div>
+
+        {/* Decision question from the observed stage */}
+        {currentStage?.decision && currentStage.decision !== "None" && (
+          <div className="rounded-lg px-3 py-2.5 border border-border/40 bg-secondary/30">
+            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">{t("Decision Point")}</p>
+            <p className="text-sm font-medium text-foreground leading-snug">{currentStage.decision}</p>
+          </div>
+        )}
+
+        {/* Branch choice cards */}
+        <div className="flex flex-col gap-2">
+          {branches.map((branch, i) => {
+            const isSelected = state.activeRoleName === branch.decision_maker
+            const cast = castData.find((c) => c.name === branch.decision_maker)
+            return (
+              <button
+                key={i}
+                onClick={() => dispatch({ type: "SET_ROLE", data: { roleId: branch.decision_maker ?? "", roleName: branch.decision_maker ?? "" } })}
+                className="text-left rounded-xl border transition-all duration-200 p-3"
+                style={{
+                  borderColor: isSelected ? pc : "var(--border)",
+                  backgroundColor: isSelected
+                    ? `color-mix(in oklch, ${pc} 10%, var(--card))`
+                    : "var(--secondary)",
+                }}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground leading-snug">{branch.choice}</p>
+                    {branch.decision_maker && (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        {cast?.avatar && <span className="text-sm leading-none">{cast.avatar}</span>}
+                        <span className="text-xs text-muted-foreground">
+                          {t("Play as")}{" "}
+                          <span className="font-semibold" style={{ color: isSelected ? pc : "var(--foreground)" }}>
+                            {branch.decision_maker}
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {isSelected && (
+                    <div
+                      className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ backgroundColor: pc }}
+                    >
+                      <span className="text-[9px] text-white font-black leading-none">✓</span>
+                    </div>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Selected role reveal */}
+        {selectedCast && (
+          <motion.div
+            key={selectedCast.name}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="rounded-xl p-3 border"
+            style={{
+              borderColor: pc,
+              backgroundColor: `color-mix(in oklch, ${pc} 7%, var(--card))`,
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-2xl leading-none">{selectedCast.avatar}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold leading-tight" style={{ color: pc }}>{selectedCast.name}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{selectedCast.title}</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{selectedCast.desc}</p>
+          </motion.div>
+        )}
+
+        <Button
+          size="default"
+          tone={tone}
+          className="w-full text-sm h-9 gap-2 font-semibold text-primary-foreground"
+          disabled={!hasNode || !hasRole}
+          onClick={handleBacktrack}
+        >
+          <GitFork className="w-4 h-4" />
+          {t("Backtrack to Node")}
+        </Button>
+        <p className="text-xs text-muted-foreground text-center">
+          {selectedNodeTitle ?? t("Select a node from the Timeline panel.")}
+        </p>
+      </div>
+    )
+  }
+
+  // ── Mock / fallback mode: manual role picker ──
+  const hasRole = !!state.activeRoleId
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -630,57 +743,33 @@ function InteractionBacktrackSetup() {
       <p className="text-sm text-muted-foreground leading-relaxed">
         {t("Select a node (left panel) and a character below to backtrack.")}
       </p>
-      {/* Show server cast_data if connected, otherwise local roles */}
-      {isWS && selectableServerRoles.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {selectableServerRoles.map((c, i) => {
-            const isActive = state.activeRoleName === c.name
-            return (
-              <button
-                key={i}
-                onClick={() => dispatch({ type: "SET_ROLE", data: { roleId: c.name, roleName: c.name } })}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
-                style={{
-                  backgroundColor: isActive ? "color-mix(in oklch, var(--chrono-teal) 15%, transparent)" : "var(--secondary)",
-                  borderColor: isActive ? "var(--chrono-teal)" : "transparent",
-                  color: isActive ? "var(--chrono-teal)" : "var(--muted-foreground)",
-                }}
-              >
-                <span className="text-lg">{c.avatar}</span>
-                {c.name.split(" ").pop()}
-              </button>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {playableRoles.map((r) => {
-            const isActive = state.activeRoleId === r.id
-            const f = getFaction(r)
-            const fs = factionStyle(f)
-            return (
-              <button
-                key={r.id}
-                onClick={() => dispatch({ type: "SET_ROLE", data: { roleId: r.id } })}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
-                style={{
-                  backgroundColor: isActive ? `color-mix(in oklch, ${fs.ring} 15%, transparent)` : "var(--secondary)",
-                  borderColor: isActive ? fs.ring : "transparent",
-                  color: isActive ? fs.ring : "var(--muted-foreground)",
-                }}
-              >
-                <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: isActive ? fs.ring : "var(--muted)" }} />
-                {r.shortName}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-2">
+        {playableRoles.map((r) => {
+          const isActive = state.activeRoleId === r.id
+          const f = getFaction(r)
+          const fs = factionStyle(f)
+          return (
+            <button
+              key={r.id}
+              onClick={() => dispatch({ type: "SET_ROLE", data: { roleId: r.id } })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
+              style={{
+                backgroundColor: isActive ? `color-mix(in oklch, ${fs.ring} 15%, transparent)` : "var(--secondary)",
+                borderColor: isActive ? fs.ring : "transparent",
+                color: isActive ? fs.ring : "var(--muted-foreground)",
+              }}
+            >
+              <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: isActive ? fs.ring : "var(--muted)" }} />
+              {r.shortName}
+            </button>
+          )
+        })}
+      </div>
       <Button
         size="default"
         tone={tone}
         className="w-full text-sm h-9 gap-2 font-semibold text-primary-foreground"
-        disabled={!hasNode || (!hasRole && !state.activeRoleName)}
+        disabled={!hasNode || !hasRole}
         onClick={handleBacktrack}
       >
         {t("Backtrack to Node")}
@@ -716,7 +805,7 @@ function InteractionComposer({
   const roleName = selectedRoleName ?? userRoleName ?? "You"
   const roleTitle = selectedRoleName ? activeRole?.title : userRoleTitle
   const targetRoles = roles.filter((r) => r.id !== "facilitator" && r.id !== state.activeRoleId)
-  const serverTargets = (state.serverConfig?.cast_data ?? []).filter((c) => c.name !== roleName)
+  const serverTargets = (state.serverConfig?.cast ?? []).filter((c) => c.name !== roleName)
   const [targetId, setTargetId] = useState<string | null>(null)
   const pc = phaseColor(state.phase)
   const tone = phaseTone(state.phase)
@@ -1601,7 +1690,7 @@ export function CenterStage() {
               const lastMsg = displayMessage
               if (!lastMsg) return null;
               
-              const serverRoles: StageRole[] = (state.serverConfig?.cast_data ?? []).map((c) => ({
+              const serverRoles: StageRole[] = (state.serverConfig?.cast ?? []).map((c) => ({
                 id: c.name,
                 name: c.name,
                 title: c.title,
