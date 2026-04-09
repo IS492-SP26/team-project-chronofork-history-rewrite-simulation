@@ -79,13 +79,10 @@ class CastEngine:
         self.initial_graph_snapshot = self.engine._push_graph_snapshot(no_push=True)
 
         # --- 3. 角色与 Facilitator ---
-        cast_data = config.get("cast_data", [])
+        cast_data = config.get("cast", config.get("cast_data", []))
         self.episode = config.get("episode", {})
-        user_role = config.get("user_role", {})
+        user_role = config.get("user_role", cast_data[0] if cast_data else {})
         self.user_role_name = user_role.get("name", "User")
-
-        if self.user_role_name not in [a.get("name") for a in cast_data]:
-            cast_data.append(user_role)
 
         self.agents: Dict[str, Agent] = {}
         for profile in cast_data:

@@ -44,7 +44,7 @@ Output ONLY JSON (no extra text):
 Requirement: each title must be concise and descriptive.""",
     },
     "config.episode_to_cast": {
-        "zh": """基于事件「{episode_title}」，生成 4-6 个关键决策人物。
+        "zh": """基于事件「{episode_title}」，生成 4-5 个关键决策人物。
 
 要求：
 - 只返回有决策权、能影响剧情走向的历史人物。
@@ -56,7 +56,7 @@ Requirement: each title must be concise and descriptive.""",
   {{"name": "拉法耶特", "title": "国民卫队指挥官", "desc": "掌控巴黎秩序的关键人物，游走于王室与革命派之间。", "avatar": "👮"}},
   ...
 ]""",
-        "en": """Based on episode "{episode_title}", generate 4-6 key decision-making figures.
+        "en": """Based on episode "{episode_title}", generate 4-5 key decision-making figures.
 
 Requirements:
 - Only include historically grounded figures with real agency over the episode's outcome.
@@ -122,8 +122,8 @@ Output format (ONLY valid JSON, no extra text):
 ]
 
 Field requirements
-- title: concise summary title for the node.
-- desc: 1-3 concise sentences of historically grounded narration involving at least 2 cast members. No dialogue; storyline narration only.
+- title: concise summary title for the node. Extremely concise.
+- desc: 1-3 concise sentences of historically grounded narration involving at least 2 cast members. No dialogue; storyline narration only. Extremely concise.
 - choice: the canonical real-history choice for the PREVIOUS node's decision (< 8 words); Node 1 MUST be "None".
 - decision: the open-ended decision question this node raises (8-12 words); last node MUST be "None".
 - decision_maker: the name of the cast member who faces this decision; last node MUST be "None".
@@ -154,12 +154,12 @@ Return JSON only.""",
     - 若无法直接接触（如远方对手），targetName 设为 "Facilitator"，且台词必须是想获取的该角色的信息，以疑问句结尾。
 - 节奏控制：
   - 每个节点严格 3-6 轮。
-  - 开头先铺垫冲突与动机，不要立刻触达 node.decision 的 dilemma；第 2-6 轮再推进决策/收束。
+  - 开头先铺垫冲突与动机，不要立刻触达 node.decision 的 dilemma；第 3-6 轮再推进决策/收束。
   - 遇到决策点，立即执行 <next_node> 行动，不反复拉扯。
   - 若他人做出偏离史实的选择，应积极允许并鼓励；仅在**极其**荒谬时简短拒绝并转向可行路径。
 
 输出（严格，仅 1 条）
-<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-3 句，**严格保持精炼**，严格使用现代中文，禁止使用文言文等，禁止给选项式的发言）
+<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-2 句，**严格保持精炼**，严格使用现代中文，禁止使用文言文等，禁止给选项式的发言）
 
 Meta 说明
 - targetName：必须是 <cast> 中精确名字或 "Facilitator"。
@@ -185,12 +185,12 @@ Rules (strict)
     - If direct contact is impossible (e.g., distant adversary), set targetName to "Facilitator" and frame dialogue as an inquiry seeking information about that character, ending with a question.
 - Pacing:
   - Strictly limit each node to 3-6 turns.
-  - Start with motive/tension setup; do not hit the node dilemma immediately. Push decision/closure by turn 2-6.
+  - Start with motive/tension setup; DO NOT hit the node dilemma immediately. Push decision/closure by turn 3-6.
   - At decision point, execute <next_node> immediately without prolonged back-and-forth.
-  - Generally allow and encourage choices deviating from historical facts; only briefly reject and redirect to feasible paths when choices are EXTREMELY absurd.
+  - Actively allow and encourage all kinds of choices deviating from historical facts.
 
 Output (strict, exactly one item)
-<meta targetName="..." nodeid="..." /> Character line (natural spoken style, 1-3 CONCISE sentences, Modern English)
+<meta targetName="..." nodeid="..." /> Character line (natural spoken style, 1-2 CONCISE sentences, Modern English, Extremely concise)
 
 Meta
 - targetName: exact name in <cast> or "Facilitator".

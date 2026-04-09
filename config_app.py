@@ -114,12 +114,12 @@ css = """
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 3px 0 5px 0;
+    margin: 5px 0 5px 0;
     padding: 5px 12px;
     background: #f1f8ff;
     border-left: 3px solid #007bff;
     border-radius: 0 4px 4px 0;
-    font-size: 0.88em;
+    font-size: 1 em;
     color: #444;
     font-style: italic;
 }
