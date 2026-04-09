@@ -1,0 +1,270 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── ChronoFork: LIGHT theme ─── */
+:root {
+  --background: oklch(0.975 0.005 220);
+  --foreground: oklch(0.15 0.02 240);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.02 240);
+  --popover: oklch(0.99 0.002 220);
+  --popover-foreground: oklch(0.15 0.02 240);
+  --primary: oklch(0.45 0.16 220);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.93 0.008 220);
+  --secondary-foreground: oklch(0.25 0.02 240);
+  --muted: oklch(0.94 0.006 220);
+  --muted-foreground: oklch(0.42 0.02 240);
+  --accent: oklch(0.58 0.16 55);
+  --accent-foreground: oklch(0.15 0.02 240);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.86 0.01 220);
+  --input: oklch(0.91 0.01 220);
+  --ring: oklch(0.45 0.14 220);
+  --chart-1: oklch(0.45 0.16 220);
+  --chart-2: oklch(0.58 0.16 55);
+  --chart-3: oklch(0.55 0.22 25);
+  --chart-4: oklch(0.5 0.1 180);
+  --chart-5: oklch(0.55 0.1 150);
+  --radius: 0.625rem;
+
+  --chrono-teal: oklch(0.45 0.14 200);
+  --chrono-teal-dim: oklch(0.58 0.08 200);
+  --chrono-teal-bg: oklch(0.93 0.04 200);
+  --chrono-amber: oklch(0.58 0.18 55);
+  --chrono-amber-dim: oklch(0.68 0.1 55);
+  --chrono-amber-bg: oklch(0.95 0.04 55);
+  --chrono-red: oklch(0.55 0.22 25);
+  --chrono-violet: oklch(0.48 0.14 290);
+  --chrono-violet-bg: oklch(0.95 0.03 290);
+
+  --faction-us: oklch(0.45 0.14 220);
+  --faction-us-bg: oklch(0.94 0.03 220);
+  --faction-soviet: oklch(0.52 0.2 30);
+  --faction-soviet-bg: oklch(0.95 0.04 30);
+
+  --glass-bg: rgba(255,255,255,var(--glass-opacity, 0.62));
+  --glass-border: rgba(0,0,0,0.07);
+  --glass-heavy-bg: rgba(255,255,255,var(--glass-opacity-heavy, 0.74));
+  --spotlight-center: oklch(1 0 0 / 0.12);
+  --spotlight-edge: transparent;
+
+  --sidebar: oklch(0.97 0.005 220);
+  --sidebar-foreground: oklch(0.15 0.02 240);
+  --sidebar-primary: oklch(0.45 0.16 220);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.94 0.008 220);
+  --sidebar-accent-foreground: oklch(0.25 0.02 240);
+  --sidebar-border: oklch(0.86 0.01 220);
+  --sidebar-ring: oklch(0.45 0.14 220);
+}
+
+/* ─── ChronoFork: DARK theme ─── */
+.dark {
+  --background: oklch(0.13 0.012 240);
+  --foreground: oklch(0.93 0.005 210);
+  --card: oklch(0.16 0.012 240);
+  --card-foreground: oklch(0.93 0.005 210);
+  --popover: oklch(0.15 0.015 240);
+  --popover-foreground: oklch(0.93 0.005 210);
+  --primary: oklch(0.72 0.14 200);
+  --primary-foreground: oklch(0.1 0.01 240);
+  --secondary: oklch(0.22 0.012 240);
+  --secondary-foreground: oklch(0.88 0.005 210);
+  --muted: oklch(0.2 0.012 240);
+  --muted-foreground: oklch(0.62 0.015 210);
+  --accent: oklch(0.72 0.16 55);
+  --accent-foreground: oklch(0.1 0.01 240);
+  --destructive: oklch(0.58 0.2 25);
+  --destructive-foreground: oklch(0.95 0 0);
+  --border: oklch(0.28 0.02 240);
+  --input: oklch(0.22 0.02 240);
+  --ring: oklch(0.65 0.12 200);
+  --chart-1: oklch(0.72 0.14 200);
+  --chart-2: oklch(0.72 0.16 55);
+  --chart-3: oklch(0.58 0.2 25);
+  --chart-4: oklch(0.6 0.1 210);
+  --chart-5: oklch(0.68 0.1 150);
+
+  --chrono-teal: oklch(0.72 0.14 200);
+  --chrono-teal-dim: oklch(0.5 0.08 200);
+  --chrono-teal-bg: oklch(0.2 0.03 200);
+  --chrono-amber: oklch(0.72 0.16 55);
+  --chrono-amber-dim: oklch(0.5 0.1 55);
+  --chrono-amber-bg: oklch(0.2 0.03 55);
+  --chrono-red: oklch(0.58 0.2 25);
+  --chrono-violet: oklch(0.65 0.14 290);
+  --chrono-violet-bg: oklch(0.2 0.03 290);
+
+  --faction-us: oklch(0.65 0.14 220);
+  --faction-us-bg: oklch(0.2 0.03 220);
+  --faction-soviet: oklch(0.62 0.18 30);
+  --faction-soviet-bg: oklch(0.2 0.03 30);
+
+  --glass-bg: rgba(18,22,36,var(--glass-opacity, 0.72));
+  --glass-border: rgba(255,255,255,0.08);
+  --glass-heavy-bg: rgba(18,22,36,var(--glass-opacity-heavy, 0.82));
+  --spotlight-center: oklch(0.3 0.02 220 / 0.15);
+  --spotlight-edge: transparent;
+
+  --sidebar: oklch(0.14 0.012 240);
+  --sidebar-foreground: oklch(0.93 0.005 210);
+  --sidebar-primary: oklch(0.72 0.14 200);
+  --sidebar-primary-foreground: oklch(0.1 0.01 240);
+  --sidebar-accent: oklch(0.22 0.012 240);
+  --sidebar-accent-foreground: oklch(0.88 0.005 210);
+  --sidebar-border: oklch(0.28 0.02 240);
+  --sidebar-ring: oklch(0.65 0.12 200);
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-serif: 'Georgia', 'Cambria', 'Times New Roman', serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* ─── Glass ─── */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+}
+.glass-panel-heavy {
+  background: var(--glass-heavy-bg);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--glass-border);
+}
+
+/* ─── Film Grain ─── */
+.film-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  z-index: 1;
+}
+
+/* ─── Animations ─── */
+@keyframes pulse-halo {
+  0%, 100% { box-shadow: 0 0 0 0 var(--chrono-teal); }
+  50% { box-shadow: 0 0 10px 3px color-mix(in oklch, var(--chrono-teal) 30%, transparent); }
+}
+.animate-pulse-halo { animation: pulse-halo 2.5s ease-in-out infinite; }
+
+@keyframes pulse-halo-amber {
+  0%, 100% { box-shadow: 0 0 0 0 var(--chrono-amber); }
+  50% { box-shadow: 0 0 10px 3px color-mix(in oklch, var(--chrono-amber) 30%, transparent); }
+}
+.animate-pulse-halo-amber { animation: pulse-halo-amber 2.5s ease-in-out infinite; }
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.animate-breathe { animation: breathe 3s ease-in-out infinite; }
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 6px 0 color-mix(in oklch, var(--chrono-teal) 25%, transparent); }
+  50% { box-shadow: 0 0 16px 4px color-mix(in oklch, var(--chrono-teal) 35%, transparent); }
+}
+.animate-glow-cta { animation: glow-pulse 2.5s ease-in-out infinite; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+
+/* ─── Breathing node glow ─── */
+@keyframes node-breathe {
+  0%, 100% { r: 12; filter: drop-shadow(0 0 0px transparent); }
+  50% { r: 13; filter: drop-shadow(0 0 6px color-mix(in oklch, var(--chrono-teal) 40%, transparent)); }
+}
+.animate-node-breathe { animation: node-breathe 2.5s ease-in-out infinite; }
+
+/* ─── Progress bar stripe ─── */
+@keyframes progress-stripe {
+  0% { background-position: 0 0; }
+  100% { background-position: 16px 0; }
+}
+.progress-bar-animated {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255,255,255,0.12) 25%, transparent 25%,
+    transparent 50%, rgba(255,255,255,0.12) 50%,
+    rgba(255,255,255,0.12) 75%, transparent 75%
+  );
+  background-size: 16px 16px;
+  animation: progress-stripe 0.6s linear infinite;
+}
+
+@keyframes pulse-halo-violet {
+  0%, 100% { box-shadow: 0 0 0 0 var(--chrono-violet); }
+  50% { box-shadow: 0 0 30px 8px color-mix(in oklch, var(--chrono-violet) 25%, transparent); }
+}
+.animate-pulse-halo-violet { animation: pulse-halo-violet 2s ease-in-out infinite; }
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-halo,
+  .animate-pulse-halo-amber,
+  .animate-pulse-halo-violet,
+  .animate-breathe,
+  .animate-glow-cta,
+  .animate-node-breathe { animation: none; }
+  .progress-bar-animated { animation: none; }
+}
+
+/* ─── Spotlight for center stage ─── */
+.center-spotlight {
+  background: radial-gradient(ellipse at 50% 45%, var(--spotlight-center), var(--spotlight-edge) 70%);
+}

@@ -1,0 +1,110 @@
+{
+    "episode": {
+        "emoji": "🌍",
+        "title": "Invasion of Poland",
+        "desc": "Germany’s 1939 invasion of Poland triggers declarations of war from Britain and France, transforming European tensions into a global conflict."
+    },
+    "cast": [
+        {
+            "name": "Adolf Hitler",
+            "title": "Führer and Reich Chancellor of Germany",
+            "desc": "As Germany’s supreme leader, Hitler personally ordered the invasion of Poland on 1 September 1939, framing it as a necessary step for territorial expansion and the destruction of the Versailles system. His ideological drive for Lebensraum and the subjugation of Poland overrode diplomatic risks, directly triggering the European war.",
+            "avatar": "🦅"
+        },
+        {
+            "name": "Edward Rydz-Śmigły",
+            "title": "Marshal of Poland and Commander-in-Chief",
+            "desc": "Rydz-Śmigły directed Polish military strategy and mobilization in the face of German aggression, trying to hold key defensive lines while preserving forces for a prolonged war. His decisions—such as prioritizing defense of the entire frontier and later ordering withdrawals toward the southeast—shaped Poland’s battlefield fate.",
+            "avatar": "🎖️"
+        },
+        {
+            "name": "Józef Beck",
+            "title": "Polish Minister of Foreign Affairs",
+            "desc": "Beck steered Poland’s prewar diplomacy, rejecting German demands over Danzig and transit rights while securing guarantees from Britain and France. Convinced that yielding would destroy Polish sovereignty, he chose a firm stance that limited room for compromise and made confrontation with Germany more likely.",
+            "avatar": "📜"
+        },
+        {
+            "name": "Neville Chamberlain",
+            "title": "Prime Minister of the United Kingdom",
+            "desc": "Chamberlain moved from a policy of appeasement to issuing firm guarantees to Poland, then faced the decision of whether to honor them once Germany attacked. After brief hesitation and failed ultimatums, his government’s declaration of war on Germany transformed the invasion from a regional conflict into World War II.",
+            "avatar": "🎩"
+        },
+        {
+            "name": "Édouard Daladier",
+            "title": "Prime Minister of France",
+            "desc": "Daladier led France’s response to the German attack, balancing military caution with treaty obligations to Poland. His government’s eventual declaration of war, despite reluctance to launch a major offensive, signaled formal support for Poland while reflecting internal doubts about France’s readiness.",
+            "avatar": "🇫🇷"
+        },
+        {
+            "name": "Vyacheslav Molotov",
+            "title": "Soviet People’s Commissar for Foreign Affairs",
+            "desc": "Molotov co-negotiated the Molotov–Ribbentrop Pact and its secret protocols, which partitioned Poland between Germany and the USSR. He then oversaw Soviet diplomatic justifications and the decision to invade eastern Poland on 17 September 1939, aiming to secure Soviet strategic depth and territorial gains.",
+            "avatar": "🛡️"
+        }
+    ],
+    "storyline": [
+        {
+            "title": "Rising Tensions Over Danzig and Polish Independence",
+            "desc": "In the late 1930s, Adolf Hitler pressed Poland for concessions over Danzig and transit rights, seeking to revise the post-Versailles order. Józef Beck, determined to safeguard Polish sovereignty, resisted these demands while cultivating British and French guarantees. As German pressure mounts and war looms, Beck must decide how firmly to oppose Berlin’s revisionist claims.",
+            "choice": "None",
+            "decision": "Should Beck categorically refuse German demands over Danzig and transit?",
+            "decision_maker": "Józef Beck",
+            "characters": [
+                "Adolf Hitler",
+                "Józef Beck",
+                "Neville Chamberlain",
+                "Édouard Daladier"
+            ]
+        },
+        {
+            "title": "Firm Polish Defiance and Western Security Guarantees",
+            "desc": "Beck categorically refuses German demands over Danzig and transit, prompting Hitler to view Poland as the next target for decisive action. Neville Chamberlain and Édouard Daladier, fearing another unchecked German victory, extend security guarantees to Poland that commit Britain and France to respond to aggression. With diplomatic options collapsing, Hitler must decide whether to risk a general European war by attacking Poland.",
+            "choice": "Refuse German demands and rely on Western guarantees",
+            "decision": "Should Hitler launch a full-scale invasion of Poland despite war risks?",
+            "decision_maker": "Adolf Hitler",
+            "characters": [
+                "Adolf Hitler",
+                "Józef Beck",
+                "Neville Chamberlain",
+                "Édouard Daladier"
+            ]
+        },
+        {
+            "title": "German Attack and Polish Strategic Dilemma",
+            "desc": "Hitler launches a full-scale invasion of Poland on 1 September 1939, shattering the fragile peace and validating Polish fears of German aggression. Edward Rydz-Śmigły, facing rapid German advances and hoping for swift Allied relief, orders defense along a broad front that soon strains Polish forces. As German pressure intensifies, Rydz-Śmigły must decide whether to continue holding exposed western positions or withdraw toward the southeast for a prolonged resistance.",
+            "choice": "Launch a full-scale invasion of Poland",
+            "decision": "Should Rydz-Śmigły abandon forward defenses and pivot toward southeastern retreat?",
+            "decision_maker": "Edward Rydz-Śmigły",
+            "characters": [
+                "Adolf Hitler",
+                "Edward Rydz-Śmigły",
+                "Józef Beck"
+            ]
+        },
+        {
+            "title": "Polish Retreat and Allied Declarations of War",
+            "desc": "Rydz-Śmigły orders a retreat toward southeastern Poland, seeking to preserve his forces while awaiting the impact of British and French commitments. Neville Chamberlain and Édouard Daladier, constrained by their guarantees yet militarily cautious, issue ultimatums and then declare war on Germany, turning the conflict into a broader European war without mounting a decisive western offensive. As Germany rapidly overruns western Poland, Vyacheslav Molotov must decide whether the USSR will seize its opportunity to occupy the eastern territories promised in the secret protocols.",
+            "choice": "Order retreat toward southeastern Poland for prolonged resistance",
+            "decision": "Should Molotov move Soviet forces into eastern Poland as prearranged?",
+            "decision_maker": "Vyacheslav Molotov",
+            "characters": [
+                "Edward Rydz-Śmigły",
+                "Neville Chamberlain",
+                "Édouard Daladier",
+                "Vyacheslav Molotov"
+            ]
+        },
+        {
+            "title": "Soviet Entry and the Partition of Poland",
+            "desc": "Molotov moves Soviet forces into eastern Poland on 17 September 1939, citing the collapse of Polish authority while implementing the secret partition agreed with Germany. As German and Soviet troops solidify control over their respective zones, Rydz-Śmigły’s remaining forces are cut off, and Polish hopes for continued organized resistance inside the country collapse, leaving the fate of Poland to be contested in exile and in future campaigns.",
+            "choice": "Move Soviet forces into eastern Poland as prearranged",
+            "decision": "None",
+            "decision_maker": "None",
+            "characters": [
+                "Vyacheslav Molotov",
+                "Adolf Hitler",
+                "Edward Rydz-Śmigły"
+            ]
+        }
+    ]
+}
