@@ -1,6 +1,6 @@
 from typing import List, Dict, AsyncGenerator
 
-from server.utilities.llm_cache import cached_chat_create, call_llm
+from server.utilities.llm_cache import GROQ_MODEL, cached_chat_create, call_llm
 from server.prompts import get_prompt, normalize_lang
 
 class Facilitator:
@@ -31,7 +31,7 @@ class Facilitator:
             )
         }]
         stream = await cached_chat_create(
-                "gpt-5-mini", 
+                "gpt-5.2", 
                 msg, 
                 stream=True
             )
@@ -111,12 +111,42 @@ class Facilitator:
         }]
 
         stream = await cached_chat_create(
-                "gpt-5.1", 
+                "gpt-5.2", 
                 msg, 
                 stream=True
             )
         return stream
     
+    async def generate_timeline_epilogue(
+        self,
+        episode_title: str,
+        canonical_storyline: List[Dict],
+        divergent_messages: List[Dict],
+    ) -> Dict:
+        """生成历史改写结局的可视化 JSON 总结"""
+        canonical_str = "\n".join(
+            f"[{n['id']}] {n['title']}: {n['desc']} (decision: {n.get('decision','None')})"
+            for n in canonical_storyline
+        )
+        divergent_str = "\n".join(
+            f"[{m['from']} -> {m['to']}]: {m['content']}"
+            for m in divergent_messages
+        )
+        prompt = get_prompt(
+            "facilitator.timeline_epilogue",
+            self.lang,
+            episode_title=episode_title,
+            canonical_storyline_str=canonical_str,
+            divergent_context_str=divergent_str,
+            cast_str=self.cast_str,
+        )
+        try:
+            response = await call_llm(prompt, lang=self.lang)
+            return response
+        except Exception as e:
+            print(f"Timeline Epilogue Gen Error: {e}")
+            return {}
+
     async def generate_tips(self,episode_title:str,user_role_name:str ,storyline: List[Dict], context_msgs: List[Dict]) -> Dict:
         """生成战略建议"""
         history_prefix_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n['id']}): {n['desc']}" for n in storyline])
@@ -142,7 +172,12 @@ class Facilitator:
             user_role_name=user_role_name,
         )
         try:
-            response = await call_llm(prompt, lang=self.lang)
+            response = await call_llm(
+                prompt,
+                lang=self.lang,
+                model=GROQ_MODEL,
+                provider="groq",
+            )
             return response
         except Exception as e:
             print(f"Tip Gen Error: {e}")

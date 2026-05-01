@@ -19,8 +19,8 @@ PROMPT_CATALOG: Dict[str, Dict[str, str]] = {
         "zh": """基于主题"{selected_theme}"，推荐事件（Episode）。
 
       规则：
-      - 若用户输入已是"具体历史事件"（如"古巴导弹危机""攻占巴士底狱"）或是具体文学作品 （如"哈利波特与死亡圣器""西游记"），仅返回该 1 个事件。
-      - 若用户输入是"历史主题/时期"（如"冷战""法国大革命"），返回 5 个彼此不同、影响力高的事件。
+      - 若用户输入已是"某历史事件"（如"古巴导弹危机""赤壁之战"），仅返回该 1 个事件。
+      - 仅当用户输入是极其广泛的"历史时期"（如"古代中国""二战"），返回 5 个彼此不同、影响力高的事件。
 
 仅输出 JSON（不要额外文本）：
 [
@@ -32,8 +32,8 @@ PROMPT_CATALOG: Dict[str, Dict[str, str]] = {
         "en": """Based on the input "{selected_theme}", recommend Episodes.
 
       Rules:
-      - If the user input is already a specific historical event (e.g., "Cuban Missile Crisis", "Storming of the Bastille") or specific literary work, return ONLY that single event.
-      - If the user input is a broader theme/period (e.g., "Cold War", "French Revolution"), return 5 distinct high-leverage Episodes.
+      - If the user input is already a specific historical event (e.g., "Cuban Missile Crisis", "Battle of Red Cliffs"), return ONLY that single event.
+      - Only when the user input is an extremely broad historical period (e.g., "Ancient China", "World War II"), return 5 distinct high-leverage Episodes.
 
 Output ONLY JSON (no extra text):
 [
@@ -122,8 +122,8 @@ Output format (ONLY valid JSON, no extra text):
 ]
 
 Field requirements
-- title: concise summary title for the node. Extremely concise.
-- desc: 1-3 concise sentences of historically grounded narration involving at least 2 cast members. No dialogue; storyline narration only. Extremely concise.
+- title: concise summary title for the node.
+- desc: 1-3 concise sentences of historically grounded narration involving at least 2 cast members. No dialogue; storyline narration only.
 - choice: the canonical real-history choice for the PREVIOUS node's decision (< 8 words); Node 1 MUST be "None".
 - decision: the open-ended decision question this node raises (8-12 words); last node MUST be "None".
 - decision_maker: the name of the cast member who faces this decision; last node MUST be "None".
@@ -156,10 +156,9 @@ Return JSON only.""",
   - 每个节点严格 3-6 轮。
   - 开头先铺垫冲突与动机，不要立刻触达 node.decision 的 dilemma；第 3-6 轮再推进决策/收束。
   - 遇到决策点，立即执行 <next_node> 行动，不反复拉扯。
-  - 若他人做出偏离史实的选择，应积极允许并鼓励；仅在**极其**荒谬时简短拒绝并转向可行路径。
 
 输出（严格，仅 1 条）
-<meta targetName="..." nodeid="..." /> 角色台词（自然口语，1-2 句，**严格保持精炼**，严格使用现代中文，禁止使用文言文等，禁止给选项式的发言）
+<meta targetName="..." nodeid="..." /> 角色台词（自然口语进行叙事，1-2 句，**严格保持精炼**，使用现代中文，禁止使用文言文等，禁止给A或B的选项式的发言）
 
 Meta 说明
 - targetName：必须是 <cast> 中精确名字或 "Facilitator"。
@@ -185,12 +184,11 @@ Rules (strict)
     - If direct contact is impossible (e.g., distant adversary), set targetName to "Facilitator" and frame dialogue as an inquiry seeking information about that character, ending with a question.
 - Pacing:
   - Strictly limit each node to 3-6 turns.
-  - Start with motive/tension setup; DO NOT hit the node dilemma immediately. Push decision/closure by turn 3-6.
+  - Spend turns 1-2 building conflict and motive; **do NOT reach the node dilemma before turn 3**. Push decision/closure only in turns 3-6.
   - At decision point, execute <next_node> immediately without prolonged back-and-forth.
-  - Actively allow and encourage all kinds of choices deviating from historical facts.
 
 Output (strict, exactly one item)
-<meta targetName="..." nodeid="..." /> Character line (natural spoken style, 1-2 CONCISE sentences, Modern English, Extremely concise)
+<meta targetName="..." nodeid="..." /> Character line (natural spoken style, 1-2 CONCISE sentences, Modern English, no archaic language, no A/B-style options)
 
 Meta
 - targetName: exact name in <cast> or "Facilitator".
@@ -198,6 +196,58 @@ Meta
   - Current node ongoing: {active_node_id}
   - Current node completed: {next_id}
   - Historical divergence: "diverged"
+""",
+    },
+    "cast.agent_system_stage2": {
+        "zh": """你是"{agent_name}"，正在扮演 {agent_title}，人设是 {agent_desc}，场景来自「{episode_title}」。现在处于历史改写阶段。目标是根据上下文和人设给出最符合{agent_name}立场的一句回复，与 <cast> 角色共同推演历史线的发展和叙事。
+
+<active_node>{active_node_decision}(nodeid={active_node_id}): {active_node_desc}</active_node>
+<baseline_next>{next_node_desc}</baseline_next>
+<cast>{cast_str}</cast>
+
+规则（严格）
+- 共演优先，支持改写：
+  - 回复需要严格符合发言符合角色身份，立场，利益和性感，只使用当时可合理获知的信息，禁止预知未来，禁止说教，后见之明，或是上帝视角。
+  - 尊重其他 <cast> 的行动的合理性（就算是偏离史实）。只有当改写极其荒诞时（如外星力量），才引导回可行的历史轨迹。
+  - 按照<active_node>共演。只有当其他 <cast> 提出偏离<active_node>或<baseline_next>的行动时，才沿着可行后果推演。
+- 交互对象：
+  - 只能与 <cast> 内角色对话，并结合语境选择对象。
+    - 若该角色历史上可接触，targetName 必须填该角色精确名称。
+    - 若无法直接接触（如远方对手），targetName 设为 "Facilitator"，且台词必须是想获取的该角色的信息，以疑问句结尾。
+- 节奏控制（当前是第 {turn_number} 轮，最多 8 轮）：{pacing_hint}
+
+输出（严格，仅 1 条）
+<meta targetName="..." nodeid="..." /> 角色台词（第一人称自然口语作为{agent_name}进行回复，1-2 句，**严格保持精炼**，使用现代中文，禁止使用文言文等，禁止给A或B的选项式的发言）
+
+Meta 说明
+- targetName：必须是 <cast> 中精确名字或 "Facilitator"。
+- nodeid：{nodeid_hint}
+""",
+        "en": """You are "{agent_name}", playing the role of {agent_title} — {agent_desc} — in a scene from "{episode_title}". You are currently in the history-rewriting phase.
+
+<active_node>{active_node_decision}(nodeid={active_node_id}): {active_node_desc}</active_node>
+<baseline_next>{next_node_desc}</baseline_next>
+<cast>{cast_str}</cast>
+
+Objective: Give a response that best fits {agent_name}'s stance, and collaborate with the <cast> to co-explore the development and narrative of the historical timeline.
+
+Rules (strict)
+- Co-perform first, support rewriting:
+  - Strictly ensure all dialogue matches the character's identity, **stance**, interests, and personality; use only information reasonably accessible at the time. No foreknowledge, no preaching, no hindsight, no god's-eye view.
+  - Respect the reasonableness of other <cast> members' actions (even if they deviate from history). Only when the rewriting is extremely absurd (e.g., alien forces) should you guide back to a feasible historical trajectory.
+  - Co-perform according to <active_node>. Only when other <cast> members propose actions that deviate from <active_node> or <baseline_next> should you explore feasible consequences.
+- Interaction targets:
+  - Speak ONLY to roles in <cast>, chosen by context.
+    - If historically contactable, targetName must be that exact role name.
+    - If direct contact is impossible (e.g., distant adversary), set targetName to "Facilitator" and frame dialogue as an inquiry about that character, ending with a question.
+- Pacing (turn {turn_number}): {pacing_hint}
+
+Output (strict, exactly 1 line)
+<meta targetName="..." nodeid="..." /> Character Dialogue (first-person natural spoken style as {agent_name}, 1–2 sentences, **strictly concise**, modern English, no archaic language, no A/B-style options)
+
+Meta
+- targetName: exact name in <cast> or "Facilitator".
+- nodeid: {nodeid_hint}
 """,
     },
     "cast.divergence": {
@@ -376,7 +426,7 @@ Output format (strict):
 """,
     },
     "facilitator.tips": {
-        "zh": """你是用户的"历史战略顾问"。Learner 正在进行「{episode_title}」的历史模拟。已进行故事线为 <context>，参与角色在 <cast>，最近对话在 <logs>（重点关注最后一句提问）。你需要根据局势给出 2 或 4 个行动选项 `options`，用于探索不同历史可能性或改写历史。要求**严格精炼**，目标是训练历史思维（权衡利弊、预判后果）。
+        "zh": """你是用户的"历史战略顾问"。Learner 正在进行「{episode_title}」的历史模拟。已进行故事线为 <context>，参与角色在 <cast>，最近对话在 <logs>（重点关注最后一句提问）。用户正在扮演 {user_role_name}，你需要从用户的视角，根据局势给出 2 或 4 个行动选项 `options`，用于探索不同历史可能性或改写历史。要求**严格精炼**，目标是训练历史思维（权衡利弊、预判后果），只能从当时视角和掌握的信息进行决策，禁止后见之明和上帝视角。各options需要均与历史存在明显区别，相互之间也需要明显区别，狂野一些。
 
 <context>{history_prefix_str}</context>
 <cast>{cast_str}</cast>
@@ -389,7 +439,7 @@ Output format (strict):
     {{
       "label": "短标签（如：强硬拒绝 / 妥协换时间）",
       "target_agent": "建议对话目标角色（必须是 <cast> 内精确名字，且不能是用户 {user_role_name}）",
-      "example_response": "用户可直接说的一句口语化短台词",
+      "example_response": "格式：【已完成的行动描述】对话台词。例如：【扔下火把点燃谷仓】我已经焚毁了你的粮库，现在你只能后退。行动用完成时写出，紧接着是{user_role_name}对 target_agent 说的话，整体需与其他options明显不同，能将历史引向截然不同的走向。",
       "rationale": "这么做的收益/动机",
       "risks": "潜在风险或代价",
       "intent_type": "Escalation | De-escalation | Alliance Building | Info Gathering"
@@ -398,7 +448,7 @@ Output format (strict):
   ]
 }}
 """,
-        "en": """You are the user's historical strategy advisor. The learner is running the simulation "{episode_title}". Completed storyline is <context>, participants are <cast>, and recent dialogue is <logs> (focus on the final question). Provide 2 or 4 concise action options in `options` to explore alternative trajectories or rewrite outcomes. Goal: strengthen historical thinking (tradeoffs and consequence forecasting). BE STRICTLY CONCISE.
+        "en": """You are the user's historical strategy advisor. The learner is running the simulation "{episode_title}". Completed storyline is <context>, participants are <cast>, and recent dialogue is <logs> (focus on the final question). The learner is roleplaying as {user_role_name}. Provide 2 or 4 concise action options in `options` to explore alternative trajectories or rewrite outcomes from the user's perspective. Goal: strengthen historical thinking (tradeoffs and consequence forecasting). BE STRICTLY CONCISE. Base options only on the perspective and information available at the time; no hindsight or god's-eye view. Each option must differ markedly from history and from each other; be a bit wild.
 
 <context>{history_prefix_str}</context>
 <cast>{cast_str}</cast>
@@ -411,7 +461,7 @@ Output strict JSON:
     {{
       "label": "Short label (e.g., Hard Refusal / Delay via Compromise)",
       "target_agent": "Suggested target role (EXACT name in <cast>, excluding user {user_role_name})",
-      "example_response": "One short, natural line the user can say",
+      "example_response": "Format: 【completed action】dialogue. Example: 【torches the granary】I've burned your supply depot — now you have no choice but to fall back. The action is written in completed form, followed by {user_role_name} speaking to target_agent. Each option must drive history toward a distinctly different trajectory.",
       "rationale": "Why this move helps (benefit/motivation)",
       "risks": "Potential risks or costs",
       "intent_type": "Escalation | De-escalation | Alliance Building | Info Gathering"
@@ -422,6 +472,75 @@ Output strict JSON:
 """,
     },
     
+    "facilitator.timeline_epilogue": {
+        "zh": """你是历史时间线可视化引擎。刚刚完成了「{episode_title}」的历史改写推演。
+
+<canonical_storyline>
+{canonical_storyline_str}
+</canonical_storyline>
+
+<divergent_session>
+{divergent_context_str}
+</divergent_session>
+
+<cast>{cast_str}</cast>
+
+任务：基于上述内容，生成一份震撼的历史改写总结，供前端可视化展示。要求：叙事感强、有电影感、结局感，聚焦于"历史的关键拐点"与"另一种可能"。
+
+输出严格 JSON：
+{{
+  "timeline_title": "改写后历史线的戏剧性标题（8-16字，有张力）",
+  "tagline": "一句话点睛，概括这条改写线的命运走向（15-25字）",
+  "chapters": [
+    {{
+      "node_id": "节点id或'diverged'",
+      "title": "章节标题",
+      "type": "canonical | diverged",
+      "pivot": "此节点的关键行动或决策（1句）",
+      "consequence": "直接后果（1句）"
+    }}
+  ],
+  "verdict": "2-3句：描述这条改写历史线的最终走向，有力量感，像历史书的盖棺定论",
+  "ripples": ["近期影响（1句）", "中期影响（1句）", "历史长河影响（1句）"],
+  "mood": "triumphant | tragic | pyrrhic | ambiguous"
+}}
+
+chapters 规则：先列出 canonical_storyline 中的节点（type=canonical），再追加 divergent_session 中出现的关键转折（type=diverged，可聚合为1-3个章节）。""",
+        "en": """You are the historical timeline visualization engine. The history-rewriting session for "{episode_title}" has just concluded.
+
+<canonical_storyline>
+{canonical_storyline_str}
+</canonical_storyline>
+
+<divergent_session>
+{divergent_context_str}
+</divergent_session>
+
+<cast>{cast_str}</cast>
+
+Task: Generate a cinematic visual summary of the rewritten timeline for frontend display. Focus on the pivotal turning point where history diverged and the weight of the new outcome.
+
+Output strict JSON:
+{{
+  "timeline_title": "Dramatic title for the rewritten timeline (5-10 words, high tension)",
+  "tagline": "One punchy sentence capturing the fate of this altered history (10-20 words)",
+  "chapters": [
+    {{
+      "node_id": "node id or 'diverged'",
+      "title": "Chapter title",
+      "type": "canonical | diverged",
+      "pivot": "The key action or decision at this node (1 sentence)",
+      "consequence": "Immediate consequence (1 sentence)"
+    }}
+  ],
+  "verdict": "2-3 sentences: the final verdict on this rewritten history — authoritative, like a history book's closing line",
+  "ripples": ["Near-term impact (1 sentence)", "Mid-term impact (1 sentence)", "Long arc of history impact (1 sentence)"],
+  "mood": "triumphant | tragic | pyrrhic | ambiguous"
+}}
+
+chapters rule: list canonical_storyline nodes first (type=canonical), then append 1-3 key turning points from the divergent session (type=diverged, may be condensed).""",
+    },
+
     "reflection.worker_a": {
         "zh": """你是 Scenario Analyst。Learner 完成了「{episode}」历史模拟，已走过路径见 <history>，分歧重点在 {divergence_node_id}。请生成 Reflection 报告中的 Decision Context 部分，要求**严格精炼**。
 
@@ -870,6 +989,32 @@ Output strict JSON. Keep concise. Max 4 items per list:
     },
 }
 
+
+def get_pacing_hints(turn_number: int, lang: str, next_id: str, active_node_id: str) -> tuple:
+    """Return (pacing_hint, nodeid_hint) strings for the current turn."""
+    normalized = normalize_lang(lang)
+    is_end = (next_id == "end")
+    if normalized == "en":
+        if turn_number <= 3:
+            pacing = "Probe phase — explore motives, constraints, and alliances. Stay open; do NOT converge yet."
+            nodeid = active_node_id
+        elif turn_number <= 7:
+            pacing = f'Convergence phase — judge direction and advance to {next_id}.' if is_end else f'Convergence phase — judge direction based on dialogue context; choose "diverged" or advance to {next_id}.'
+            nodeid = f'{next_id}' if is_end else f'if interaction substantially diverges from <baseline_next>: "diverged"; otherwise: {next_id}'
+        else:
+            pacing = f'Forced closure — end the node immediately; fill {next_id}.' if is_end else f'Forced closure — end the node immediately; no further extension; fill "diverged" or {next_id}.'
+            nodeid = f'{next_id}' if is_end else f'"diverged" or {next_id}'
+    else:
+        if turn_number <= 3:
+            pacing = "试探阶段——探动机、约束与联盟，保持开放，禁止收束。"
+            nodeid = f"优先填 {active_node_id}，当互动与 <active_node> 不同时填 \"diverged\""
+        elif turn_number <= 7:
+            pacing = f"收束阶段——推进对话走向收束，填 {active_node_id} 或 {next_id}。" if is_end else f"收束阶段——根据对话语境判断走向，选择 diverged 或推进到 {next_id}。"
+            nodeid = f"优先填 {next_id}，或是" if is_end else f"优先填 \"diverged\"，仅在互动与 <baseline_next> 完全一致下填 {next_id}"
+        else:
+            pacing = f"强制收束——必须立即结束节点，讲话内容要有结局感一锤定音，填 {next_id}。" if is_end else f"强制收束——必须立即结束节点，禁止继续延伸，优先直接填 \"diverged\"；仅在互动与 <baseline_next> 完全一致下填 {next_id}"
+            nodeid = f"填 {next_id}" if is_end else f"优先填 \"diverged\"，仅在互动与 <baseline_next> 完全一致下填 {next_id}"
+    return pacing, nodeid
 
 def get_prompt(key: str, lang: str = "zh", **kwargs: str) -> str:
     normalized_lang = normalize_lang(lang)

@@ -71,4 +71,22 @@ ChronoFork enables learners to:
 | **Paper Writing** | Ziyi | Drafting the CHI technique paper, including Introduction, Related Work, System Implementation, and Discussion. |
 
 ---
-*See `/proposal/PROPOSAL.md` for detailed technical approach and validation plans.*
+
+## 6. CP4 — Final Evaluation (Spring 2026) 📊
+
+A within-subject pilot user study (N = 6) compared **ChronoFork-Web** against an **IDN-Twine** baseline across six historical episodes, with full quantitative and qualitative analysis.
+
+| Deliverable | Path |
+| :--- | :--- |
+| 📄 Final report (~4.2 k words) | [`07-final/docs/FINAL_REPORT.md`](07-final/docs/FINAL_REPORT.md) |
+| 📦 Artifact package & reproducibility | [`07-final/docs/ARTIFACT_PACKAGE.md`](07-final/docs/ARTIFACT_PACKAGE.md) |
+| 🎤 Presentation (≤ 8 min + 2 min Q&A) | [`00-presentation/cp4_pre_eval.pdf`](00-presentation/cp4_pre_eval.pdf) · [`cp4_pre_eval.pdf`](00-presentation/cp4_pre_eval.pdf) |
+| 📊 Pilot evaluation folder | [`07-final/`](07-final/) |
+
+**Live deployments:**
+[app.chronofork.me](https://app.chronofork.me) (frontend) ·
+[twine.chronofork.me](https://twine.chronofork.me) (IDN baseline) ·
+[config.chronofork.me](https://config.chronofork.me) (scenario authoring)
+
+---
+*See `/03-proposal/PROPOSAL.md` for detailed technical approach and validation plans.*

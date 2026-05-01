@@ -11,8 +11,9 @@ class StoryGraph:
         self.nodes = {} 
         self.edges = [] 
         self.max_variant = 0
-        self.edge_contexts: Dict[Tuple[str, str], List[dict]] = {} 
-        self.edge_choices: Dict[Tuple[str, str], str] = {} 
+        self.edge_contexts: Dict[Tuple[str, str], List[dict]] = {}
+        self.edge_choices: Dict[Tuple[str, str], str] = {}
+        self.edge_seed_counts: Dict[Tuple[str, str], int] = {}  # seed messages pre-loaded at diverge, not counted as turns
         
         # 根节点初始化
         self.nodes["0.0"] = {
@@ -28,13 +29,15 @@ class StoryGraph:
         # 将 tuple key 转为 string key "u|v"
         serialized_contexts = {f"{k[0]}|{k[1]}": v for k, v in self.edge_contexts.items()}
         serialized_choices = {f"{k[0]}|{k[1]}": v for k, v in self.edge_choices.items()}
-        
+        serialized_seed_counts = {f"{k[0]}|{k[1]}": v for k, v in self.edge_seed_counts.items()}
+
         return {
             "nodes": self.nodes,
             "edges": self.edges,
             "max_variant": self.max_variant,
             "edge_contexts": serialized_contexts,
-            "edge_choices": serialized_choices
+            "edge_choices": serialized_choices,
+            "edge_seed_counts": serialized_seed_counts,
         }
     
     def load_from_dict(self, data):
@@ -55,6 +58,11 @@ class StoryGraph:
         for k, v in data["edge_choices"].items():
             u, target = k.split("|")
             self.edge_choices[(u, target)] = v
+
+        self.edge_seed_counts = {}
+        for k, v in data.get("edge_seed_counts", {}).items():
+            u, target = k.split("|")
+            self.edge_seed_counts[(u, target)] = v
 
     def add_node(self, title, desc, decision, choice, parent_id=None, specific_id=None):
         new_id = specific_id
@@ -159,19 +167,19 @@ class StoryEngine:
             curr = self._graph.nodes[curr]['parent_id']
         return path
 
-    def _move_state(self, target_node_id):
+    def _move_state(self, target_node_id, suspend_current=False):
         """更新内部状态机指针"""
         if target_node_id not in self._graph.nodes:
             return
 
-        # 1. 完成当前节点
+        # 1. 完成/挂起当前节点
         if self._current_node_id != "0.0":
-            self._node_statuses[self._current_node_id] = "COMPLETED"
-        
+            self._node_statuses[self._current_node_id] = "SUSPENDED" if suspend_current else "COMPLETED"
+
         # 2. 激活目标节点
         self._node_statuses[target_node_id] = "IN_PROGRESS"
         self._current_node_id = target_node_id
-        
+
         # 3. 维护路径
         # 如果是前进，直接 append；如果是跳转/回溯，逻辑由上层保证 path 正确性
         if self._current_path[-1] != target_node_id:
@@ -341,28 +349,28 @@ class StoryEngine:
         self._node_statuses[target_node_id] = "IN_PROGRESS"
         self._push_graph_snapshot()
 
-    def add_message(self, from_name, to_name, content):
+    def add_message(self, from_name, to_name, content, user_authored=False):
         """记录边上的消息"""
         if self._current_node_id == "0.0": return
-        
+
         # 找到当前 Active 的边 (Parent -> Current)
         parent = self._current_path[-2]
         key = (parent, self._current_node_id)
-        
+
         if key not in self._graph.edge_contexts:
             self._graph.edge_contexts[key] = []
-        
-        self._graph.edge_contexts[key].append({
-            "from": from_name,
-            "to": to_name,
-            "content": content
-        })
 
-    def create_divergence_branch(self, divergence_data: dict, context_to_save: List[dict]):
+        msg = {"from": from_name, "to": to_name, "content": content}
+        if user_authored:
+            msg["user_authored"] = True
+        self._graph.edge_contexts[key].append(msg)
+
+    def create_divergence_branch(self, divergence_data: dict, context_to_save: List[dict], suspend_current: bool = False):
         """
         根据推理结果创建新的分支，并将缓存的 Context 写入新边。
         :param divergence_data: LLM 推理出的 JSON
         :param context_to_save: 需要固化到新边上的对话历史 (从 pending_messages 转化而来)
+        :param suspend_current: True 时将当前节点标为 SUSPENDED（正常流分歧），False 标为 COMPLETED（回溯分歧）
         """
         target_type = divergence_data.get("target", "child")
         new_nodes_data = divergence_data.get("branch_storyline", [])
@@ -407,6 +415,7 @@ class StoryEngine:
         key = (parent_id, branch_head_id)
         # 这里直接接收外部清洗好的 list，不做逻辑判断，保证 Engine 只负责存储
         self._graph.edge_contexts[key] = context_to_save
+        self._graph.edge_seed_counts[key] = len(context_to_save)  # exclude seed from turn_number
 
         # 5. 创建后续自动推演节点
         prev_auto_id = branch_head_id
@@ -426,11 +435,8 @@ class StoryEngine:
             self._node_statuses[next_auto_id] = "UNFINISHED"
             prev_auto_id = next_auto_id
             
-        # 6. 移动状态
-        if target_type == "child":
-            self._node_statuses[self._current_node_id] = "COMPLETED"
-            
-        self._move_state(branch_head_id)
+        # 6. 移动状态（suspend_current=True 时旧节点标为 SUSPENDED，保留可回溯）
+        self._move_state(branch_head_id, suspend_current=suspend_current)
         self._push_graph_snapshot()
         
         return branch_head_id

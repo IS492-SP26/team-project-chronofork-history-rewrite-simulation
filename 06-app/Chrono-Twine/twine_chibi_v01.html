@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>赤壁之战 · Twine IDN Baseline</title>
+<style>
+  /* ============================================================
+     Twine IDN Baseline · 赤壁之战
+     Static branching narrative · NO LLM / NO backtracking /
+     NO divergence engine. Choices are limited to preset options.
+     ============================================================ */
+
+  :root {
+    --bg-0: #1a120b;
+    --bg-1: #211a12;
+    --bg-2: #2a2118;
+    --bg-card: #2f261b;
+    --ink-0: #f3e7d2;
+    --ink-1: #d9c8a8;
+    --ink-2: #a89579;
+    --ink-3: #7a6a52;
+    --accent: #c0392b;
+    --accent-2: #e8c14a;
+    --accent-3: #5d8a4e;
+    --rule: #4a3a26;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+    --serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif SC", "Times New Roman", serif;
+    --sans: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans SC", -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-0);
+    color: var(--ink-0);
+    font-family: var(--serif);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at 20% 0%, rgba(192, 57, 43, 0.08), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(232, 193, 74, 0.06), transparent 50%),
+      var(--bg-0);
+  }
+
+  .app {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px 24px 60px;
+  }
+
+  /* ---------- Header ---------- */
+  header.episode {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    background: linear-gradient(135deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    margin-bottom: 18px;
+  }
+  .episode .title-block {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .episode .emoji {
+    font-size: 32px;
+    line-height: 1;
+  }
+  .episode .title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent-2);
+    letter-spacing: 1px;
+  }
+  .episode .sub {
+    font-size: 12px;
+    color: var(--ink-2);
+    margin-top: 2px;
+    letter-spacing: 2px;
+    font-family: var(--sans);
+  }
+  .episode .meta {
+    text-align: right;
+    font-size: 12px;
+    color: var(--ink-2);
+    font-family: var(--sans);
+  }
+  .episode .meta .tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    margin-left: 6px;
+    color: var(--ink-1);
+  }
+
+  /* ---------- Two-column layout ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 18px;
+  }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    aside.side { order: 2; }
+  }
+
+  /* ---------- Stage card ---------- */
+  .stage {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .stage-head {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--rule);
+    background: linear-gradient(180deg, rgba(232, 193, 74, 0.06), transparent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .stage-head .chapter {
+    color: var(--accent-2);
+    font-size: 13px;
+    letter-spacing: 4px;
+    font-family: var(--sans);
+  }
+  .stage-head .scene-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink-0);
+    margin-top: 2px;
+  }
+  .stage-head .right-tag {
+    font-size: 12px;
+    color: var(--ink-2);
+    font-family: var(--sans);
+  }
+
+  .stage-body {
+    padding: 22px 26px;
+  }
+
+  .narrative {
+    font-size: 16px;
+    color: var(--ink-1);
+    text-indent: 2em;
+    margin: 0 0 16px;
+  }
+
+  .narrative.lead {
+    color: var(--ink-0);
+    font-size: 16.5px;
+  }
+
+  /* ---------- Dialog block ---------- */
+  .dialogs {
+    margin: 18px 0 6px;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.18);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+  }
+  .dialogs .line {
+    display: flex;
+    gap: 10px;
+    margin: 8px 0;
+    align-items: baseline;
+  }
+  .dialogs .who {
+    flex: 0 0 96px;
+    text-align: right;
+    color: var(--accent-2);
+    font-weight: 600;
+    font-size: 14px;
+    font-family: var(--sans);
+  }
+  .dialogs .who .av {
+    margin-right: 4px;
+  }
+  .dialogs .what {
+    flex: 1;
+    color: var(--ink-1);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .dialogs .what::before {
+    content: "「";
+    color: var(--ink-3);
+  }
+  .dialogs .what::after {
+    content: "」";
+    color: var(--ink-3);
+  }
+  .dialogs .stage-direction {
+    color: var(--ink-3);
+    font-size: 13px;
+    font-style: italic;
+    text-align: center;
+    margin: 6px 0;
+  }
+
+  /* ---------- Decision block ---------- */
+  .decision {
+    margin-top: 22px;
+    padding: 16px 18px;
+    border: 1px dashed var(--accent-2);
+    border-radius: 6px;
+    background: rgba(232, 193, 74, 0.04);
+  }
+  .decision .label {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--accent-2);
+    font-family: var(--sans);
+    margin-bottom: 6px;
+  }
+  .decision .question {
+    font-size: 16px;
+    color: var(--ink-0);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .decision .maker {
+    font-size: 13px;
+    color: var(--ink-2);
+    font-family: var(--sans);
+  }
+
+  /* ---------- Choice buttons ---------- */
+  .choices {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .choice-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--bg-2);
+    color: var(--ink-0);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.55;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.05s;
+  }
+  .choice-btn:hover {
+    background: #3a2d1f;
+    border-color: var(--accent-2);
+    color: var(--accent-2);
+  }
+  .choice-btn:active { transform: translateY(1px); }
+  .choice-btn .arrow {
+    color: var(--accent);
+    margin-right: 8px;
+    font-weight: 700;
+  }
+  .choice-btn .hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: var(--ink-3);
+    font-family: var(--sans);
+  }
+
+  /* ---------- Side panel ---------- */
+  aside.side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .panel h3 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--accent-2);
+    letter-spacing: 3px;
+    font-family: var(--sans);
+    font-weight: 600;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 8px;
+  }
+  .cast-list .cast-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .cast-list .cast-row:last-child { border-bottom: none; }
+  .cast-list .av {
+    font-size: 22px;
+    flex: 0 0 28px;
+    text-align: center;
+  }
+  .cast-list .info .name {
+    font-weight: 600;
+    color: var(--ink-0);
+    font-size: 14px;
+  }
+  .cast-list .info .role {
+    font-size: 11.5px;
+    color: var(--ink-2);
+    font-family: var(--sans);
+  }
+  .cast-list .info .desc {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 3px;
+    line-height: 1.45;
+  }
+
+  .progress-list .step {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 4px 0;
+    font-size: 13px;
+    font-family: var(--sans);
+    color: var(--ink-3);
+  }
+  .progress-list .step .dot {
+    flex: 0 0 12px;
+    color: var(--rule);
+    font-size: 11px;
+  }
+  .progress-list .step.done { color: var(--ink-1); }
+  .progress-list .step.done .dot { color: var(--accent-3); }
+  .progress-list .step.current { color: var(--accent-2); font-weight: 600; }
+  .progress-list .step.current .dot { color: var(--accent); }
+
+  /* ---------- Ending screen ---------- */
+  .ending .stage-head { background: linear-gradient(180deg, rgba(192, 57, 43, 0.18), transparent); }
+  .ending .ending-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--accent);
+    color: var(--ink-0);
+    font-size: 12px;
+    letter-spacing: 3px;
+    border-radius: 3px;
+    font-family: var(--sans);
+    margin-bottom: 10px;
+  }
+  .ending .ending-tag.canonical { background: var(--accent-3); }
+  .ending .ending-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent-2);
+    margin: 4px 0 14px;
+  }
+  .ending .reflection {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--accent-2);
+    border-radius: 0 6px 6px 0;
+    font-size: 14.5px;
+    color: var(--ink-1);
+    font-family: var(--sans);
+    line-height: 1.7;
+  }
+  .ending .reflection b { color: var(--accent-2); }
+  .ending .path-trace {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .ending .path-trace .pt-title {
+    color: var(--accent-2);
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+  .ending .path-trace ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .ending .path-trace ol li {
+    margin: 3px 0;
+    color: var(--ink-1);
+  }
+  .ending .actions {
+    margin-top: 22px;
+    display: flex;
+    gap: 10px;
+  }
+  .ending .actions button {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    color: var(--ink-0);
+    font-family: var(--serif);
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .ending .actions button:hover {
+    background: #3a2d1f;
+    border-color: var(--accent-2);
+    color: var(--accent-2);
+  }
+
+  /* ---------- Start screen ---------- */
+  .start .stage-body {
+    text-align: center;
+    padding: 44px 36px;
+  }
+  .start .ep-emoji {
+    font-size: 68px;
+    margin-bottom: 8px;
+  }
+  .start .ep-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent-2);
+    letter-spacing: 4px;
+    margin-bottom: 6px;
+  }
+  .start .ep-sub {
+    font-size: 13px;
+    color: var(--ink-2);
+    letter-spacing: 6px;
+    font-family: var(--sans);
+    margin-bottom: 22px;
+  }
+  .start .ep-desc {
+    text-align: left;
+    color: var(--ink-1);
+    font-size: 15.5px;
+    text-indent: 2em;
+    line-height: 1.85;
+    margin: 0 auto 20px;
+    max-width: 640px;
+  }
+  .start .start-btn {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 14px 36px;
+    background: var(--accent);
+    color: var(--ink-0);
+    border: none;
+    border-radius: 6px;
+    font-family: var(--serif);
+    font-size: 16px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+  }
+  .start .start-btn:hover { background: #d44a3a; }
+  .start .start-btn:active { transform: translateY(1px); }
+
+  /* ---------- Footer ---------- */
+  footer.foot {
+    margin-top: 26px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-family: var(--sans);
+  }
+  footer.foot .pipe { margin: 0 8px; }
+
+  /* ---------- Misc ---------- */
+  .fade-in { animation: fadeIn 0.35s ease; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-1); }
+  ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  /* ---------- Back to home ---------- */
+  .back-home {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.05s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .back-home:hover {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+  .back-home:active { transform: translateY(1px); }
+
+  /* ---------- Lang toggle ---------- */
+  .lang-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .lang-toggle:hover {
+    background: var(--accent-2);
+    color: #1a120b;
+    border-color: var(--accent-2);
+  }
+
+</style>
+</head>
+<body>
+<a class="back-home" id="back-home-link" href="index.html">← Home</a>
+<button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">中文</button>
+
+<div class="app">
+
+  <header class="episode">
+    <div class="title-block">
+      <div class="emoji">🔥</div>
+      <div>
+        <div class="title" id="ep-title-el">Battle of Red Cliffs</div>
+        <div class="sub">CHI BI · A.D. 208 · YANGTZE</div>
+      </div>
+    </div>
+    <div class="meta">
+      Twine IDN Baseline
+      <span class="tag" id="meta-progress">Act 0 / 5</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main id="passage-area"></main>
+
+    <aside class="side">
+      <div class="panel">
+        <h3 id="cast-panel-h">CAST</h3>
+        <div class="cast-list" id="cast-list"></div>
+      </div>
+      <div class="panel">
+        <h3 id="story-panel-h">STORY PROGRESS</h3>
+        <div class="progress-list" id="progress-list"></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="foot">
+    Twine IDN Baseline · Static Branching Narrative
+    <span class="pipe">|</span> Episode 01 — <span id="foot-ep-name">赤壁之战</span>
+    <span class="pipe">|</span> v1.0
+  </footer>
+</div>
+
+<script>
+  /* ============================================================
+     Language support
+     ============================================================ */
+  let currentLang = localStorage.getItem('lang') || 'en';
+  let currentPassageId = 'start';
+
+  function toggleLang() {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    localStorage.setItem('lang', currentLang);
+    updateStaticUI();
+    render(currentPassageId);
+  }
+
+  function getPassages() { return currentLang === 'en' ? PASSAGES_EN : PASSAGES; }
+  function getCast()     { return currentLang === 'en' ? CAST_EN     : CAST;     }
+  function getLabels()   { return currentLang === 'en' ? STORY_PROGRESS_LABELS_EN : STORY_PROGRESS_LABELS; }
+
+  function updateStaticUI() {
+    const isEn = currentLang === 'en';
+    document.title = isEn ? 'Battle of Red Cliffs · Twine IDN Baseline' : '赤壁之战 · Twine IDN Baseline';
+    document.getElementById('ep-title-el').textContent   = isEn ? 'Battle of Red Cliffs' : '赤壁之战';
+    document.getElementById('cast-panel-h').textContent  = isEn ? 'CAST'                 : '登场人物 CAST';
+    document.getElementById('story-panel-h').textContent = isEn ? 'STORY PROGRESS'       : '剧情进度 STORY';
+    document.getElementById('back-home-link').textContent = isEn ? '← Home'              : '← 返回首页';
+    document.getElementById('lang-toggle').textContent   = isEn ? '中文'                  : 'EN';
+    document.getElementById('foot-ep-name').textContent  = isEn ? 'Battle of Red Cliffs'  : '赤壁之战';
+  }
+
+  /* ============================================================
+     Cast — Chinese
+     ============================================================ */
+  const CAST = {
+    "曹操":   { avatar: "⚔️", title: "丞相·北方最高统帅",    desc: "挟天子号令诸侯，自任水陆大军统帅，意在一举平定孙刘。" },
+    "孙权":   { avatar: "🛡️", title: "江东之主",              desc: "在投降与抗曹之间反复权衡，一纸决断系东吴命运于赤壁。" },
+    "周瑜":   { avatar: "⛵", title: "东吴大都督",            desc: "统领江东水军，主导联合抗曹，火攻为其手笔。" },
+    "刘备":   { avatar: "🐉", title: "汉室宗亲·联军一方主帅",  desc: "荆州溃败后联吴抗曹，借此立足江南。" },
+    "鲁肃":   { avatar: "📜", title: "东吴谋臣·联盟推手",      desc: "力主抗曹，亲自牵线撮合孙刘联盟。" }
+  };
+
+  /* ============================================================
+     Cast — English
+     ============================================================ */
+  const CAST_EN = {
+    "曹操": { avatar: "⚔️", name: "Cao Cao",  title: "Chancellor · Supreme Commander of the North",  desc: "Wielding the emperor as his mandate, he commanded the combined forces and marched south to crush Sun Quan and Liu Bei in one stroke." },
+    "孙权": { avatar: "🛡️", name: "Sun Quan", title: "Lord of Jiangdong",                             desc: "Torn between surrender and resistance, a single decision placed the fate of Eastern Wu on the scales at Red Cliffs." },
+    "周瑜": { avatar: "⛵", name: "Zhou Yu",  title: "Grand Commander of Eastern Wu",                 desc: "Led the Jiangdong navy, masterminded the Sun-Liu alliance, and devised the fire-attack that broke Cao Cao's fleet." },
+    "刘备": { avatar: "🐉", name: "Liu Bei",  title: "Scion of Han · Allied Commander",               desc: "Routed at Dangyang, he allied with Wu and used Red Cliffs as his foothold south of the Yangtze." },
+    "鲁肃": { avatar: "📜", name: "Lu Su",    title: "Wu Strategist · Architect of the Alliance",    desc: "A staunch advocate for resistance who personally brokered the Sun-Liu pact." },
+    "张昭": { avatar: "📋", name: "Zhang Zhao",  title: "Sun Quan's Chief Civil Advisor",  desc: "Argued for submission to Cao Cao, believing Wu could not survive a military confrontation." },
+    "程普": { avatar: "🗡️", name: "Cheng Pu",   title: "Senior General of Eastern Wu",    desc: "Veteran commander who served under Sun Quan's father; fought alongside Zhou Yu at Red Cliffs." },
+    "黄盖": { avatar: "🔥", name: "Huang Gai",  title: "Eastern Wu General",              desc: "Proposed and executed the fire-ship stratagem that broke Cao Cao's chained fleet." },
+    "蒋干": { avatar: "📨", name: "Jiang Gan",  title: "Cao Cao's Envoy",                 desc: "Sent to persuade Zhou Yu to defect; instead carried back a forged letter that led Cao Cao to execute his own naval commanders." }
+  };
+
+  /* ============================================================
+     Passages — Chinese (original)
+     ============================================================ */
+  const PASSAGES = {
+
+    /* ---------- START ---------- */
+    "start": {
+      type: "start",
+      epEmoji: "🔥",
+      epTitle: "赤壁之战",
+      epSub: "C H I   B I   ·   A . D .   2 0 8",
+      desc: "东汉末年，曹操平定北方，挟天子号令天下，挥师南下。荆州刘琮望风而降，刘备败退江夏。孙权坐镇江东，承受北方大军压境的最大压力。此时，江东内部主战与主降两派激烈争论，一场决定未来三百年中国格局的对峙，正在长江两岸悄然展开。",
+      next: "n1"
+    },
+
+    /* ---------- Node 1.0 ---------- */
+    "n1": {
+      type: "scene",
+      chapter: "第一幕  ·  风雨欲来",
+      sceneTitle: "荆州风云与北伐南下",
+      progressIndex: 0,
+      castOnStage: ["曹操", "孙权", "刘备", "鲁肃"],
+      narrative: [
+        "建安十三年秋，曹操亲率水陆大军自江陵顺流而下，号称八十万。檄文一封传至柴桑，孙权左右文武分作两派：以张昭为首的主降派慷慨陈词，以鲁肃为首的主战派坚持抗曹。",
+        "刘备败于当阳，退保夏口，遣诸葛亮渡江求援。孙权握檄沉吟，拍案与议降之间只剩一线之隔。"
+      ],
+      dialogs: [
+        { who: "张昭",  what: "曹公豺虎也，托名汉相，挟天子以征四方，以朝廷为辞，今日拒之，事更不顺。愿将军迎之。" },
+        { who: "鲁肃",  what: "肃可迎曹操，将军不可。何以言之？今肃迎操，操当以肃还付乡党，犹不失下曹从事；将军迎操，欲安所归乎？" },
+        { who: "刘备",  what: "备虽不才，愿与江东共抗曹军。荆州残部尚有水陆之众万余，唯将军一念之间。" }
+      ],
+      decision: {
+        question: "在群臣劝降声中，孙权应如何抉择？",
+        maker: "孙权"
+      },
+      choices: [
+        { label: "议降曹操，保全江东百姓",  hint: "顺势归曹，避免战祸 — 偏离正史的妥协路线", next: "end_A" },
+        { label: "拍案而起，决意抗曹",      hint: "斩案为誓，与刘备结盟 — 正史选择",         next: "n2" }
+      ]
+    },
+
+    /* ---------- Node 2.0 ---------- */
+    "n2": {
+      type: "scene",
+      chapter: "第二幕  ·  江东剑起",
+      sceneTitle: "孙权拍案与孙刘联盟",
+      progressIndex: 1,
+      castOnStage: ["孙权", "周瑜", "刘备", "鲁肃"],
+      narrative: [
+        "孙权拔佩刀斫面前奏案，正色而言：「诸将吏敢复有言当迎操者，与此案同！」 鲁肃奉命与刘备会晤，结为盟好；周瑜被任命为大都督，统军三万溯江西上。",
+        "然而曹军号称八十万，江东精兵不过数万，兵力悬殊，周瑜须在「沿江布防、以拖待变」与「主动出击、寻机决战」之间立下方略。"
+      ],
+      dialogs: [
+        { who: "周瑜",  what: "操虽托名汉相，其实汉贼也。北土未平，马超、韩遂尚在关西，为操后患。今北人不习水战，舍鞍马杖舟楫，与吴越争衡，本非中国所长。" },
+        { who: "鲁肃",  what: "曹军远来疲弊，又值仲冬之月，疫病渐起，若我等据险而守，不出三月，操军必生变。" },
+        { who: "周瑜",  what: "主动出击，亦未必无胜算。我观曹军连船首尾，正可火攻 —— 是守是攻，在此一念。" }
+      ],
+      decision: {
+        question: "兵力悬殊之下，周瑜应取何种方略？",
+        maker: "周瑜"
+      },
+      choices: [
+        { label: "据守长江，以拖待变",  hint: "稳健消耗 — 偏离正史的持久战路线", next: "n2a" },
+        { label: "主动出击，速战速决",  hint: "寻机决战 — 正史选择",               next: "n3" }
+      ]
+    },
+
+    /* ---------- Node 2A.0 (divergent branch) ---------- */
+    "n2a": {
+      type: "scene",
+      chapter: "分支  ·  沿江相持",
+      sceneTitle: "长江壁垒与持久消耗",
+      progressIndex: 2,
+      castOnStage: ["周瑜", "鲁肃", "刘备"],
+      narrative: [
+        "周瑜放弃主动出击，选择沿长江布防。东吴水军分驻夏口、巴丘、陆口诸险，高垒深堑，避而不战。曹军战船连营江北，先锋几度试探强渡，皆被江风与水寨拒之于外。",
+        "时近隆冬，曹营疫病更盛。然东吴粮草日耗，士气难继。鲁肃献策，须在「凭险固守」与「收缩防线、退保根本」之间再做抉择。"
+      ],
+      dialogs: [
+        { who: "程普",  what: "都督，士卒久无战功，暮气已生。粮道虽通，恐难支半载。" },
+        { who: "鲁肃",  what: "曹操军中疫起，又远离根本，再拖月余必生哗变。我等据险勿动，自有转机。" },
+        { who: "周瑜",  what: "若退守江东，则荆州尽弃；若强守不退，则赌尽国运。子敬，你定。" }
+      ],
+      decision: {
+        question: "持久之战中，鲁肃应如何选择？",
+        maker: "鲁肃"
+      },
+      choices: [
+        { label: "据险固守，待曹军生变", hint: "赌曹军先溃 — 走向南北僵持的结局", next: "end_B" },
+        { label: "收缩防线，退保江东",   hint: "壮士断腕 — 走向偏安自保的结局",   next: "end_C" }
+      ]
+    },
+
+    /* ---------- Node 3.0 ---------- */
+    "n3": {
+      type: "scene",
+      chapter: "第三幕  ·  巧战之机",
+      sceneTitle: "赤壁对峙与火攻构想",
+      progressIndex: 2,
+      castOnStage: ["曹操", "周瑜", "刘备"],
+      narrative: [
+        "联军溯江西上，与曹军遇于赤壁。初一交锋，曹军不利，引次江北。曹操将战船首尾相接，又令士卒习舟。东吴探报回报：北军多疫，且船阵紧密，正是可乘之机。",
+        "曹营之中，水军都督蔡瑁、张允颇知水战，是曹操水军根本。周瑜须在数计之中择一施行。"
+      ],
+      dialogs: [
+        { who: "黄盖",  what: "操军方连船舰，首尾相接，可烧而走也。" },
+        { who: "周瑜",  what: "若正面强攻，可凭一时锐气；若行火攻，须有诈降；若反间疏忌蔡张，则可釜底抽薪。" },
+        { who: "刘备",  what: "都督所谋，备愿与江东共进退。" }
+      ],
+      decision: {
+        question: "对峙之中，周瑜应施何计破局？",
+        maker: "周瑜"
+      },
+      choices: [
+        { label: "正面强攻，以勇制众",     hint: "硬拼水军 — 偏离正史的冒险路线",         next: "end_D" },
+        { label: "诈降送信，火攻连舰",     hint: "黄盖诈降 + 借东风 — 正史选择",           next: "n4" },
+        { label: "反间疏忌蔡张，瓦解水军", hint: "群英会蒋干盗书 — 偏离正史的反间路线", next: "n3a" }
+      ]
+    },
+
+    /* ---------- Node 3A.0 (divergent branch) ---------- */
+    "n3a": {
+      type: "scene",
+      chapter: "分支  ·  反间疏忌",
+      sceneTitle: "蒋干盗书与曹营自伤",
+      progressIndex: 3,
+      castOnStage: ["曹操", "周瑜"],
+      narrative: [
+        "周瑜借故宴请曹操旧友蒋干，于帐中佯醉酣睡。蒋干窃取案上「蔡瑁、张允通敌密书」，星夜返报曹操。",
+        "曹操震怒，即斩二将于辕门。等到怒气稍息，方知中计 —— 然水军都督已殒，曹军水战之能元气大伤。",
+        "周瑜得报抚掌而笑，只是接下来的方略，仍须他亲自定夺。"
+      ],
+      dialogs: [
+        { who: "蒋干",  what: "操公息怒，瑜信书凿凿，不可不察 ……（话音未落，二将已斩）" },
+        { who: "曹操",  what: "吾中周郎之计也！" },
+        { who: "周瑜",  what: "蔡张已除，曹军水军大不如前。然兵贵神速 —— 是趁势火攻、稳收战果，还是孤军北上、直捣许都？" }
+      ],
+      decision: {
+        question: "反间得手后，周瑜应如何乘势？",
+        maker: "周瑜"
+      },
+      choices: [
+        { label: "稳健配合火攻，扩大战果", hint: "反间 + 火攻 双管齐下",     next: "end_E" },
+        { label: "孤军北上，直捣许都",     hint: "乘锐气北伐 — 高风险路线", next: "end_F" }
+      ]
+    },
+
+    /* ---------- Node 4.0 ---------- */
+    "n4": {
+      type: "scene",
+      chapter: "第四幕  ·  东风火起",
+      sceneTitle: "连环战船与火烧赤壁",
+      progressIndex: 3,
+      castOnStage: ["曹操", "孙权", "周瑜", "刘备"],
+      narrative: [
+        "黄盖密书至曹营，称欲举众降。曹操喜，备酒相迎。十一月二十日夜，东南风急起。黄盖率十艘蒙冲斗舰，舰上载干燥柴草，灌以鱼膏，覆以帷幕，上建牙旗，乘风疾进。",
+        "近曹营二里，黄盖纵火，火借风势，须臾烟焰张天，曹军船阵首尾相连，无路可退，焚毁过半。岸上营寨亦被波及，曹军大乱溃散，曹操率残部经华容道仓皇北归。",
+        "联军大胜在望，刘备所部当如何配合追击，影响着此后数十年天下格局。"
+      ],
+      dialogs: [
+        { who: "周瑜",  what: "火！" },
+        { who: "曹操",  what: "天不助我！传令烧船自退，速走华容！" },
+        { who: "刘备",  what: "曹军溃乱，是穷追到底、聚焦荆襄、还是见好就收？" }
+      ],
+      decision: {
+        question: "火势已起，曹军溃乱，刘备应如何配合追击？",
+        maker: "刘备"
+      },
+      choices: [
+        { label: "乘胜全力追击，直捣华容", hint: "穷追猛打 — 偏离正史的激进路线",   next: "end_G" },
+        { label: "适度追击，聚焦荆襄诸地", hint: "夺取战略要地 — 正史选择",          next: "end_H" },
+        { label: "见好就收，固守现有疆域", hint: "保守防御 — 偏离正史的保守路线",    next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "江东归曹  ·  汉室名存",
+      castOnStage: ["曹操", "孙权"],
+      narrative: [
+        "孙权迫于群臣压力与曹军威势，遣使奉表，举江东而降。东吴水军未发一矢，便归于曹操麾下。刘备孤立无援，退守苍梧，不久病亡于交州。",
+        "建安十四年春，曹操受封魏王、加九锡，挟天子以令四海。中原与江东合而为一，三年后曹操病逝，曹丕受禅称帝，国号大魏 —— 中国进入了一个没有「三国」的时代。"
+      ],
+      reflection: "<b>反事实推演：</b>若孙权选择归降，赤壁之战便从未发生。东汉末年的群雄竞合在此提前终结，南北未及融合便骤然合一。短期内战乱平息、生民得息，但江南士族被北方门阀长期压制，三国时期独特的人物与文化竞合也无从展开 —— 中国此后数百年的政治版图与文化基因，都将被这一念之差彻底改写。"
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "划江而治  ·  南北相持",
+      castOnStage: ["曹操", "周瑜", "鲁肃"],
+      narrative: [
+        "周瑜采纳鲁肃之策，沿江坚壁不出。曹军连战不下，疫病蔓延，又值隆冬粮道艰难，操不得已焚船自退。然东吴并未取得决定性大胜 —— 曹操元气未伤，北归后整顿数年，再度构筑南征防线。",
+        "此后数十年，曹魏与东吴隔江相持，长江成为新的政治边界。刘备困守江夏，未能借势取荆州，最终仅在交州一隅称王。三国格局未成，南北分立长达半世纪。"
+      ],
+      reflection: "<b>反事实推演：</b>持久消耗虽避免了正面决战的风险，却也错失了重创曹军的战机。没有赤壁的烈火，南北实力差距未被根本扭转，孙刘联盟亦难升级为长期同盟。「三足鼎立」让位于「南北二分」 —— 整个中国中世纪的政治节奏，将被这种慢性消耗深刻拖长。"
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "退保江东  ·  偏安一隅",
+      castOnStage: ["孙权", "鲁肃"],
+      narrative: [
+        "鲁肃力主壮士断腕，孙权遂下令收缩防线，让出夏口与江夏，退保长江下游。曹操几乎不战而得荆襄全境，刘备失去立足之地，辗转入交州。",
+        "东吴退守虽保住了根本，却也将战略主动权拱手让人。曹操坐拥北方与荆襄，三年后大军再度南下，东吴独力难支，孙权不得不向魏称臣，受封吴王，名为藩国，实为附庸。"
+      ],
+      reflection: "<b>反事实推演：</b>「以空间换时间」的保守策略，在面对一个仍处巅峰的曹操时往往意味着慢性死亡。战略纵深一旦让出，便很难再夺回。这条分支提醒我们：正史中孙权的「拍案抗曹」之所以伟大，不仅在于勇气，更在于他对战略时机的精准把握。"
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "正面强攻  ·  赤壁惨败",
+      castOnStage: ["曹操", "周瑜"],
+      narrative: [
+        "周瑜押上锐气，率水军正面强攻曹军船阵。然曹军舰船虽连，但弓弩齐发、北军居高临下，江东锐卒在密集箭雨与撞角之下伤亡惨重。黄盖中流矢落水，周瑜亦受重创。",
+        "联军大败而退，曹军乘势南渡。孙权失去精锐与都督，被迫遣使乞降。刘备孤军远窜益州未果，败死于途。曹操不久平定江南，再次完成了北方式的统一。"
+      ],
+      reflection: "<b>反事实推演：</b>面对绝对兵力优势，正面强攻几乎是兵家大忌。这条分支提醒：周瑜在正史中之所以名垂青史，不只因敢战，更因他在「敢战」与「巧战」之间作出了正确的选择。火攻的精妙，正是用最小代价撬动最大胜势 —— 而强攻则是以己之短攻彼之长。"
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "反间 + 火攻  ·  东吴独大",
+      castOnStage: ["周瑜", "孙权"],
+      narrative: [
+        "蔡瑁、张允既诛，曹军水战之能尽失。周瑜随即施行火攻，曹军船阵在群龙无首之中焚毁殆尽，连岸上营寨与辎重亦被一并烧成焦土。曹操仅率亲卫数百北归，狼狈不堪。",
+        "战后，周瑜不让刘备分润，独力进取荆州、襄阳。孙权趁势封藩诸将，江东势力空前扩张，几占南中国半壁。刘备无地可立，只得西入益州寄居刘璋帐下，再无与孙曹三分天下之资。"
+      ],
+      reflection: "<b>反事实推演：</b>反间与火攻同施虽战果丰硕，却也打破了孙刘联盟原有的微妙平衡。东吴一家独大反而埋下隐患 —— 失去刘备这一缓冲，东吴需直接面对曹魏的全部压力，并在西线孤军作战。此分支揭示了「联盟」的深层意义：有时分润胜利果实，比独占胜利本身更重要。"
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "孤军北伐  ·  深入折戟",
+      castOnStage: ["周瑜", "曹操"],
+      narrative: [
+        "周瑜趁反间得手，挥师北上，欲乘势直捣许都。东吴水军北渡淮水后，骑兵不济，粮道愈拖愈长。曹操虽水军受挫，陆军主力尚存，更得马超、张辽等驰援。",
+        "周瑜孤军深入，于宛城一带遭曹军合围。东吴援军远水难救，周瑜中流矢病发，竟陨于军中。江东痛失栋梁，势力收缩；曹操借势重整南征防线，三国格局未及形成便夭折于一念之差。"
+      ],
+      reflection: "<b>反事实推演：</b>「乘胜追击」与「冒进深入」往往只一线之隔。周瑜在正史中以英年早逝著称，这条分支以另一种方式让他陨落 —— 提醒我们：战术胜利与战略胜利之间，需要一道清醒的边界。胜利之后保持克制，往往比赢下战斗本身更需要智慧。"
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "穷追华容  ·  北方动荡",
+      castOnStage: ["曹操", "刘备", "孙权"],
+      narrative: [
+        "刘备亲率精锐穷追曹操至华容道。大雨泥泞之中，曹军残部几被全歼，曹操险些被擒，仅以身免。北方诸郡闻败讯，颍川、汝南一带豪强趁机起事，曹操归洛阳后忙于平乱，无力南顾。",
+        "联军乘胜挺进至樊城，然粮道过长、孙刘亦因分润战果生隙。三年后，曹操元气稍复再度南下，孙刘联盟在内耗中崩解，刘备折于荆州，孙权独力抗曹，三国未及鼎立便已变形。"
+      ],
+      reflection: "<b>反事实推演：</b>极致的战术胜利，未必带来最优的战略结果。穷追猛打虽快意一时，却暴露了联盟的脆弱与后勤的极限。正史中孙刘选择「适度追击」，正是在战果与可持续性之间的精妙平衡。这条分支提醒：胜利的尺度，需要由更长远的格局来度量。"
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "正史结局 · CANONICAL",
+      tagClass: "canonical",
+      title: "三足鼎立  ·  天下三分",
+      castOnStage: ["曹操", "孙权", "周瑜", "刘备", "鲁肃"],
+      narrative: [
+        "孙刘联军选择适度追击，重点歼灭曹军留守与辎重，迫使曹操北还。曹军留下的荆州城邑被孙刘瓜分：刘备得武陵、长沙、桂阳、零陵四郡，借此跨有荆益；孙权得江夏、南郡之半，控扼长江中游。",
+        "此战之后，曹操短期内无力南下，孙权稳坐江东，刘备终于得到立足之地。十二年后，曹丕称帝建魏，刘备称帝建汉（蜀），孙权称王再称帝建吴 —— 三国鼎立的格局正式形成，中国进入了波澜壮阔的近百年三国时代。"
+      ],
+      reflection: "<b>历史的真实走向：</b>赤壁之战是中国历史上最经典的「以少胜多」「以弱胜强」战例之一。其意义远超军事本身 —— 它阻止了北方的过快统一，保留了多元格局，孕育了三国时代璀璨的人物、文化与制度试验。<br><br>这一结局也告诉我们：在历史的关键节点上，<b>克制与节奏感</b>往往比孤注一掷更具决定性。孙刘的「适度追击」，看似平淡，却是一种洞悉时势的战略智慧。"
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "见好就收  ·  错失良机",
+      castOnStage: ["曹操", "刘备", "孙权"],
+      narrative: [
+        "刘备主张「见好就收」，火攻之后联军未追，仅就地巩固防线。曹操得以从容收拾残部，从华容道安全北归，并将荆州大部留守兵力撤往南阳。",
+        "联军未能借胜势夺取荆州要地，刘备仍困于江夏一隅。三年后曹操恢复元气，再度南下，孙刘联盟在新的压力下迅速瓦解。东吴勉强自保，刘备失去争夺天下的最后机会，三国格局让位于南北长期对峙。"
+      ],
+      reflection: "<b>反事实推演：</b>过度保守是另一种形式的失败。胜利的果实需要在恰当的时刻摘取，否则便会枯萎。正史中孙刘的「适度追击」之所以高明，正在于它既避免了穷追的代价，又抓住了战略要地的窗口期。这条分支揭示：战机稍纵即逝，<b>保守</b>有时比<b>冒进</b>更危险。"
+    }
+  };
+
+  /* ============================================================
+     Passages — English
+     ============================================================ */
+  const PASSAGES_EN = {
+    "start": {
+      type: "start", epEmoji: "🔥",
+      epTitle: "Battle of Red Cliffs",
+      epSub: "C H I   B I   ·   A . D .   2 0 8",
+      desc: "In the dying years of the Eastern Han, Cao Cao pacified the north and marched south with the emperor's sanction. The lord of Jing Province surrendered without a fight; Liu Bei fled to Xiakou. Sun Quan, holding court in Jiangdong, bore the greatest pressure as the northern juggernaut advanced. Inside the Wu court, advocates of surrender and resistance clashed bitterly. Along both banks of the Yangtze, a confrontation that would shape three hundred years of Chinese history was quietly unfolding.",
+      next: "n1"
+    },
+    "n1": {
+      type: "scene",
+      chapter: "Act I  ·  Storm Gathering",
+      sceneTitle: "The Fall of Jing and Cao Cao's March South",
+      progressIndex: 0,
+      castOnStage: ["曹操", "孙权", "刘备", "鲁肃"],
+      narrative: [
+        "In the autumn of Jian'an 13, Cao Cao led his combined forces downstream from Jiangling — eighty-thousand strong by proclamation. When his ultimatum reached Chai Sang, Sun Quan's court split: Zhang Zhao's pro-surrender faction argued for submission; Lu Su's pro-resistance faction urged defiance.",
+        "Liu Bei had just lost at Dangyang and retreated to Xiakou; he sent Zhuge Liang across the river to seek aid. Sun Quan brooded over the letter — between capitulation and resolve, the margin had narrowed to a single thread."
+      ],
+      dialogs: [
+        { who: "张昭", what: "Cao Cao is a wolf. He bears the Han Chancellor's title but wields the emperor's name to summon the lords. To resist him today is to act against the court's mandate. I urge Your Lordship to receive him." },
+        { who: "鲁肃", what: "I, Lu Su, can submit to Cao Cao — but Your Lordship cannot. If I submit, Cao will assign me some minor post and I will not lose my standing. But if Your Lordship submits, where could you possibly land?" },
+        { who: "刘备", what: "Though I am of limited talent, I am willing to stand with Jiangdong against Cao. Of Jing's remnant forces — foot and fleet alike — I still command over ten thousand. The decision rests with Your Lordship." }
+      ],
+      decision: { question: "Amid the clamor for surrender from his ministers, how should Sun Quan choose?", maker: "孙权" },
+      choices: [
+        { label: "Negotiate submission; spare the people of Jiangdong", hint: "Yield to Cao's momentum, avoid the calamity of war — a compromise route diverging from history", next: "end_A" },
+        { label: "Slam the table and swear to resist",                   hint: "Pledge defiance, forge the alliance with Liu Bei — the historical choice",                         next: "n2" }
+      ]
+    },
+    "n2": {
+      type: "scene",
+      chapter: "Act II  ·  The Sword Rises in Jiangdong",
+      sceneTitle: "Sun Quan's Vow and the Sun-Liu Alliance",
+      progressIndex: 1,
+      castOnStage: ["孙权", "周瑜", "刘备", "鲁肃"],
+      narrative: [
+        "Sun Quan drew his blade and slashed the memorial table, declaring: 'Any officer who dares again speak of welcoming Cao Cao shall share the fate of this table!' Lu Su was dispatched to formalize the pact with Liu Bei; Zhou Yu was named Grand Commander and led thirty thousand troops upriver.",
+        "Yet Cao's host was reportedly eight hundred thousand strong, while Jiangdong's trained troops numbered only in the tens of thousands. Facing such disparity, Zhou Yu had to choose between holding the Yangtze line to wait out Cao, or seizing the initiative for a decisive engagement."
+      ],
+      dialogs: [
+        { who: "周瑜", what: "Cao Cao bears the Chancellor's title in name only — in truth he is a traitor to Han. The north is not yet fully pacified; Ma Chao and Han Sui still haunt him from the west. Moreover, northern men know nothing of water warfare — they have abandoned their horses for oars and fight us on our own element." },
+        { who: "鲁肃", what: "Cao's army has marched far and is exhausted. Midwinter is setting in, and plague is spreading through his camp. If we hold our ground, within three months his army will begin to crack from within." },
+        { who: "周瑜", what: "An offensive strike is not without its prospects, either. I observe that Cao's ships are chained prow to stern — precisely the target for a fire-attack. Whether to hold or to strike: everything hinges on this choice." }
+      ],
+      decision: { question: "Vastly outnumbered, what strategy should Zhou Yu adopt?", maker: "周瑜" },
+      choices: [
+        { label: "Hold the Yangtze line; wait for Cao's army to falter", hint: "Attritional defense — a prolonged-war route diverging from history", next: "n2a" },
+        { label: "Seize the initiative; force a swift decisive battle",   hint: "Seek engagement — the historical choice",                           next: "n3" }
+      ]
+    },
+    "n2a": {
+      type: "scene",
+      chapter: "Branch  ·  Stalemate on the River",
+      sceneTitle: "The Yangtze Barrier and the War of Attrition",
+      progressIndex: 2,
+      castOnStage: ["周瑜", "鲁肃", "刘备"],
+      narrative: [
+        "Zhou Yu abandoned the offensive and chose to fortify the riverbank. The Wu navy garrisoned the passes at Xiakou, Baqiu, and Lukou, building deep ramparts and refusing battle. Cao's fleet anchored along the northern shore; repeated probing attacks were turned back.",
+        "Deep winter set in; plague worsened in Cao's camp. Yet Wu's own provisions were dwindling and morale fraying. Lu Su proposed a further choice: hold the line in place, or compress the front and fall back to protect the Jiangdong heartland."
+      ],
+      dialogs: [
+        { who: "程普", what: "Commander, the troops have gone too long without a victory — morale is sagging. Our supply route holds, but I fear we cannot sustain this for another six months." },
+        { who: "鲁肃", what: "Cao Cao's camp is rife with plague and he is far from his home base. Hold firm for another month and he will likely see mutinies in his own ranks." },
+        { who: "周瑜", what: "If we pull back to Jiangdong, we abandon Jing Province entirely. If we hold on, we gamble the fate of the state. Zijing — the decision is yours." }
+      ],
+      decision: { question: "In a war of attrition, what should Lu Su decide?", maker: "鲁肃" },
+      choices: [
+        { label: "Hold the line; wait for Cao's army to crack",   hint: "Bet that Cao's forces break first — leads to the North-South stalemate ending", next: "end_B" },
+        { label: "Compress the front; fall back to Jiangdong",    hint: "Sacrifice the periphery — leads to the self-preservation ending",               next: "end_C" }
+      ]
+    },
+    "n3": {
+      type: "scene",
+      chapter: "Act III  ·  The Opening for Stratagem",
+      sceneTitle: "Standoff at Red Cliffs and the Fire-Attack Plan",
+      progressIndex: 2,
+      castOnStage: ["曹操", "周瑜", "刘备"],
+      narrative: [
+        "The allied forces sailed upstream and met Cao's army at Red Cliffs. In the first skirmish Cao's forces fared worse and withdrew to the northern bank. Cao had his warships chained prow to stern and drilled his northern soldiers in seamanship. Scouts reported that plague ran through the northern camp and the chained fleet sat densely packed — a ripe target.",
+        "Within Cao's camp, the naval commanders Cai Mao and Zhang Yun were the backbone of his water-fighting capability. Zhou Yu weighed several stratagems and had to choose one to execute."
+      ],
+      dialogs: [
+        { who: "黄盖", what: "Cao's ships are lashed together end to end — we can burn them out and rout the whole army." },
+        { who: "周瑜", what: "A frontal assault could ride the first surge of courage. A fire-attack requires a staged surrender. Or we could sow distrust of Cai Mao and Zhang Yun — pulling the roots from under Cao's navy from within." },
+        { who: "刘备", what: "Commander Zhou, whatever you decide, Bei will advance and retreat with Jiangdong." }
+      ],
+      decision: { question: "In the standoff, what stratagem should Zhou Yu employ to break the deadlock?", maker: "周瑜" },
+      choices: [
+        { label: "Mount a frontal assault; overpower them with sheer force",                     hint: "Force a head-on clash — a risky route diverging from history",                   next: "end_D" },
+        { label: "Stage a feigned surrender and launch the fire-attack on the chained fleet",    hint: "Huang Gai's false surrender + the southeast wind — the historical choice",        next: "n4" },
+        { label: "Sow discord to discredit Cai Mao and Zhang Yun; cripple Cao's navy within",  hint: "Jiang Gan steals the letter — a counter-intelligence route diverging from history", next: "n3a" }
+      ]
+    },
+    "n3a": {
+      type: "scene",
+      chapter: "Branch  ·  The Counter-Intelligence Coup",
+      sceneTitle: "Jiang Gan Steals the Letter; Cao's Camp Turns on Itself",
+      progressIndex: 3,
+      castOnStage: ["曹操", "周瑜"],
+      narrative: [
+        "Zhou Yu contrived an occasion to invite Jiang Gan — an old friend of Cao's — to a banquet, and feigned drunken sleep. Jiang Gan stole a letter from the table, purportedly a secret communication from Cai Mao and Zhang Yun to the enemy, and rushed it back to Cao Cao before dawn.",
+        "Cao Cao flew into a rage and ordered both generals executed at the gate. Only when his fury subsided did he realize he had been deceived — but his naval commanders were already dead and Cao's capacity for water warfare was crippled.",
+        "Zhou Yu received the news and laughed. But the next move still required his own decision."
+      ],
+      dialogs: [
+        { who: "蒋干", what: "Lord Cao, please be calm — the letter is compelling evidence; it cannot be ignored … (Before he finished, both generals had already been executed.)" },
+        { who: "曹操", what: "I have fallen for Zhou Yu's ruse!" },
+        { who: "周瑜", what: "Cai Mao and Zhang Yun are gone; Cao's navy is badly diminished. Speed is of the essence — do we press forward with the fire-attack to consolidate gains, or march north alone and strike straight at Xu Chang?" }
+      ],
+      decision: { question: "After the ruse succeeds, how should Zhou Yu press the advantage?", maker: "周瑜" },
+      choices: [
+        { label: "Coordinate the fire-attack to compound the gains", hint: "Counter-intelligence + fire-attack, a double blow",  next: "end_E" },
+        { label: "March north alone; strike directly at Xu Chang",   hint: "Press the momentum northward — a high-risk route", next: "end_F" }
+      ]
+    },
+    "n4": {
+      type: "scene",
+      chapter: "Act IV  ·  The East Wind Rises",
+      sceneTitle: "The Chained Fleet and the Fire at Red Cliffs",
+      progressIndex: 3,
+      castOnStage: ["曹操", "孙权", "周瑜", "刘备"],
+      narrative: [
+        "Huang Gai sent a secret message to Cao's camp claiming he wished to surrender with his troops. Cao Cao rejoiced and prepared a welcome. On the night of the 20th day of the 11th month, a strong southeast wind sprang up. Huang Gai led ten armored fire-ships packed with dry straw soaked in fish oil, racing downwind under battle flags.",
+        "When they drew within two li of Cao's camp, Huang Gai ignited the ships. Fire carried on the wind; within moments columns of smoke and flame swallowed the sky. With the fleet chained prow to stern there was no escape — more than half was burned. The shore camps were engulfed; Cao's forces collapsed in panic. Cao Cao led his shattered remnants north via the Huarong Road.",
+        "As a great allied victory loomed, Liu Bei's choice of how to coordinate the pursuit would shape the contours of the realm for decades to come."
+      ],
+      dialogs: [
+        { who: "周瑜", what: "Fire!" },
+        { who: "曹操", what: "Heaven does not favor me! Order the ships burned and retreat to Huarong — quickly!" },
+        { who: "刘备", what: "Cao's army is in chaos. Do we pursue all-out, focus on Jing-Xiang, or cut our losses?" }
+      ],
+      decision: { question: "With fires raging and Cao's army in rout, how should Liu Bei coordinate the pursuit?", maker: "刘备" },
+      choices: [
+        { label: "Press the victory; drive straight to Huarong",                     hint: "Relentless pursuit — an aggressive route diverging from history", next: "end_G" },
+        { label: "Pursue in moderation; concentrate on the Jing-Xiang territories",  hint: "Secure strategic ground — the historical choice",                 next: "end_H" },
+        { label: "Consolidate the gains; hold the current frontier",                  hint: "Conservative defense — a cautious route diverging from history",  next: "end_I" }
+      ]
+    },
+    "end_A": {
+      type: "ending", tag: "Alternative Ending · Diverges from History", tagClass: "",
+      title: "Jiangdong Falls to Cao · The Han Name Endures",
+      castOnStage: ["曹操", "孙权"],
+      narrative: [
+        "Under pressure from his ministers and in fear of Cao Cao's might, Sun Quan sent an envoy with a letter of submission, surrendering Jiangdong intact. Wu's navy never fired a single arrow; its fleet passed to Cao Cao's command. Liu Bei, left with no allies, retreated to Cangwu and died in Jiaozhi not long after.",
+        "In the spring of Jian'an 14, Cao Cao was enfeoffed as King of Wei and awarded the Nine Bestowments, commanding the realm. Three years later Cao Cao died; his son Cao Pi received the abdication and proclaimed the empire of Wei — China entered an era with no 'Three Kingdoms.'"
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Had Sun Quan surrendered, the Battle of Red Cliffs would never have been fought. The late-Han warlord contest would have ended prematurely, and north and south would have merged before any true integration took place. In the short term, wars would have ceased and the people gained some respite — but Jiangdong's gentry would have been suppressed under northern aristocratic dominance for generations, and the extraordinary interplay of personalities, culture, and institutions that defined the Three Kingdoms era would never have unfolded."
+    },
+    "end_B": {
+      type: "ending", tag: "Alternative Ending · Diverges from History", tagClass: "",
+      title: "The Yangtze Divides China · North and South in Stalemate",
+      castOnStage: ["曹操", "周瑜", "鲁肃"],
+      narrative: [
+        "Zhou Yu adopted Lu Su's strategy of holding the river ramparts. Cao's forces could not break through; plague spread and the winter supply lines became untenable. Cao was forced to burn his own ships and retreat north. Yet Wu achieved no decisive victory — Cao's strength was unbroken, and after several years of recovery he rebuilt his southern invasion line.",
+        "For decades thereafter, Cao-Wei and Eastern Wu faced each other across the Yangtze, which became a new political boundary. Liu Bei, trapped in Xiakou, never parlayed the battle into control of Jing Province, and ultimately ruled only a corner of Jiao Province. The Three Kingdoms configuration never materialized; the north-south partition dragged on for half a century."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> A prolonged war of attrition avoided the risks of a head-on battle, but also missed the moment to deliver a decisive blow. Without Red Cliff's fires, the power gap between north and south was never fundamentally reversed, and the Sun-Liu alliance had no occasion to evolve into a long-term strategic partnership. 'The Three Kingdoms' gave way to 'The Two Divisions' — and the rhythm of medieval Chinese history would have been drawn out by this slow war of consumption."
+    },
+    "end_C": {
+      type: "ending", tag: "Alternative Ending · Diverges from History", tagClass: "",
+      title: "Retreat to Jiangdong · Survival in a Corner",
+      castOnStage: ["孙权", "鲁肃"],
+      narrative: [
+        "Lu Su advocated cutting losses; Sun Quan ordered the front compressed, ceding Xiakou and Jiangxia and pulling back to defend the lower Yangtze. Cao Cao gained the Jing-Xiang region at almost no cost; Liu Bei lost his foothold and wandered into Jiao Province.",
+        "Though Eastern Wu saved its core, it surrendered all strategic initiative. With the north and Jing-Xiang in hand, Cao Cao sent his armies south again three years later. Wu could not hold alone; Sun Quan was compelled to accept Wei suzerainty, receiving the title King of Wu — a vassal in all but name."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> 'Trading space for time' against a Cao Cao still at his peak often amounts to slow-motion defeat. Once strategic depth is ceded, it is rarely recovered. This branch reminds us: the greatness of Sun Quan's historical table-slam was not only in its courage, but in his precise read of the strategic moment — once that window closed, no retreating army ever pried it back open."
+    },
+    "end_D": {
+      type: "ending", tag: "Alternative Ending · Diverges from History", tagClass: "",
+      title: "The Frontal Assault · Catastrophe at Red Cliffs",
+      castOnStage: ["曹操", "周瑜"],
+      narrative: [
+        "Zhou Yu staked everything on the first surge of valor and ordered his navy into a frontal assault on Cao's fleet. But Cao's ships bristled with crossbows; northern troops fired down from the high decks. Jiangdong's crack troops fell under the arrow storm; Huang Gai was struck by an arrow and fell into the river; Zhou Yu himself was gravely wounded.",
+        "The allied forces broke and retreated. Cao's army crossed the river in pursuit. With her finest soldiers gone and her Grand Commander fallen, Wu was forced to sue for peace. Liu Bei's isolated force was cut off and destroyed. Cao Cao subdued Jiangnan and completed a northern-style reunification."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Against an enemy with an overwhelming numerical advantage, a frontal assault is nearly always a catastrophic mistake. This branch reminds us: Zhou Yu's place in history rests not only on his willingness to fight, but on his choice between 'willing to fight' and 'fighting wisely.' The brilliance of the fire-attack lay in achieving maximum effect at minimum cost — a frontal assault plays directly into the enemy's strengths."
+    },
+    "end_E": {
+      type: "ending", tag: "Alternative Ending · Diverges from History", tagClass: "",
+      title: "Counter-Intelligence + Fire-Attack · Eastern Wu Ascendant",
+      castOnStage: ["周瑜", "孙权"],
+      narrative: [
+        "With Cai Mao and Zhang Yun eliminated, Cao's naval capability collapsed. Zhou Yu immediately launched the fire-attack; leaderless, Cao's fleet was consumed to ash — along with his shore camps and supply trains. Cao Cao escaped north with only a few hundred personal guards, utterly humiliated.",
+        "After the battle, Zhou Yu refused to let Liu Bei share in the spoils, and Wu pressed on alone to take Jing Province and Xiangyang. Sun Quan enfeoffed his generals across a vast territory; Jiangdong's power expanded to dominate the southern half of China. Liu Bei, with nowhere to stand, retreated into Yi Province to shelter under Liu Zhang, and was never again a contender for the realm."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Combining counter-intelligence with the fire-attack yielded dazzling military results, yet it also shattered the delicate balance of the Sun-Liu alliance. Eastern Wu's unrivalled ascendancy planted its own seeds of peril — without Liu Bei as a buffer, Wu had to confront the full pressure of Cao-Wei directly and fight alone on the western flank. This branch reveals a deeper truth about alliances: sometimes sharing the fruits of victory matters more than claiming them all."
+    },
+    "end_F": {
+      type: "ending", tag: "Alternative Ending · Diverges from History", tagClass: "",
+      title: "The Lone March North · Deep in Enemy Territory, the Army Breaks",
+      castOnStage: ["周瑜", "曹操"],
+      narrative: [
+        "Emboldened by the counter-intelligence coup, Zhou Yu drove his forces northward, aiming to strike straight at Xu Chang. After Wu's navy crossed the Huai River, the cavalry was too thin and the supply lines stretched to breaking. Cao Cao's main land force was unbroken, and reinforcements under Ma Chao and Zhang Liao were closing in.",
+        "Zhou Yu pressed too far north and was surrounded by Cao's forces near Wan. Wu's relief army was too far away to intervene. Zhou Yu was struck by an arrow and succumbed to his wounds in the field. Jiangdong lost its greatest pillar; Wu's power contracted. Cao Cao rebuilt his southern invasion line, and the Three Kingdoms configuration died in the cradle."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> The line between 'pressing a victory' and 'dangerous overextension' is razor-thin. Zhou Yu's early death is a well-known historical tragedy; this branch gives him another way to fall — reminding us that the gap between tactical success and strategic success requires a cool head. Restraint after victory is often a greater proof of wisdom than winning the battle itself."
+    },
+    "end_G": {
+      type: "ending", tag: "Alternative Ending · Diverges from History", tagClass: "",
+      title: "The Relentless Pursuit to Huarong · The North in Turmoil",
+      castOnStage: ["曹操", "刘备", "孙权"],
+      narrative: [
+        "Liu Bei led his finest troops in relentless pursuit of Cao Cao along the Huarong Road. Through rain and mud, Cao's shattered remnants were nearly annihilated; Cao Cao himself barely escaped with his life. Strongmen in Yingchuan and Runan seized on the news to launch uprisings; back in Luoyang, Cao Cao was consumed with putting down revolts and could not look south.",
+        "The allied army pressed forward to Fancheng, but supply lines were dangerously long, and Sun Quan and Liu Bei fell out over the division of the spoils. Three years later Cao Cao marched south again. The Sun-Liu alliance disintegrated amid squabbling; Liu Bei was cut off in Jing Province; Sun Quan fought Cao alone. The Three Kingdoms never truly took shape before they were already collapsing."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> The most extreme tactical success does not necessarily yield the best strategic result. The relentless pursuit bought a brief moment of triumph while exposing the alliance's fragility and the limits of logistics. The historical 'moderate pursuit' was precisely a subtle balance between wartime gains and long-term sustainability. This branch reminds us: the measure of victory must be calibrated to a far longer arc."
+    },
+    "end_H": {
+      type: "ending", tag: "Canonical Ending · CANONICAL", tagClass: "canonical",
+      title: "The Three Kingdoms · China Divided in Three",
+      castOnStage: ["曹操", "孙权", "周瑜", "刘备", "鲁肃"],
+      narrative: [
+        "The allied forces chose moderate pursuit, focusing on destroying Cao's rear guard and supply train and forcing his withdrawal north. The Jing Province settlements left behind by Cao were divided between Sun and Liu: Liu Bei received the four commanderies of Wuling, Changsha, Guiyang, and Lingling, giving him a foothold spanning Jing and Yi; Sun Quan received Jiangxia and half of Nan Commandery, commanding the middle Yangtze.",
+        "After the battle, Cao Cao lacked the strength for another southern campaign in the near term; Sun Quan held Jiangdong securely; Liu Bei finally had a place to stand. Twelve years later, Cao Pi proclaimed the empire of Wei; Liu Bei proclaimed the empire of Han (Shu); Sun Quan was first king, then emperor of Wu — the Three Kingdoms configuration was formally established, and China entered nearly a century of its most turbulent and brilliant age."
+      ],
+      reflection: "<b>The true course of history:</b> The Battle of Red Cliffs stands as one of the most celebrated examples in Chinese history of a smaller, weaker force defeating a larger, stronger one. Its significance extends far beyond the military: it halted a premature northern unification, preserved a pluralistic order, and gave birth to the Three Kingdoms era's extraordinary flowering of personalities, culture, and institutional experiment.<br><br>This ending also tells us: at history's pivotal moments, <b>restraint and a sense of timing</b> are often more decisive than a single all-or-nothing gamble. The allied forces' 'moderate pursuit' appears understated — yet it reveals a strategic wisdom that saw clearly what time and circumstances demanded."
+    },
+    "end_I": {
+      type: "ending", tag: "Alternative Ending · Diverges from History", tagClass: "",
+      title: "Knowing When to Stop · A Missed Opportunity",
+      castOnStage: ["曹操", "刘备", "孙权"],
+      narrative: [
+        "Liu Bei urged the allies to accept their gains. After the fire-attack the allied forces did not pursue; they consolidated the defensive line in place. Cao Cao was able to collect his remnants at leisure and retreated safely north via the Huarong Road, withdrawing most of his Jing Province garrison to Nanyang.",
+        "The allied forces never converted the victory into control of Jing Province's key positions. Liu Bei remained confined to Jiangxia. Three years later Cao Cao recovered his strength and marched south again; the Sun-Liu alliance quickly unraveled under renewed pressure. Eastern Wu barely preserved itself; Liu Bei lost his last chance to contest the realm, and the Three Kingdoms configuration gave way to a prolonged north-south confrontation."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Excessive caution is another form of defeat. The fruits of victory must be harvested at the right moment — or they wither. The historical 'moderate pursuit' was precisely superior: it avoided the costs of reckless pursuit while seizing the window to claim strategic ground. This branch reveals that <b>conservatism</b> can sometimes be more dangerous than <b>recklessness</b>."
+    }
+  };
+
+  /* ============================================================
+     Story progress labels
+     ============================================================ */
+  const STORY_PROGRESS_LABELS = [
+    "荆州风云与北伐南下",
+    "孙权拍案与孙刘联盟",
+    "赤壁对峙与火攻构想",
+    "连环战船与东风火势",
+    "战后三分与历史定局"
+  ];
+
+  const STORY_PROGRESS_LABELS_EN = [
+    "The Fall of Jing and Cao Cao's March South",
+    "Sun Quan's Vow and the Sun-Liu Alliance",
+    "Standoff at Red Cliffs and the Fire-Attack Plan",
+    "The Chained Fleet and the East Wind",
+    "The Post-War Division and History's Verdict"
+  ];
+
+  const state = {
+    pathTrace: []  // array of {passageId, choiceIndex}
+  };
+
+  function renderCast(names) {
+    const list = document.getElementById("cast-list");
+    const cast = getCast();
+    list.innerHTML = "";
+    (names || []).forEach(key => {
+      const c = cast[key];
+      if (!c) return;
+      const row = document.createElement("div");
+      row.className = "cast-row";
+      row.innerHTML = `
+        <div class="av">${c.avatar}</div>
+        <div class="info">
+          <div class="name">${currentLang === 'en' ? c.name : key}</div>
+          <div class="role">${c.title}</div>
+          <div class="desc">${c.desc}</div>
+        </div>`;
+      list.appendChild(row);
+    });
+  }
+
+  function renderProgress(currentIndex) {
+    const list = document.getElementById("progress-list");
+    const labels = getLabels();
+    list.innerHTML = "";
+    labels.forEach((label, i) => {
+      const row = document.createElement("div");
+      let cls = "step";
+      if (currentIndex != null) {
+        if (i < currentIndex) cls += " done";
+        else if (i === currentIndex) cls += " current";
+      }
+      row.className = cls;
+      row.innerHTML = `<span class="dot">●</span><span>${i + 1}. ${label}</span>`;
+      list.appendChild(row);
+    });
+    const meta = document.getElementById("meta-progress");
+    if (meta) {
+      const display = currentIndex == null ? 0 : Math.min(currentIndex + 1, labels.length);
+      meta.textContent = currentLang === 'en'
+        ? `Act ${display} / ${labels.length}`
+        : `第 ${display} / ${labels.length} 幕`;
+    }
+  }
+
+  function go(passageId, choiceIndex) {
+    if (choiceIndex != null) {
+      const last = state.pathTrace[state.pathTrace.length - 1];
+      if (last && last.choiceIndex == null) last.choiceIndex = choiceIndex;
+    }
+    render(passageId);
+  }
+
+  function render(passageId) {
+    currentPassageId = passageId;
+    const passages = getPassages();
+    const p = passages[passageId];
+    if (!p) return;
+
+    const area = document.getElementById("passage-area");
+    area.innerHTML = "";
+
+    const card = document.createElement("section");
+    card.className = "stage fade-in" + (p.type === "ending" ? " ending" : "") + (p.type === "start" ? " start" : "");
+
+    if (p.type === "start") {
+      const startLabel = currentLang === 'en' ? 'Begin this story →' : '开始这段历史 →';
+      card.innerHTML = `
+        <div class="stage-body">
+          <div class="ep-emoji">${p.epEmoji}</div>
+          <div class="ep-title">${p.epTitle}</div>
+          <div class="ep-sub">${p.epSub}</div>
+          <p class="ep-desc">${p.desc}</p>
+          <button class="start-btn" id="start-btn">${startLabel}</button>
+        </div>`;
+      area.appendChild(card);
+      renderCast(["曹操", "孙权", "周瑜", "刘备", "鲁肃"]);
+      renderProgress(null);
+      document.getElementById("start-btn").onclick = () => {
+        state.pathTrace = [];
+        render(p.next);
+      };
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (p.type === "scene") {
+      state.pathTrace.push({ passageId: passageId, choiceIndex: null });
+
+      const headHtml = `
+        <div class="stage-head">
+          <div>
+            <div class="chapter">${p.chapter}</div>
+            <div class="scene-title">${p.sceneTitle}</div>
+          </div>
+          <div class="right-tag">SCENE  ${String(p.progressIndex + 1).padStart(2, "0")}</div>
+        </div>`;
+
+      let bodyHtml = `<div class="stage-body">`;
+      p.narrative.forEach((para, i) => {
+        bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`;
+      });
+
+      if (p.dialogs && p.dialogs.length) {
+        bodyHtml += `<div class="dialogs">`;
+        p.dialogs.forEach(d => {
+          if (d.direction) {
+            bodyHtml += `<div class="stage-direction">— ${d.direction} —</div>`;
+          } else {
+            const av = (CAST[d.who] && CAST[d.who].avatar) || "·";
+            const speakerName = currentLang === 'en' ? (CAST_EN[d.who] ? CAST_EN[d.who].name : d.who) : d.who;
+            bodyHtml += `<div class="line">
+              <div class="who"><span class="av">${av}</span>${speakerName}</div>
+              <div class="what">${d.what}</div>
+            </div>`;
+          }
+        });
+        bodyHtml += `</div>`;
+      }
+
+      if (p.decision) {
+        const makerAv = (CAST[p.decision.maker] && CAST[p.decision.maker].avatar) || "·";
+        const makerName = currentLang === 'en' ? (CAST_EN[p.decision.maker] ? CAST_EN[p.decision.maker].name : p.decision.maker) : p.decision.maker;
+        const decLabel = currentLang === 'en' ? '▼ KEY DECISION' : '▼ 关键抉择 KEY DECISION';
+        const makerLabel = currentLang === 'en'
+          ? `Decision by ${makerAv} <b>${makerName}</b>`
+          : `由 ${makerAv} <b>${makerName}</b> 拍板`;
+        bodyHtml += `
+          <div class="decision">
+            <div class="label">${decLabel}</div>
+            <div class="question">${p.decision.question}</div>
+            <div class="maker">${makerLabel}</div>
+          </div>`;
+      }
+
+      if (p.choices && p.choices.length) {
+        bodyHtml += `<div class="choices">`;
+        p.choices.forEach((c, i) => {
+          bodyHtml += `<button class="choice-btn" data-next="${c.next}" data-index="${i}">
+            <span class="arrow">▶</span>${c.label}
+            ${c.hint ? `<span class="hint">${c.hint}</span>` : ""}
+          </button>`;
+        });
+        bodyHtml += `</div>`;
+      }
+
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+
+      renderCast(p.castOnStage);
+      renderProgress(p.progressIndex);
+
+      card.querySelectorAll(".choice-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const next = btn.getAttribute("data-next");
+          const idx = parseInt(btn.getAttribute("data-index"), 10);
+          go(next, idx);
+        });
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (p.type === "ending") {
+      const endChapter = currentLang === 'en' ? 'END  ·  THE END' : '终  ·  THE END';
+      const headHtml = `
+        <div class="stage-head">
+          <div>
+            <div class="chapter">${endChapter}</div>
+            <div class="scene-title">${p.title}</div>
+          </div>
+          <div class="right-tag">EPISODE COMPLETE</div>
+        </div>`;
+
+      let bodyHtml = `<div class="stage-body">
+        <div class="ending-tag ${p.tagClass || ""}">${p.tag}</div>
+        <div class="ending-title">${p.title}</div>`;
+
+      p.narrative.forEach((para, i) => {
+        bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`;
+      });
+
+      bodyHtml += `<div class="reflection">${p.reflection}</div>`;
+
+      if (state.pathTrace.length) {
+        const ptTitle = currentLang === 'en' ? '▼ YOUR STORY PATH' : '▼ 你走过的剧情线 STORY PATH';
+        const endLabel = currentLang === 'en' ? 'Ending reached:' : '抵达结局：';
+        bodyHtml += `<div class="path-trace">
+          <div class="pt-title">${ptTitle}</div>
+          <ol>`;
+        state.pathTrace.forEach(t => {
+          const tp = passages[t.passageId];
+          const sceneName = tp ? tp.sceneTitle : t.passageId;
+          let choiceStr = '';
+          if (t.choiceIndex != null && tp && tp.choices && tp.choices[t.choiceIndex]) {
+            choiceStr = ` — <i style="color:var(--accent-2)">${tp.choices[t.choiceIndex].label}</i>`;
+          }
+          bodyHtml += `<li>${sceneName}${choiceStr}</li>`;
+        });
+        bodyHtml += `<li>${endLabel} <b style="color:var(--accent-2)">${p.title}</b></li>`;
+        bodyHtml += `</ol></div>`;
+      }
+
+      const restartLabel = currentLang === 'en' ? '↺  Restart' : '↺  重新开始（Restart）';
+      bodyHtml += `<div class="actions">
+        <button id="restart-btn">${restartLabel}</button>
+      </div>`;
+
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+
+      renderCast(p.castOnStage);
+      renderProgress(getLabels().length - 1);
+
+      document.getElementById("restart-btn").addEventListener("click", () => {
+        state.pathTrace = [];
+        render("start");
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+  }
+
+  // boot
+  updateStaticUI();
+  render("start");
+</script>
+</body>
+</html>

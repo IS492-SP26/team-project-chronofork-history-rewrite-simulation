@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChronoFork · IDN Baseline 故事集</title>
+<style>
+  :root {
+    --bg-0: #0e0c0a;
+    --bg-1: #15120e;
+    --bg-2: #1d1812;
+    --bg-card: #221c16;
+    --ink-0: #f3e7d2;
+    --ink-1: #d2c4a9;
+    --ink-2: #978769;
+    --ink-3: #6a5e44;
+    --rule: #3f3424;
+    --accent: #c0392b;
+    --accent-2: #e8c14a;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+    --shadow-hover: 0 10px 36px rgba(0, 0, 0, 0.65);
+    --serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif SC", "Georgia", serif;
+    --sans: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans SC", -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink-0); font-family: var(--serif); line-height: 1.7; min-height: 100vh; }
+  body { background: radial-gradient(circle at 20% 0%, rgba(192, 57, 43, 0.1), transparent 50%), radial-gradient(circle at 80% 100%, rgba(232, 193, 74, 0.06), transparent 50%), var(--bg-0); }
+  .app { max-width: 1280px; margin: 0 auto; padding: 32px 28px 60px; }
+  header.hero { text-align: center; padding: 36px 22px 30px; border-bottom: 1px solid var(--rule); margin-bottom: 32px; }
+  .hero .brand { display: inline-flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .hero .brand .logo { width: 44px; height: 44px; border: 1px solid var(--accent-2); border-radius: 50%; color: var(--accent-2); display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-family: var(--sans); font-weight: 700; letter-spacing: -1px; }
+  .hero .brand .brand-text { font-family: var(--sans); font-size: 14px; color: var(--ink-2); letter-spacing: 6px; }
+  .hero h1 { font-size: 36px; margin: 8px 0 6px; color: var(--accent-2); letter-spacing: 6px; font-weight: 700; }
+  .hero .subtitle { font-size: 13px; color: var(--ink-2); letter-spacing: 6px; font-family: var(--sans); margin-bottom: 18px; }
+  .hero .lede { max-width: 720px; margin: 14px auto 0; font-size: 15px; color: var(--ink-1); line-height: 1.85; text-indent: 2em; text-align: left; }
+  .hero .meta-row { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; font-family: var(--sans); font-size: 12px; color: var(--ink-3); letter-spacing: 2px; }
+  .hero .meta-row .pill { display: inline-block; padding: 4px 10px; border: 1px solid var(--rule); border-radius: 4px; color: var(--ink-2); }
+  .sec-title { font-family: var(--sans); font-size: 13px; color: var(--accent-2); letter-spacing: 6px; text-align: center; margin: 0 0 22px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 1080px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 680px)  { .grid { grid-template-columns: 1fr; } }
+  .card { position: relative; display: block; text-decoration: none; color: var(--ink-0); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--rule); background: var(--bg-card); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; min-height: 380px; }
+  .card::before { content: ""; position: absolute; inset: 0; background: var(--card-bg, linear-gradient(135deg, #444, #222)); opacity: 0.88; z-index: 0; }
+  .card::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 0% 0%, rgba(255, 255, 255, 0.18), transparent 60%); z-index: 0; opacity: 0.5; transition: opacity 0.2s ease; pointer-events: none; }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--ink-2); }
+  .card:hover::after { opacity: 0.85; }
+  .card-inner { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; padding: 22px 22px 18px; }
+  .card-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 12px; }
+  .card-emoji { font-size: 38px; line-height: 1; flex: 0 0 auto; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4)); }
+  .card-title-block { flex: 1; min-width: 0; }
+  .card-title { font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 2px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); margin-bottom: 2px; }
+  .card-sub { font-size: 11px; color: rgba(255, 255, 255, 0.65); letter-spacing: 3px; font-family: var(--sans); }
+  .card-tag { display: inline-block; margin-top: 6px; padding: 2px 8px; background: rgba(0, 0, 0, 0.35); color: rgba(255, 255, 255, 0.85); font-size: 11px; letter-spacing: 2px; border-radius: 3px; font-family: var(--sans); }
+  .card-desc { font-size: 13.5px; line-height: 1.75; color: rgba(255, 255, 255, 0.94); text-indent: 2em; margin: 8px 0 14px; flex: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+  .card-cast { border-top: 1px solid rgba(255, 255, 255, 0.18); padding-top: 12px; margin-top: auto; }
+  .card-cast-label { font-size: 10px; letter-spacing: 3px; color: rgba(255, 255, 255, 0.6); font-family: var(--sans); margin-bottom: 6px; }
+  .card-cast-list { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+  .cast-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(0, 0, 0, 0.38); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; font-size: 11.5px; color: rgba(255, 255, 255, 0.94); font-family: var(--sans); white-space: nowrap; }
+  .cast-chip .av { font-size: 13px; }
+  .card-cta { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; font-family: var(--sans); font-size: 12px; color: rgba(255, 255, 255, 0.72); letter-spacing: 4px; }
+  .card-cta .arrow { font-size: 16px; transition: transform 0.2s ease; }
+  .card:hover .card-cta { color: #ffffff; }
+  .card:hover .card-cta .arrow { transform: translateX(4px); }
+  .card-01 { --card-bg: linear-gradient(135deg, #7a1a18 0%, #c0392b 55%, #8b3115 100%); }
+  .card-02 { --card-bg: linear-gradient(135deg, #1d3a4d 0%, #355264 50%, #5a3a2a 100%); }
+  .card-03 { --card-bg: linear-gradient(135deg, #3a1f4a 0%, #6b3a52 60%, #4a1f30 100%); }
+  .card-04 { --card-bg: linear-gradient(135deg, #0d2433 0%, #1d4a64 50%, #2a6e72 100%); }
+  .card-05 { --card-bg: linear-gradient(135deg, #1a2540 0%, #2a3a5a 40%, #5a2018 100%); }
+  .card-06 { --card-bg: linear-gradient(135deg, #2e1410 0%, #5a2010 45%, #8c4413 100%); }
+  footer.foot { margin-top: 50px; padding-top: 22px; border-top: 1px solid var(--rule); text-align: center; color: var(--ink-3); font-size: 12px; letter-spacing: 2px; font-family: var(--sans); }
+  footer.foot .pipe { margin: 0 8px; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .lang-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 100;
+    padding: 7px 14px;
+    background: rgba(14, 12, 10, 0.75);
+    color: var(--ink-1);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .lang-toggle:hover { background: var(--accent-2); color: #111; border-color: var(--accent-2); }
+  .grid .card { animation: fadeIn 0.45s ease both; }
+  .grid .card:nth-child(1) { animation-delay: 0.05s; }
+  .grid .card:nth-child(2) { animation-delay: 0.10s; }
+  .grid .card:nth-child(3) { animation-delay: 0.15s; }
+  .grid .card:nth-child(4) { animation-delay: 0.20s; }
+  .grid .card:nth-child(5) { animation-delay: 0.25s; }
+  .grid .card:nth-child(6) { animation-delay: 0.30s; }
+</style>
+</head>
+<body>
+<button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">中文</button>
+
+<div class="app">
+
+  <header class="hero">
+    <div class="brand">
+      <span class="logo">CF</span>
+      <span class="brand-text">CHRONOFORK   ·   IDN   BASELINE</span>
+    </div>
+    <h1>历史叙事故事集</h1>
+    <div class="subtitle">SIX  EPISODES   ·   STATIC  BRANCHING  NARRATIVE</div>
+    <p class="lede">本故事集是 ChronoFork 项目的对照实验基线（IDN baseline）：基于经典 Twine 风格的静态分支叙事系统，每一段历史均由专家审定的预设剧情构成。点击下方任一故事卡片进入对应剧本 —— 你将以预设选项体验关键决策点的不同走向，最终抵达一个 canonical 历史结局或一个 alternative 反事实结局。</p>
+    <div class="meta-row">
+      <span class="pill">6 EPISODES</span>
+      <span class="pill">9 PATHS PER STORY</span>
+      <span class="pill">1 CANONICAL  ·  8 DIVERGENT ENDINGS</span>
+      <span class="pill">CONTROLLED BASELINE</span>
+    </div>
+  </header>
+
+  <h2 class="sec-title">▼  E P I S O D E S  ▼</h2>
+
+  <div class="grid" id="ep-grid"></div>
+
+  <footer class="foot">
+    ChronoFork · IDN Baseline · Static Branching Narrative
+    <span class="pipe">|</span> 6 Episodes  ·  9 Paths Each
+    <span class="pipe">|</span> Controlled Baseline for Within-Subject Study
+  </footer>
+</div>
+<script>
+const LANG_DATA = {
+  en: {
+    pageTitle: "ChronoFork · IDN Baseline Story Collection",
+    h1: "Historical Narrative Stories",
+    lede: "This collection is the controlled baseline (IDN baseline) for the ChronoFork project: a classic Twine-style static branching narrative system in which each historical episode is built from expert-reviewed, preset storylines. Click any episode card to enter its script — you will navigate key decision points through preset choices, ultimately reaching a canonical historical ending or an alternative counterfactual ending.",
+    castLabel: "▼ PLAYABLE CAST",
+    cta: "Begin",
+    episodes: [
+      { title:"Battle of Red Cliffs", tag:"Ancient China  ·  Middle Yangtze", desc:"In the late Han dynasty, Cao Cao marched south while Sun Quan and Liu Bei forged an alliance at Red Cliffs, launching a devastating fire attack that repelled the northern army and established the Three Kingdoms standoff — China's most celebrated naval victory against overwhelming odds.", cast:[["⚔️","Cao Cao"],["🛡️","Sun Quan"],["⛵","Zhou Yu"],["🐉","Liu Bei"],["📜","Lu Su"]], href:"twine_chibi_v01.html", cls:"card-01", emoji:"🔥", sub:"CHI BI  ·  A.D. 208" },
+      { title:"First Opium War", tag:"Modern China  ·  Pearl River Delta", desc:"Lin Zexu's destruction of British opium at Humen triggered military retaliation. Outmatched in arms and organization, Qing China was defeated and forced into the Treaty of Nanjing — the opening of China's modern era and its reluctant entry into global affairs.", cast:[["👑","Emp. Daoguang"],["📜","Lin Zexu"],["🎩","Chas. Elliot"],["📘","Palmerston"],["⚓","H. Pottinger"]], href:"twine_yapian_v01.html", cls:"card-02", emoji:"🚢", sub:"OPIUM WAR  ·  1839 – 1842" },
+      { title:"Hundred Days Reform", tag:"Late Qing Court  ·  Forbidden City", desc:"After the Sino-Japanese War, the Guangxu Emperor launched sweeping reforms under the Reformers' influence. Lacking military support, the movement was crushed by Empress Dowager Cixi's coup after 103 days, costing China a chance at peaceful modernization.", cast:[["👑","Emp. Guangxu"],["🦚","Emp. Cixi"],["📜","Kang Youwei"],["🖋️","Liang Qichao"],["🛡️","Ronglu"]], href:"twine_wuxu_v01.html", cls:"card-03", emoji:"📜", sub:"HUNDRED  DAYS  ·  REFORM  ·  1898" },
+      { title:"Sinking of the Titanic", tag:"North Atlantic  ·  Maiden Voyage", desc:"On its 1912 maiden voyage, the 'unsinkable' liner ignored seven ice warnings and maintained near-full speed. After striking an iceberg, she sank in under three hours, killing ~1,500 people and triggering the first international maritime safety convention.", cast:[["🧭","Capt. Smith"],["💼","J.B. Ismay"],["📐","T. Andrews"],["⚓","H. Wilde"],["🚢","A. Rostron"]], href:"twine_titanic_v01.html", cls:"card-04", emoji:"🚢", sub:"RMS  TITANIC  ·  APR  1912" },
+      { title:"Cuban Missile Crisis", tag:"Cold War Peak  ·  13-Day Standoff", desc:"The US and USSR entered a 13-day nuclear standoff over Soviet missile deployments in Cuba. Kennedy chose naval blockade over airstrike; back-channel diplomacy ultimately resolved the crisis and established the template for Cold War crisis management.", cast:[["🇺🇸","Kennedy"],["🇷🇺","Khrushchev"],["🇨🇺","Castro"],["⚖️","R.F. Kennedy"],["🕊️","Dobrynin"]], href:"twine_cuba_v01.html", cls:"card-05", emoji:"🚀", sub:"CUBAN  MISSILE  CRISIS  ·  OCT  1962" },
+      { title:"Pearl Harbor", tag:"WWII Turning Point  ·  Hawaii", desc:"Japan launched a surprise carrier strike to neutralize the US Pacific Fleet and prevent interference in its southern expansion. The raid galvanized American resolve, drove full US entry into the war, and accelerated the collapse of the Axis powers.", cast:[["⚓","Yamamoto"],["🎖️","Tojo"],["🦅","Roosevelt"],["📜","Pr. Konoe"],["📐","Kawasaki"]], href:"twine_pearl_v01.html", cls:"card-06", emoji:"🌊", sub:"PEARL  HARBOR  ·  DEC  7,  1941" }
+    ]
+  },
+  zh: {
+    pageTitle: "ChronoFork · IDN Baseline 故事集",
+    h1: "历史叙事故事集",
+    lede: "本故事集是 ChronoFork 项目的对照实验基线（IDN baseline）：基于经典 Twine 风格的静态分支叙事系统，每一段历史均由专家审定的预设剧情构成。点击下方任一故事卡片进入对应剧本 —— 你将以预设选项体验关键决策点的不同走向，最终抵达一个 canonical 历史结局或一个 alternative 反事实结局。",
+    castLabel: "▼ 可扮演角色 PLAYABLE CAST",
+    cta: "开始体验",
+    episodes: [
+      { title:"赤壁之战", tag:"中国古代  ·  长江中游", desc:"东汉末年曹操南下伐吴，孙权与刘备结盟于赤壁火攻奇袭，重创曹军水陆联军，迫其北撤。此战奠定三国鼎立格局，是中国古代最著名的以少胜多的水战。", cast:[["⚔️","曹操"],["🛡️","孙权"],["⛵","周瑜"],["🐉","刘备"],["📜","鲁肃"]], href:"twine_chibi_v01.html", cls:"card-01", emoji:"🔥", sub:"CHI BI  ·  A.D. 208" },
+      { title:"第一次鸦片战争", tag:"中国近代  ·  珠江口", desc:"林则徐虎门销烟引发英方武力报复，清朝因武器与体系落后战败，被迫签订《南京条约》，中国近代史由此开端，被动卷入全球化进程。", cast:[["👑","道光帝"],["📜","林则徐"],["🎩","查理·义律"],["📘","巴麦尊"],["⚓","璞鼎查"]], href:"twine_yapian_v01.html", cls:"card-02", emoji:"🚢", sub:"OPIUM WAR  ·  1839 – 1842" },
+      { title:"戊戌变法", tag:"晚清宫廷  ·  紫禁城", desc:"甲午战败后光绪帝起用维新派试图全方位改革，因急于求成且缺乏兵权支持，遭慈禧太后联合守旧派发动政变镇压，中国错失一次和平转型的机会。", cast:[["👑","光绪帝"],["🦚","慈禧太后"],["📜","康有为"],["🖋️","梁启超"],["🛡️","荣禄"]], href:"twine_wuxu_v01.html", cls:"card-03", emoji:"📜", sub:"HUNDRED  DAYS  ·  REFORM  ·  1898" },
+      { title:"泰坦尼克号沉没", tag:"北大西洋  ·  首航夜", desc:"1912 年首航中因忽视冰山警报、航速过快及救生艇配置不足，巨轮在撞冰山后数小时沉没，约 1,500 人罹难，引发全球海事安全改革。", cast:[["🧭","史密斯"],["💼","伊斯梅"],["📐","安德鲁斯"],["⚓","威尔德"],["🚢","罗斯特伦"]], href:"twine_titanic_v01.html", cls:"card-04", emoji:"🚢", sub:"RMS  TITANIC  ·  APR  1912" },
+      { title:"古巴导弹危机", tag:"冷战巅峰  ·  13 天对峙", desc:"苏美两国因古巴核导弹部署陷入极限博弈，肯尼迪在空袭与封锁间艰难抉择，最终通过秘密外交化解危机，确立了冷战的危机管理模式。", cast:[["🇺🇸","肯尼迪"],["🇷🇺","赫鲁晓夫"],["🇨🇺","卡斯特罗"],["⚖️","罗伯特·肯尼迪"],["🕊️","多布雷宁"]], href:"twine_cuba_v01.html", cls:"card-05", emoji:"🚀", sub:"CUBAN  MISSILE  CRISIS  ·  OCT  1962" },
+      { title:"珍珠港事件", tag:"二战转折  ·  夏威夷", desc:"日本为排除美国干预发起突袭，重创美军舰队却彻底唤醒了美国的战争潜力，推动其全面参战，加速了轴心国的覆灭与太平洋战争的爆发。", cast:[["⚓","山本五十六"],["🎖️","东条英机"],["🦅","罗斯福"],["📜","近卫文麿"],["📐","川崎清"]], href:"twine_pearl_v01.html", cls:"card-06", emoji:"🌊", sub:"PEARL  HARBOR  ·  DEC  7,  1941" }
+    ]
+  }
+};
+
+let currentLang = localStorage.getItem('lang') || 'en';
+
+function buildGrid() {
+  const d = LANG_DATA[currentLang];
+  document.getElementById('ep-grid').innerHTML = d.episodes.map((ep, i) => `
+    <a class="card ${ep.cls}" href="${ep.href}" style="animation-delay:${0.05 + i * 0.05}s">
+      <div class="card-inner">
+        <div class="card-top">
+          <div class="card-emoji">${ep.emoji}</div>
+          <div class="card-title-block">
+            <div class="card-title">${ep.title}</div>
+            <div class="card-sub">${ep.sub}</div>
+            <div class="card-tag">${ep.tag}</div>
+          </div>
+        </div>
+        <p class="card-desc">${ep.desc}</p>
+        <div class="card-cast">
+          <div class="card-cast-label">${d.castLabel}</div>
+          <div class="card-cast-list">${ep.cast.map(c => `<span class="cast-chip"><span class="av">${c[0]}</span>${c[1]}</span>`).join('')}</div>
+        </div>
+        <div class="card-cta"><span>${d.cta}</span><span class="arrow">→</span></div>
+      </div>
+    </a>`).join('');
+}
+
+function applyLang() {
+  const d = LANG_DATA[currentLang];
+  document.title = d.pageTitle;
+  document.querySelector('.hero h1').textContent = d.h1;
+  document.querySelector('.hero .lede').textContent = d.lede;
+  document.getElementById('lang-toggle').textContent = currentLang === 'en' ? '中文' : 'EN';
+  buildGrid();
+}
+
+function toggleLang() {
+  currentLang = currentLang === 'en' ? 'zh' : 'en';
+  localStorage.setItem('lang', currentLang);
+  applyLang();
+}
+
+applyLang();
+</script>
+</body>
+</html>

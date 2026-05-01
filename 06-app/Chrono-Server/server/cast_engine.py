@@ -8,7 +8,7 @@ import textwrap
 from typing import List, Dict, Any, AsyncGenerator
 from server.facilitator import Facilitator
 from server.utilities.llm_cache import cached_chat_create, call_llm
-from server.prompts import get_prompt, normalize_lang
+from server.prompts import get_prompt, get_pacing_hints, normalize_lang
 from server.story_engine import StoryEngine
 from typing import List, Dict
 from server.reflection_worker import ReflectionWorker
@@ -16,7 +16,7 @@ from server.utilities.html_renderer import  render_reflection_report
 
 
 class Agent:
-    def __init__(self, profile: Dict, model: str = "gpt-5.1"):
+    def __init__(self, profile: Dict, model: str = "gpt-5.2"):
         self.name = profile["name"]
         self.profile = profile
         self.model = model
@@ -114,8 +114,10 @@ class CastEngine:
         # True = 我们正在一个已完成的节点上进行“假想”对话，尚未分歧
         # False = 我们在一个正常的活跃节点上 (Stage 1 或 Stage 2 分歧后)
         self.in_backtrack_draft_mode = False
+        self.user_auto_proxy = False  # True 时用户角色也由 LLM 代跑
 
         self.history_msg = []  # 回溯前的历史消息缓存
+        self.is_backtrack_to_first = False  # 是否回溯到第一节点
 
     def start(self):
         """启动引擎"""
@@ -137,16 +139,18 @@ class CastEngine:
             self.output_queue.task_done()
 
     async def push_user_message(self, content: str, target: str):
-        """用户发送消息 (含打断逻辑)"""
-        # 1. 触发打断事件
-        self.interruption_event.set()
-
-        # 2. 入队
-        await self.input_queue.put({"content": content, "target": target})
-
-    async def push_user_message(self, content: str, target: str):
         """Server 将前端收到的消息塞入这里"""
-        await self.input_queue.put({"content": content, "target": target, "interruption": True})
+        self.interruption_event.set()
+        await self.input_queue.put({
+            "type": "user_message",
+            "content": content,
+            "target": target,
+            "interruption": True,
+        })
+
+    async def push_agent_continue(self):
+        """Stage 2: 前端确认允许下一位 agent 继续发言。"""
+        await self.input_queue.put({"type": "continue_agent"})
 
     # ==========================
     # 内部主逻辑 (串行状态机)
@@ -189,6 +193,13 @@ class CastEngine:
 
             # --- STAGE 2 LOGIC (Backtrack Session) ---
             elif self.stage == 2:
+                if self.is_backtrack_to_first:
+                    self.is_backtrack_to_first = False
+                    start_node = self.engine.get_story_context()
+                    start_node_desc = start_node[0].get("desc", "")
+                    first_speaker = await self._run_facilitator_intro(start_node_desc, self.user_role_name)
+                    self.current_speaker = first_speaker
+
                 if self.history_msg:
                     for msg in self.history_msg:
                         await self.output_queue.put(
@@ -231,45 +242,115 @@ class CastEngine:
                 while self.running:
                     self.interruption_event.clear()
 
+                    # Drain any queued set_auto_proxy messages so user_auto_proxy
+                    # is up-to-date before CASE A decides whether to send input_request.
+                    _pending = []
+                    while not self.input_queue.empty():
+                        try:
+                            _pending.append(self.input_queue.get_nowait())
+                        except asyncio.QueueEmpty:
+                            break
+                    for _item in _pending:
+                        if _item.get("type") == "set_auto_proxy":
+                            self.user_auto_proxy = _item["enabled"]
+                            await self.output_queue.put({"type": "auto_proxy_changed", "data": {"enabled": self.user_auto_proxy}})
+                        else:
+                            self.input_queue.put_nowait(_item)
+
                     # --- CASE A: User Turn ---
                     if self.current_speaker == self.user_role_name:
-                        # 确定 Prompt 的来源
-                        if self.in_backtrack_draft_mode:
-                            last_msg = self.pending_messages[-1] if self.pending_messages else self.history_msg[-1]
+                        if self.user_auto_proxy:
+                            # 自动代理：先发 agent_continue_request，等用户批准或接管后再推理
+                            wait_type, user_input = await self._wait_for_stage2_agent_continue_or_user_message(self.user_role_name)
+                            if wait_type == "user_message":
+                                await self._commit_user_message(user_input)
+                                self.current_speaker = user_input["target"]
+                            elif wait_type == "takeover":
+                                # 用户接管自己代理的角色：关闭自动代理，发 input_request
+                                self.user_auto_proxy = False
+                                last_ctx = self.pending_messages if self.in_backtrack_draft_mode else self.engine.get_context_messages()
+                                last_msg = last_ctx[-1] if last_ctx else {}
+                                from_name = last_msg.get("from", "System")
+                                prompt_msg = f'{from_name} is talking to you. Respond or select another character.' if from_name not in ("System", "Facilitator") else 'Select an Agent to address your message to.'
+                                await self.output_queue.put({"type": "input_request", "data": {"msg": prompt_msg, "from_name": from_name}})
+                            else:
+                                # continue_agent：执行 LLM 推理
+                                await self.output_queue.put({"type": "agent_thinking", "data": {"agent": self.user_role_name}})
+                                next_speaker, tag = await self._run_agent_turn(self.user_role_name)
+                                if tag in ("DIVERGENCE_END", "STAGE1_END"):
+                                    divergent_snapshot = list(self.pending_messages)
+                                    self.in_backtrack_draft_mode = False
+                                    self.pending_messages = []
+                                    self.stage = 3
+                                    await self.send_stage_update(3)
+                                    await self._generate_timeline_epilogue(divergent_snapshot)
+                                    await self.output_queue.put({"type": "enable_reflection", "data": {}})
+                                    break
+                                elif tag != "ERROR":
+                                    self.current_speaker = next_speaker
                         else:
-                            last_msg = (
-                                self.engine.get_context_messages()[-1] if self.engine.get_context_messages() else {}
+                            # 确定 Prompt 的来源
+                            if self.in_backtrack_draft_mode:
+                                last_msg = self.pending_messages[-1] if self.pending_messages else self.history_msg[-1]
+                            else:
+                                last_msg = (
+                                    self.engine.get_context_messages()[-1] if self.engine.get_context_messages() else {}
+                                )
+
+                            from_name = last_msg.get("from", "System")
+
+                            if from_name == "System" or from_name == "Facilitator":
+                                msg = 'Select an Agent to address your message to.'
+                            else:
+                                msg = f'{from_name} is talking to you. Respond or select another character.'
+
+                            await self.output_queue.put(
+                                {
+                                    "type": "input_request",
+                                    "data": {"msg": msg, "from_name": from_name},
+                                }
                             )
 
-                        from_name = last_msg.get("from", "System")
+                            user_input = await self._wait_for_user_message()
 
-                        if from_name == "System" or from_name == "Facilitator":
-                            msg = 'Select an Agent to address your message to.'
-                        else:
-                            msg = f'{from_name} is talking to you. Respond or select another character.'
+                            # set_auto_proxy 在等待期间到达：重新进入循环，下次 CASE A 会自动代理
+                            if user_input.get("type") == "set_auto_proxy":
+                                continue
 
-                        await self.output_queue.put(
-                            {
-                                "type": "input_request",
-                                "data": {"msg": msg, "from_name": from_name},
-                            }
-                        )
-
-                        user_input = await self.input_queue.get()
-
-                        # 【核心写逻辑】
-                        await self._unified_commit_message(
-                            self.user_role_name,
-                            user_input["target"],
-                            user_input["content"],
-                        )
-                        self.current_speaker = user_input["target"]
-
-                        self.logger.log("User", "MessageSent", f"Message sent to {user_input['target']}", {"content": user_input["content"]})
+                            # 【核心写逻辑】
+                            await self._commit_user_message(user_input)
+                            self.current_speaker = user_input["target"]
 
                     # CASE B: Agent Turn
                     else:
                         agent_name = self.current_speaker
+                        wait_type, user_input = await self._wait_for_stage2_agent_continue_or_user_message(agent_name)
+                        if wait_type == "user_message":
+                            await self._commit_user_message(user_input)
+                            self.current_speaker = user_input["target"]
+                            await asyncio.sleep(0.1)
+                            continue
+                        if wait_type == "takeover":
+                            # 用户接管当前 pending agent 的角色
+                            old_role = self.user_role_name
+                            self.user_role_name = agent_name
+                            self.user_auto_proxy = False
+                            self.current_speaker = self.user_role_name
+                            self.logger.log("CastEngine", "Takeover", f"{old_role} -> {agent_name}", {})
+                            await self.output_queue.put({
+                                "type": "role_switched",
+                                "data": {"from_role": old_role, "to_role": agent_name},
+                            })
+                            last_ctx = self.pending_messages if self.in_backtrack_draft_mode else self.engine.get_context_messages()
+                            last_msg = last_ctx[-1] if last_ctx else {}
+                            from_name = last_msg.get("from", "System")
+                            prompt_msg = f'{from_name} is talking to you. Respond or select another character.' if from_name not in ("System", "Facilitator") else 'Select an Agent to address your message to.'
+                            await self.output_queue.put({
+                                "type": "input_request",
+                                "data": {"msg": prompt_msg, "from_name": from_name},
+                            })
+                            await asyncio.sleep(0.1)
+                            continue
                         await self.output_queue.put({"type": "agent_thinking", "data": {"agent": agent_name}})
 
                         # 运行 Agent，传入 override context
@@ -281,24 +362,22 @@ class CastEngine:
                         curr_node = self.engine._current_node_id
                         if curr_node != prev_node:
                             await self.send_node_update(prev_node, curr_node)
-                        if meta_status == "DIVERGENCE_END":
-                            # 结束回溯草稿模式
+                        if meta_status in ("DIVERGENCE_END", "STAGE1_END"):
+                            divergent_snapshot = list(self.pending_messages)
                             self.in_backtrack_draft_mode = False
                             self.pending_messages = []
+                            self.stage = 3
+                            await self.send_stage_update(3)
+                            await self._generate_timeline_epilogue(divergent_snapshot)
+                            await self.output_queue.put({"type": "enable_reflection", "data": {}})
                             break
 
                         # 检查打断
                         if self.interruption_event.is_set():
-                            if not self.input_queue.empty():
-                                # 处理打断输入
-                                user_input = self.input_queue.get_nowait()
-                                self.pending_messages.append(
-                                    {
-                                        "from": self.user_role_name,
-                                        "to": user_input["target"],
-                                        "content": user_input["content"] + " --(interrupted)",
-                                    }
-                                )
+                            # 处理打断输入
+                            user_input = self._get_queued_user_message_nowait()
+                            if user_input:
+                                await self._commit_user_message(user_input, suffix=" --(interrupted)")
                                 self.current_speaker = user_input["target"]
                         else:
                             # 【需求2.1】处理返回值
@@ -308,7 +387,7 @@ class CastEngine:
 
                             self.current_speaker = next_speaker
 
-                        await asyncio.sleep(0.1)
+                        await asyncio.sleep(1)
 
         except Exception as e:
             print(f"Logic Loop Error: {e}")
@@ -319,29 +398,112 @@ class CastEngine:
     # ==========================
     # Helper Methods
     # ==========================
+    async def _wait_for_user_message(self):
+        while True:
+            item = await self.input_queue.get()
+            item_type = item.get("type", "user_message")
+            if item_type == "user_message":
+                return item
+            if item_type == "set_auto_proxy":
+                self.user_auto_proxy = item["enabled"]
+                await self.output_queue.put({"type": "auto_proxy_changed", "data": {"enabled": self.user_auto_proxy}})
+                if self.user_auto_proxy:
+                    return item  # 返回给 CASE A 作为信号，触发 continue
 
-    async def _unified_commit_message(self, src, tgt, content):
+    async def _wait_for_stage2_agent_continue_or_user_message(self, agent_name: str):
+        await self.output_queue.put({
+            "type": "agent_continue_request",
+            "data": {
+                "agent": agent_name,
+            },
+        })
+        self.logger.log(
+            "CastEngine",
+            "AgentContinueRequest",
+            f"Waiting for frontend to confirm {agent_name} to continue",
+            {"agent": agent_name},
+        )
+
+        while True:
+            item = await self.input_queue.get()
+            item_type = item.get("type", "user_message")
+            if item_type == "continue_agent":
+                return "continue_agent", None
+            if item_type == "user_message":
+                if self.user_auto_proxy:
+                    # 自动代理模式下不允许 user_message 跳过本轮 agent；放回队列等 agent 运行完再处理
+                    self.input_queue.put_nowait(item)
+                    continue
+                return "user_message", item
+            if item_type == "takeover":
+                return "takeover", None
+            if item_type == "set_auto_proxy":
+                self.user_auto_proxy = item["enabled"]
+                await self.output_queue.put({"type": "auto_proxy_changed", "data": {"enabled": self.user_auto_proxy}})
+
+    def _get_queued_user_message_nowait(self):
+        skipped = []
+        user_input = None
+
+        while not self.input_queue.empty():
+            item = self.input_queue.get_nowait()
+            if item.get("type", "user_message") == "user_message":
+                user_input = item
+                break
+            skipped.append(item)
+
+        for item in skipped:
+            self.input_queue.put_nowait(item)
+
+        return user_input
+
+    async def _commit_user_message(self, user_input, suffix: str = ""):
+        content = f"{user_input['content']}{suffix}"
+        await self._unified_commit_message(
+            self.user_role_name,
+            user_input["target"],
+            content,
+            user_authored=True,
+        )
+        self.logger.log(
+            "User",
+            "MessageSent",
+            f"Message sent to {user_input['target']}",
+            {"content": content},
+        )
+
+    async def _unified_commit_message(self, src, tgt, content, user_authored=False):
         """
         【统一写入口】根据当前模式决定写 Engine 还是 Pending Buffer
         """
         if self.in_backtrack_draft_mode:
-            self.pending_messages.append({"from": src, "to": tgt, "content": content})
+            msg = {"from": src, "to": tgt, "content": content}
+            if user_authored:
+                msg["user_authored"] = True
+            self.pending_messages.append(msg)
             recent = self.pending_messages[-3:]
         else:
-            self.engine.add_message(src, tgt, content)
+            self.engine.add_message(src, tgt, content, user_authored=user_authored)
             recent = self.engine.get_context_messages()[-3:]
 
         if self.stage == 2:
             self.msg_counter += 1
 
             # 每 3 条消息，且不在 Intro 阶段，并行触发 Facilitator
-            if self.msg_counter % 3 == 0:
-                # Fire-and-forget task
-                asyncio.create_task(self._run_parallel_facilitator_reflection(recent))
+            # if self.msg_counter % 6 == 0:
+            #     # Fire-and-forget task
+            #     asyncio.create_task(self._run_parallel_facilitator_reflection(recent))
 
-    def backtrack_to(self, target_node_id, perspective_agent=None):
+    async def set_auto_proxy(self, enabled: bool):
+        """Stage 2: 开启/关闭自动代理模式。开启后用户角色也由 LLM 代跑，直到用户接管某个 agent。"""
         if self.stage != 2:
             return
+        await self.input_queue.put({"type": "set_auto_proxy", "enabled": enabled})
+
+    def backtrack_to(self, target_node_id, perspective_agent=None):
+        if self.stage not in (2, 3):
+            return
+        self.stage = 2
         asyncio.create_task(self._backtrack_sequence(target_node_id, perspective_agent))
 
     async def _backtrack_sequence(self, target_node_id, perspective_agent):
@@ -350,6 +512,7 @@ class CastEngine:
         # 2. 物理回溯
         self.engine.backtrack_to(target_node_id)
         self.user_role_name = perspective_agent
+        self.user_auto_proxy = False
         print(f"Backtracking to node {target_node_id} as {perspective_agent}")
 
         self.logger.log("CastEngine", "BacktrackTo", f"Backtracking to {target_node_id} as {perspective_agent}", {"target": target_node_id, "perspective_agent": perspective_agent})
@@ -363,6 +526,7 @@ class CastEngine:
         print(f"Preparing {len(raw_msgs)} pending messages for backtrack draft mode.")
 
         depth, variant = map(int, target_node_id.split('.'))
+        self.is_backtrack_to_first = (depth == 1)
 
         self.pending_messages = []
         for msg in raw_msgs:
@@ -473,7 +637,8 @@ class CastEngine:
             agent = self.agents[agent_name]
             agent.update_system_message(sys_msg)
             # 我们不直接 await chat()，而是把它包装成 task 以便 cancel
-            chat_coro = agent.chat(full_context)
+            context_window = full_context[-15:] if self.stage == 2 else full_context
+            chat_coro = agent.chat(context_window)
 
         chat_task = asyncio.create_task(chat_coro)
         # 2. 显式创建打断任务 (Fix RuntimeWarning)
@@ -599,23 +764,21 @@ class CastEngine:
             self.logger.log("StoryEngine", "StateUpdate", f"Staying at node {self.engine._current_node_id}", {})
         elif meta_node_id == "diverged":
             print(f"Info: Divergence detected at node {self.engine._current_node_id} by {agent_name}.")
-            if self.in_backtrack_draft_mode:
-                await self._handle_divergence()
-                tag = "DIVERGENCE_TRIGGERED"
-            else:
-                print("Warning: Divergence triggered outside of backtrack draft mode. Ignored.")
-                pass
+            if not self.in_backtrack_draft_mode:
+                self._prepare_divergence_context_from_engine()
+            await self._handle_divergence()
+            tag = "DIVERGENCE_TRIGGERED"
         elif meta_node_id == "end":
-            print(f"Info: Reached end of story at node {self.engine._current_node_id}.")
+            ending_node_id = self.engine._current_node_id
+            print(f"Info: Reached end of story at node {ending_node_id}.")
             self.engine.move_next()
-            await self.send_node_update(self.engine._current_node_id, "end")
+            await self.send_node_update(ending_node_id, "end")
 
-            depth, variant = map(int, self.engine._current_node_id.split('.'))
+            depth, variant = map(int, ending_node_id.split('.'))
             if variant == 0:
                 tag = "STAGE1_END"
             else:
                 tag = "DIVERGENCE_END"
-                await self.output_queue.put({"type": "enable_reflection", "data": {}})
         else:
             if int(meta_node_id.split(".")[0]) == int(self.engine._current_node_id.split(".")[0]) + 1:
                 self.engine.move_next()
@@ -629,6 +792,18 @@ class CastEngine:
         await self._unified_commit_message(agent_name, target_name, final_body)
 
         return target_name, tag
+
+    def _prepare_divergence_context_from_engine(self):
+        """正常流分歧时，从当前 engine 边填充 pending_messages 与 history_msg"""
+        path = self.engine._current_path
+        if len(path) >= 2:
+            parent = path[-2]
+            current = self.engine._current_node_id
+            self.pending_messages = list(self.engine._graph.edge_contexts.get((parent, current), []))
+        else:
+            self.pending_messages = []
+        all_history = self.engine.get_context_messages(include_current_edge=False)
+        self.history_msg = all_history[-3:] if all_history else []
 
     async def _handle_divergence(self):
         """
@@ -680,7 +855,8 @@ class CastEngine:
             else:
                 context_to_save = list(trigger_segment)  # Copy
 
-            new_node_id = self.engine.create_divergence_branch(divergence_data, context_to_save)
+            suspend_current = not self.in_backtrack_draft_mode
+            new_node_id = self.engine.create_divergence_branch(divergence_data, context_to_save, suspend_current=suspend_current)
 
             self.in_backtrack_draft_mode = False
             self.pending_messages = []  # 清空 Buffer
@@ -808,10 +984,25 @@ class CastEngine:
             return meta_match.end()
         return -1
 
+    async def _generate_timeline_epilogue(self, divergent_messages: list):
+        self.logger.log("CastEngine", "TimelineEpilogue", "Generating", {})
+        try:
+            canonical_storyline = self.engine.get_story_context()
+            epilogue = await self.facilitator.generate_timeline_epilogue(
+                episode_title=self.episode.get("title", ""),
+                canonical_storyline=canonical_storyline,
+                divergent_messages=divergent_messages,
+            )
+            await self.output_queue.put({"type": "timeline_epilogue", "data": epilogue})
+            self.logger.log("CastEngine", "TimelineEpilogue", "Done", {"mood": epilogue.get("mood", "")})
+        except Exception as e:
+            self.logger.log("CastEngine", "TimelineEpilogue", f"Error: {e}", {})
+
     async def send_node_update(self, fromid: str, toid: str):
         await self.output_queue.put({"type": "node_update", "data": {"from_id": fromid, "to_id": toid}})
 
     async def send_stage_update(self, stage: str):
+        self.logger.log("CastEngine", "StageUpdate", f"Stage -> {stage}", {"stage": stage})
         await self.output_queue.put({"type": "stage_update", "data": {"stage": stage}})
 
 
@@ -938,6 +1129,42 @@ class CastEngine:
             future_node = storyline_json[-1]
             next_node_desc = f"{future_node["choice"]}(nodeid={future_node["id"]}): {future_node["desc"]}"
             next_id = future_node["id"]
+
+        if self.stage == 2 and not (self.user_auto_proxy and agent_name == self.user_role_name):
+            if self.in_backtrack_draft_mode:
+                turn_number = len(self.pending_messages) + 1
+            else:
+                path = self.engine._current_path
+                if len(path) >= 2:
+                    parent, current = path[-2], path[-1]
+                    edge_key = (parent, current)
+                    total = len(self.engine._graph.edge_contexts.get(edge_key, []))
+                    seed = self.engine._graph.edge_seed_counts.get(edge_key, 0)
+                    turn_number = total - seed + 1
+                else:
+                    turn_number = 1
+
+            pacing_hint, nodeid_hint = get_pacing_hints(
+                turn_number, self.prompt_lang, next_id, active_node["id"]
+            )
+            return get_prompt(
+                "cast.agent_system_stage2",
+                self.prompt_lang,
+                agent_name=agent.name,
+                agent_title=agent.profile["title"],
+                agent_desc=agent.profile.get("desc", ""),
+                episode_title=self.episode.get("title", ""),
+                active_node_title=active_node["title"],
+                active_node_decision=active_node.get("decision", active_node["title"]),
+                active_node_id=active_node["id"],
+                active_node_desc=active_node["desc"],
+                next_node_desc=("nodeid=end" if not next_node_desc else next_node_desc),
+                cast_str=cast_str,
+                next_id=next_id,
+                turn_number=str(turn_number),
+                pacing_hint=pacing_hint,
+                nodeid_hint=nodeid_hint,
+            )
 
         return get_prompt(
             "cast.agent_system",

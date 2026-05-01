@@ -4,7 +4,7 @@ import json
 import asyncio
 import os
 from typing import Dict, List, Any
-from server.utilities.llm_cache import call_llm
+from server.utilities.llm_cache import GROQ_MODEL, call_llm
 from server.prompts import get_prompt
 
 class ReflectionWorker:
@@ -18,11 +18,33 @@ class ReflectionWorker:
         node = self.graph.nodes[node_id]
         return {
             "id": node_id,
-            "title": node['title'],
-            "decision": node.get('decision', node['title']),
-            "choice": node['choice'],
-            "desc": node['desc']
+            "title": node.get('title', ''),
+            "decision": node.get('decision', node.get('title', '')),
+            "choice": node.get('choice', ''),
+            "desc": node.get('desc', '')
         }
+
+    def _format_node_path(self, nodes):
+        parts = []
+        for n in nodes:
+            if not n or not n.get("id"):
+                continue
+            choice = n.get("choice", "")
+            choice_prefix = "" if choice in ("", "None", None) else choice
+            body = n.get("desc") or n.get("decision") or n.get("title") or n.get("id")
+            parts.append(f"{choice_prefix}({n.get('id')}): {body}")
+        return " -> ".join(parts)
+
+    def _format_node_summary(self, nodes):
+        parts = []
+        for n in nodes:
+            if not n or not n.get("id"):
+                continue
+            choice = n.get("choice", "")
+            choice_prefix = "" if choice in ("", "None", None) else choice
+            body = n.get("decision") or n.get("title") or n.get("id")
+            parts.append(f"{choice_prefix}({body})")
+        return " -> ".join(parts)
 
     def _prepare_context(self):
         """
@@ -34,11 +56,14 @@ class ReflectionWorker:
         cast_str = self.cast_engine.cast_str
         
         # 2. 路径分析
-        user_path_ids = self.engine._current_path # e.g. ['0.0', '1.0', '2.0', '3.1', '4.1', '5.2', '6.2']
+        user_path_ids = [nid for nid in self.engine._current_path if nid in self.graph.nodes] # e.g. ['0.0', '1.0', '2.0', '3.1', '4.1', '5.2', '6.2']
 
         # 移除路径开头的根节点 '0.0', 专注于决策节点
         if user_path_ids and user_path_ids[0] == '0.0':
             user_path_ids = user_path_ids[1:]
+        if not user_path_ids:
+            current_node_id = self.engine._current_node_id
+            user_path_ids = [current_node_id] if current_node_id in self.graph.nodes else ["0.0"]
         
         # --- 核心修改：倒序查找分歧点 (Divergence Node) ---
         divergence_index = len(user_path_ids) - 1 # 默认指向最后一个
@@ -68,13 +93,16 @@ class ReflectionWorker:
         # 例如：0.0 -> ... -> 4.1
         history_prefix_ids = user_path_ids[:divergence_index + 1]
         history_prefix_data = [self._get_node_data(nid) for nid in history_prefix_ids]
-        depth, variant = user_path_ids[divergence_index + 1].split('.')
-        try:
-            history_prefix_data.append(self._get_node_data(f"{depth}.{int(variant)-1}"))
-        except:
-            print("Error appending canonical node to history prefix.")
-            pass
-        history_prefix_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n['id']}): {n['desc']}" for n in history_prefix_data])
+        if divergence_index + 1 < len(user_path_ids):
+            try:
+                depth, variant = user_path_ids[divergence_index + 1].split('.')
+                canonical_variant = int(variant) - 1
+                canonical_node_id = f"{depth}.{canonical_variant}"
+                if canonical_variant >= 0 and canonical_node_id in self.graph.nodes:
+                    history_prefix_data.append(self._get_node_data(canonical_node_id))
+            except:
+                print("Error appending canonical node to history prefix.")
+        history_prefix_str = self._format_node_path(history_prefix_data)
 
 
         # 4. 构建 Branch Line (当前新分支)
@@ -84,11 +112,11 @@ class ReflectionWorker:
         branch_path_ids = user_path_ids[divergence_index + 1:] 
         branch_nodes_data = [self._get_node_data(nid) for nid in branch_path_ids]
         
-        branch_line_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n['id']}): {n['desc']}" for n in branch_nodes_data])
-
         # 如果没有新分支（branch_path_ids为空），说明还在主线上，做容错处理
         if not branch_nodes_data:
             branch_nodes_data = [divergence_node_data] # Fallback
+        
+        branch_line_str = self._format_node_path(branch_nodes_data)
 
         # 5. 构建 Canonical Future (对比组)
         # 定义：Divergence Node 的“原定未来”。
@@ -114,7 +142,7 @@ class ReflectionWorker:
             print("Error in constructing canonical future nodes.")
             pass # 图结构解析失败或无后续
 
-        original_future_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n['id']}): {n['desc']}" for n in original_future_nodes])
+        original_future_str = self._format_node_path(original_future_nodes)
 
         # 6. Logs Extraction (Updated)
         # 逻辑：提取从 Divergence Node 开始往后的所有边上的交互
@@ -127,14 +155,15 @@ class ReflectionWorker:
             
             msgs = self.graph.edge_contexts.get((u, v), [])
             for m in msgs:
+                is_user_authored = m.get('user_authored', False)
                 log_entry = {
-                    "from": m['from'] if m['from']!=self.cast_engine.user_role_name else f"{m['from']} (User)",
-                    "to": m['to'] if m['to']!=self.cast_engine.user_role_name else f"{m['to']} (User)",
-                    "content": m['content']
+                    "from": f"{m.get('from')} (User)" if is_user_authored else m.get('from'),
+                    "to": m.get('to'),
+                    "content": m.get('content', ''),
                 }
                 branch_logs.append(log_entry)
         
-        branch_logs_str = '\n'.join([f"{log['from']} -> {log['to']}: {log['content']}" for log in branch_logs])
+        branch_logs_str = '\n'.join([f"{log.get('from')} -> {log.get('to')}: {log.get('content', '')}" for log in branch_logs])
 
         # 7. 摘要生成 (给 Worker E 使用)
         
@@ -148,9 +177,9 @@ class ReflectionWorker:
             else:
                 break
         
-        canon_summary_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n.get('decision', n['title'])})" for n in [self._get_node_data(nid) for nid in canonical_nodes]])
+        canon_summary_str = self._format_node_summary([self._get_node_data(nid) for nid in canonical_nodes])
 
-        branch_summary_str = " -> ".join([f"{'' if n['choice']=='None' else n['choice']}({n.get('decision', n['title'])})" for n in branch_nodes_data])
+        branch_summary_str = self._format_node_summary(branch_nodes_data)
 
         user_path_data = [self._get_node_data(nid) for nid in user_path_ids]
 
@@ -225,7 +254,12 @@ class ReflectionWorker:
         """Helper to format prompt and call LLM safely"""
         try:
             prompt = get_prompt(prompt_key, self.cast_engine.prompt_lang, **ctx)
-            response = await call_llm(prompt, lang=self.cast_engine.prompt_lang)
+            response = await call_llm(
+                prompt,
+                lang=self.cast_engine.prompt_lang,
+                model=GROQ_MODEL,
+                provider="groq",
+            )
             return response
         except Exception as e:
             print(f"Worker Error: {e}")
@@ -247,7 +281,7 @@ class ReflectionWorker:
             "episode_id": self.cast_engine.episode.get('title'),
             "timeline_snapshot": {
                 "divergence": ctx['divergence_node_id'],
-                "checkpoints": [n['id'] for n in user_path_data]
+                "checkpoints": [n.get('id') for n in user_path_data if n.get('id')]
             }
         }
         
@@ -288,4 +322,3 @@ class ReflectionWorker:
             "III_meta_historical_takeaways": meta
         }
     
-

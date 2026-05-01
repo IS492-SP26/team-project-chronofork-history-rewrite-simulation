@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuban Missile Crisis · Twine IDN Baseline</title>
+<style>
+  :root { --bg-0: #0d1117; --bg-1: #131922; --bg-2: #1a2230; --bg-card: #1d2533; --ink-0: #ecf0f6; --ink-1: #c8cfd9; --ink-2: #8b95a3; --ink-3: #5a6373; --accent: #c0392b; --accent-2: #e8c14a; --accent-3: #4a7cb8; --rule: #2c3545; --shadow: 0 6px 24px rgba(0, 0, 0, 0.55); --serif: "Georgia", "Source Han Serif SC", "Noto Serif SC", "Songti SC", serif; --sans: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans SC", -apple-system, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink-0); font-family: var(--serif); line-height: 1.7; min-height: 100vh; }
+  body { background: radial-gradient(circle at 20% 0%, rgba(74, 124, 184, 0.1), transparent 40%), radial-gradient(circle at 80% 100%, rgba(192, 57, 43, 0.06), transparent 50%), var(--bg-0); }
+  .app { max-width: 1080px; margin: 0 auto; padding: 24px 24px 60px; }
+  header.episode { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: linear-gradient(135deg, var(--bg-2), var(--bg-1)); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 18px; }
+  .episode .title-block { display: flex; align-items: center; gap: 14px; }
+  .episode .emoji { font-size: 32px; line-height: 1; }
+  .episode .title { font-size: 22px; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
+  .episode .sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; letter-spacing: 2px; font-family: var(--sans); }
+  .episode .meta { text-align: right; font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .episode .meta .tag { display: inline-block; padding: 3px 8px; border: 1px solid var(--rule); border-radius: 3px; margin-left: 6px; color: var(--ink-1); }
+  .layout { display: grid; grid-template-columns: 1fr 280px; gap: 18px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } aside.side { order: 2; } }
+  .stage { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); overflow: hidden; }
+  .stage-head { padding: 14px 22px; border-bottom: 1px solid var(--rule); background: linear-gradient(180deg, rgba(74, 124, 184, 0.08), transparent); display: flex; align-items: center; justify-content: space-between; }
+  .stage-head .chapter { color: var(--accent-2); font-size: 13px; letter-spacing: 4px; font-family: var(--sans); }
+  .stage-head .scene-title { font-size: 20px; font-weight: 600; color: var(--ink-0); margin-top: 2px; }
+  .stage-head .right-tag { font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .stage-body { padding: 22px 26px; }
+  .narrative { font-size: 16px; color: var(--ink-1); text-indent: 2em; margin: 0 0 16px; }
+  .narrative.lead { color: var(--ink-0); font-size: 16.5px; }
+  .dialogs { margin: 18px 0 6px; padding: 14px 16px; background: rgba(0, 0, 0, 0.22); border-left: 3px solid var(--accent-3); border-radius: 0 6px 6px 0; }
+  .dialogs .line { display: flex; gap: 10px; margin: 8px 0; align-items: baseline; }
+  .dialogs .who { flex: 0 0 130px; text-align: right; color: var(--accent-2); font-weight: 600; font-size: 14px; font-family: var(--sans); }
+  .dialogs .who .av { margin-right: 4px; }
+  .dialogs .what { flex: 1; color: var(--ink-1); font-size: 15px; line-height: 1.65; }
+  .dialogs .what::before { content: "「"; color: var(--ink-3); }
+  .dialogs .what::after { content: "」"; color: var(--ink-3); }
+  .decision { margin-top: 22px; padding: 16px 18px; border: 1px dashed var(--accent-2); border-radius: 6px; background: rgba(232, 193, 74, 0.04); }
+  .decision .label { font-size: 12px; letter-spacing: 3px; color: var(--accent-2); font-family: var(--sans); margin-bottom: 6px; }
+  .decision .question { font-size: 16px; color: var(--ink-0); font-weight: 600; margin-bottom: 4px; }
+  .decision .maker { font-size: 13px; color: var(--ink-2); font-family: var(--sans); }
+  .choices { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .choice-btn { display: block; width: 100%; text-align: left; background: var(--bg-2); color: var(--ink-0); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 16px; font-family: var(--serif); font-size: 15px; line-height: 1.55; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.05s; }
+  .choice-btn:hover { background: #2a334a; border-color: var(--accent-2); color: var(--accent-2); }
+  .choice-btn:active { transform: translateY(1px); }
+  .choice-btn .arrow { color: var(--accent); margin-right: 8px; font-weight: 700; }
+  .choice-btn .hint { display: block; margin-top: 4px; font-size: 12.5px; color: var(--ink-3); font-family: var(--sans); }
+  aside.side { display: flex; flex-direction: column; gap: 14px; }
+  .panel { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .panel h3 { margin: 0 0 10px; font-size: 13px; color: var(--accent-2); letter-spacing: 3px; font-family: var(--sans); font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+  .cast-list .cast-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+  .cast-list .cast-row:last-child { border-bottom: none; }
+  .cast-list .av { font-size: 22px; flex: 0 0 28px; text-align: center; }
+  .cast-list .info .name { font-weight: 600; color: var(--ink-0); font-size: 14px; }
+  .cast-list .info .role { font-size: 11.5px; color: var(--ink-2); font-family: var(--sans); }
+  .cast-list .info .desc { font-size: 12px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
+  .progress-list .step { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; font-family: var(--sans); color: var(--ink-3); }
+  .progress-list .step .dot { flex: 0 0 12px; color: var(--rule); font-size: 11px; }
+  .progress-list .step.done { color: var(--ink-1); } .progress-list .step.done .dot { color: var(--accent-3); }
+  .progress-list .step.current { color: var(--accent-2); font-weight: 600; } .progress-list .step.current .dot { color: var(--accent); }
+  .ending .stage-head { background: linear-gradient(180deg, rgba(192, 57, 43, 0.18), transparent); }
+  .ending .ending-tag { display: inline-block; padding: 4px 12px; background: var(--accent); color: var(--ink-0); font-size: 12px; letter-spacing: 3px; border-radius: 3px; font-family: var(--sans); margin-bottom: 10px; }
+  .ending .ending-tag.canonical { background: #5d8a4e; }
+  .ending .ending-title { font-size: 26px; font-weight: 700; color: var(--accent-2); margin: 4px 0 14px; }
+  .ending .reflection { margin-top: 18px; padding: 14px 16px; background: rgba(0, 0, 0, 0.22); border-left: 3px solid var(--accent-2); border-radius: 0 6px 6px 0; font-size: 14.5px; color: var(--ink-1); font-family: var(--sans); line-height: 1.7; }
+  .ending .reflection b { color: var(--accent-2); }
+  .ending .path-trace { margin-top: 16px; padding: 12px 14px; background: rgba(0, 0, 0, 0.18); border: 1px solid var(--rule); border-radius: 6px; font-family: var(--sans); font-size: 13px; color: var(--ink-2); }
+  .ending .path-trace .pt-title { color: var(--accent-2); font-weight: 600; margin-bottom: 6px; font-size: 12px; letter-spacing: 2px; }
+  .ending .path-trace ol { margin: 0; padding-left: 20px; } .ending .path-trace ol li { margin: 3px 0; color: var(--ink-1); }
+  .ending .actions { margin-top: 22px; display: flex; gap: 10px; }
+  .ending .actions button { flex: 1; padding: 12px 16px; background: var(--bg-2); border: 1px solid var(--rule); border-radius: 6px; color: var(--ink-0); font-family: var(--serif); font-size: 15px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .ending .actions button:hover { background: #2a334a; border-color: var(--accent-2); color: var(--accent-2); }
+  .start .stage-body { text-align: center; padding: 44px 36px; }
+  .start .ep-emoji { font-size: 68px; margin-bottom: 8px; }
+  .start .ep-title { font-size: 32px; font-weight: 700; color: var(--accent-2); letter-spacing: 4px; margin-bottom: 6px; }
+  .start .ep-sub { font-size: 13px; color: var(--ink-2); letter-spacing: 6px; font-family: var(--sans); margin-bottom: 22px; }
+  .start .ep-desc { text-align: left; color: var(--ink-1); font-size: 15.5px; text-indent: 2em; line-height: 1.85; margin: 0 auto 20px; max-width: 640px; }
+  .start .start-btn { display: inline-block; margin-top: 14px; padding: 14px 36px; background: var(--accent); color: var(--ink-0); border: none; border-radius: 6px; font-family: var(--serif); font-size: 16px; letter-spacing: 4px; cursor: pointer; transition: background 0.15s, transform 0.05s; }
+  .start .start-btn:hover { background: #d44a3a; } .start .start-btn:active { transform: translateY(1px); }
+  footer.foot { margin-top: 26px; text-align: center; color: var(--ink-3); font-size: 12px; letter-spacing: 2px; font-family: var(--sans); }
+  footer.foot .pipe { margin: 0 8px; }
+  .fade-in { animation: fadeIn 0.35s ease; } @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-track { background: var(--bg-1); } ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  /* ---------- Back to home ---------- */
+  .back-home {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.05s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .back-home:hover {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+  .back-home:active { transform: translateY(1px); }
+
+  /* ---------- Lang toggle ---------- */
+  .lang-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .lang-toggle:hover {
+    background: var(--accent-2);
+    color: #1a120b;
+    border-color: var(--accent-2);
+  }
+
+</style>
+</head>
+<body>
+<a class="back-home" id="back-home-link" href="index.html">← Home</a>
+<button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">中文</button>
+
+<div class="app">
+  <header class="episode">
+    <div class="title-block">
+      <div class="emoji">🚀</div>
+      <div>
+        <div class="title" id="ep-title-el">Cuban Missile Crisis</div>
+        <div class="sub">CUBAN MISSILE CRISIS · OCT 1962 · 13 DAYS</div>
+      </div>
+    </div>
+    <div class="meta">Twine IDN Baseline <span class="tag" id="meta-progress">Act 0 / 5</span></div>
+  </header>
+  <div class="layout">
+    <main id="passage-area"></main>
+    <aside class="side">
+      <div class="panel"><h3 id="cast-panel-h">CAST</h3><div class="cast-list" id="cast-list"></div></div>
+      <div class="panel"><h3 id="story-panel-h">STORY PROGRESS</h3><div class="progress-list" id="progress-list"></div></div>
+    </aside>
+  </div>
+  <footer class="foot">Twine IDN Baseline · Static Branching Narrative <span class="pipe">|</span> Episode 05 — <span id="foot-ep-name">古巴导弹危机</span> <span class="pipe">|</span> v1.0</footer>
+</div>
+<script>
+  /* ============================================================
+     Language support
+     ============================================================ */
+  let currentLang = localStorage.getItem('lang') || 'en';
+  let currentPassageId = 'start';
+
+  function toggleLang() {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    localStorage.setItem('lang', currentLang);
+    updateStaticUI();
+    render(currentPassageId);
+  }
+
+  function getPassages() { return currentLang === 'en' ? PASSAGES_EN : PASSAGES; }
+  function getCast()     { return currentLang === 'en' ? CAST_EN     : CAST;     }
+  function getLabels()   { return currentLang === 'en' ? STORY_PROGRESS_LABELS_EN : STORY_PROGRESS_LABELS; }
+
+  function updateStaticUI() {
+    const isEn = currentLang === 'en';
+    document.title = isEn ? 'Cuban Missile Crisis · Twine IDN Baseline' : '古巴导弹危机 · Twine IDN Baseline';
+    document.getElementById('ep-title-el').textContent   = isEn ? 'Cuban Missile Crisis' : '古巴导弹危机';
+    document.getElementById('cast-panel-h').textContent  = isEn ? 'CAST'                 : '登场人物 CAST';
+    document.getElementById('story-panel-h').textContent = isEn ? 'STORY PROGRESS'       : '剧情进度 STORY';
+    document.getElementById('back-home-link').textContent = isEn ? '← Home'               : '← 返回首页';
+    document.getElementById('lang-toggle').textContent   = isEn ? '中文'                   : 'EN';
+    document.getElementById('foot-ep-name').textContent  = isEn ? 'Cuban Missile Crisis'   : '古巴导弹危机';
+  }
+
+  /* ============================================================
+     Cast — Chinese
+     ============================================================ */
+  const CAST = {
+    "约翰·F·肯尼迪":     { avatar: "🦅", title: "美国总统",                 desc: "在强硬与避免核战之间权衡，最终以「封锁+秘密交易」化解危机。" },
+    "尼基塔·赫鲁晓夫":   { avatar: "☭",  title: "苏共中央第一书记",         desc: "主导向古巴部署核导弹，危机后期急转向接受撤导弹方案。" },
+    "菲德尔·卡斯特罗":   { avatar: "🌴", title: "古巴总理",                 desc: "坚决支持苏联部署导弹，后期与莫斯科在风险承受度上出现裂痕。" },
+    "罗伯特·F·肯尼迪":   { avatar: "⚖️", title: "美国司法部长",              desc: "推动以封锁代替空袭，是关键秘密斡旋者。" },
+    "阿纳托利·多布雷宁": { avatar: "📞", title: "苏联驻美大使",              desc: "苏美之间最关键的非正式沟通渠道，与罗伯特秘密谈判。" }
+  };
+
+  /* ============================================================
+     Cast — English
+     ============================================================ */
+  const CAST_EN = {
+    "约翰·F·肯尼迪":  { avatar: "🦅", name: "John F. Kennedy",        title: "35th President of the United States",            desc: "Chose the naval quarantine over an air strike, threading the needle between capitulation and nuclear war." },
+    "尼基塔·赫鲁晓夫": { avatar: "☭",  name: "Nikita Khrushchev",      title: "General Secretary of the Soviet Communist Party", desc: "Ordered the missiles to Cuba seeking strategic parity, then agreed to withdraw them in exchange for secret assurances." },
+    "菲德尔·卡斯特罗": { avatar: "🌴", name: "Fidel Castro",            title: "Prime Minister of Cuba",                         desc: "Welcomed Soviet missiles as a deterrent against U.S. invasion, then was left out of the final superpower deal." },
+    "罗伯特·F·肯尼迪": { avatar: "⚖️", name: "Robert F. Kennedy",      title: "U.S. Attorney General · President's Brother",    desc: "Key back-channel negotiator with Soviet Ambassador Dobrynin, crafting the secret Turkey-missile swap." },
+    "阿纳托利·多布雷宁": { avatar: "📞", name: "Anatoly Dobrynin",      title: "Soviet Ambassador to the United States",          desc: "The quiet back-channel through which the secret deal was negotiated between RFK and Moscow." },
+    "李梅将军":          { avatar: "✈️", name: "Gen. Curtis LeMay",      title: "U.S. Air Force Chief of Staff",                    desc: "The most hawkish member of the Joint Chiefs; repeatedly urged immediate airstrikes and an invasion of Cuba." },
+    "腊斯克国务卿":      { avatar: "📋", name: "Sec. Dean Rusk",          title: "U.S. Secretary of State",                          desc: "Favored diplomatic and multilateral approaches and was present during the most critical ExComm sessions." },
+    "吴丹":              { avatar: "🌐", name: "U Thant",                 title: "UN Secretary-General",                             desc: "Proposed a mutual standdown and offered the UN as a neutral channel for superpower communication." },
+    "赫鲁晓夫":          { avatar: "☭",  name: "Nikita Khrushchev",      title: "General Secretary of the Soviet Communist Party",  desc: "Ordered the missiles to Cuba seeking strategic parity, then agreed to withdraw them in exchange for secret assurances." },
+    "赫鲁晓夫（电报）":  { avatar: "☭",  name: "Khrushchev (Telegram)",  title: "General Secretary of the Soviet Communist Party",  desc: "Communicated via written cable during the most sensitive phases of the crisis." },
+    "卡斯特罗（电报）":  { avatar: "🌴", name: "Castro (Telegram)",       title: "Prime Minister of Cuba",                           desc: "Sent an urgent cable to Khrushchev urging a preemptive Soviet nuclear strike against the United States." },
+    "多布雷宁（电报）":  { avatar: "📞", name: "Dobrynin (Telegram)",     title: "Soviet Ambassador to the United States",           desc: "Relayed RFK's secret proposal to Moscow by urgent cable on the night of October 27." },
+    "麦克米伦（来电）":  { avatar: "🇬🇧", name: "Macmillan (Phone)",      title: "Prime Minister of the United Kingdom",             desc: "Consulted Kennedy by transatlantic telephone and offered Britain as an intermediary with the Soviets." }
+  };
+
+  /* ============================================================
+     Passages — Chinese (original)
+     ============================================================ */
+  const PASSAGES = {
+
+    "start": {
+      type: "start",
+      epEmoji: "🚀",
+      epTitle: "古巴导弹危机",
+      epSub: "T H I R T E E N   D A Y S   ·   O C T   1 9 6 2",
+      desc: "1962 年 10 月 14 日，美国 U-2 侦察机在古巴西部圣克里斯托瓦尔上空拍下苏联中程弹道导弹基地的照片。对华盛顿而言，这意味着 5 分钟内莫斯科即可对美国东海岸主要城市实施核打击。肯尼迪召集执行委员会闭门 13 天，赫鲁晓夫在莫斯科与古巴之间反复权衡，卡斯特罗在哈瓦那做好玉石俱焚的准备。人类历史上最接近全面核战争的 13 天，将由几位最高决策者在缺觉、焦虑与情报真伪之间作出的每一次拍板，决定未来。",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "第一幕  ·  侦察照片",
+      sceneTitle: "导弹现身加勒比上空",
+      progressIndex: 0,
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫", "菲德尔·卡斯特罗"],
+      narrative: [
+        "10 月 16 日清晨，国家安全顾问邦迪将照片放在椭圆形办公室的桌上：「总统先生 —— 苏联在古巴部署中程导弹，其中 SS-4 射程可达华盛顿。」",
+        "参联会主席李梅将军主张「立即空袭并入侵古巴」；国务卿腊斯克倾向「外交途径」；罗伯特·F·肯尼迪则提出第三条路：海上封锁。距离苏联导弹基地完工只剩约 10-14 天 —— 总统须在数小时内决定基本应对方向。"
+      ],
+      dialogs: [
+        { who: "李梅将军",         what: "总统先生，唯一的答案就是「外科手术式」空袭，紧接着登陆。等他们装好导弹，纽约和华盛顿都将处于五分钟核打击之下。" },
+        { who: "罗伯特·F·肯尼迪",  what: "约翰，我们不能再做一个「日本式偷袭珍珠港」的国家。封锁能让赫鲁晓夫有台阶，也能给我们时间。" },
+        { who: "约翰·F·肯尼迪",    what: "如果我先动手空袭，我会被历史比作东条英机；可如果我什么都不做，导弹很快就架在那里了。" }
+      ],
+      decision: { question: "在三种基本方略之间，肯尼迪应取何路径？", maker: "约翰·F·肯尼迪" },
+      choices: [
+        { label: "立即空袭古巴并准备登陆",   hint: "鹰派路线 — 偏离正史的战争路线",      next: "end_A" },
+        { label: "宣布对古巴海上「隔离」封锁", hint: "中间路线 — 正史选择",                 next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "第二幕  ·  海上对峙",
+      sceneTitle: "封锁与公开摊牌",
+      progressIndex: 1,
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫", "菲德尔·卡斯特罗"],
+      narrative: [
+        "10 月 22 日，肯尼迪发表全国电视讲话，宣布对古巴实施「隔离」（quarantine）—— 海军舰队封锁所有运抵古巴的攻击性武器。第二天，赫鲁晓夫公开抗议「海盗式封锁」，但下令一艘载有导弹的苏联货船「亚历山德罗夫斯克」号缓速通过封锁线测试反应。",
+        "古巴上空 U-2 侦察机数次受到苏军 SAM 防空导弹追踪。10 月 27 日「黑色星期六」，一架 U-2 在古巴上空被击落，飞行员安德森少校阵亡。参联会再次主张全面空袭。肯尼迪须重新决定：是从「隔离」升级为「军事打击」，还是继续坚守封锁、争取外交时间？"
+      ],
+      dialogs: [
+        { who: "李梅将军",         what: "总统先生，我们的飞行员被打下来了！再不动手，盟友会怀疑美国是只纸老虎。" },
+        { who: "罗伯特·F·肯尼迪",  what: "约翰，赫鲁晓夫击落 U-2 不一定是命令的，更可能是前线司令的判断。我们不能让一次「意外」点燃整场战争。" },
+        { who: "约翰·F·肯尼迪",    what: "我们现在要避免的，是「意外的世界末日」。" }
+      ],
+      decision: { question: "在 U-2 被击落后，肯尼迪应如何回应？", maker: "约翰·F·肯尼迪" },
+      choices: [
+        { label: "立即升级为空袭与登陆作战", hint: "鹰派反扑 — 偏离正史的升级路线",   next: "n2a" },
+        { label: "暂不升级，继续封锁与外交",  hint: "克制等待 — 正史选择",              next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "分支  ·  扳机扣下",
+      sceneTitle: "空袭升级的两种打法",
+      progressIndex: 2,
+      castOnStage: ["约翰·F·肯尼迪", "李梅将军"],
+      narrative: [
+        "肯尼迪在巨大的内部压力下批准对古巴实施军事打击。然而打击范围仍有两种选择：是仅以「精准空袭」摧毁导弹基地与防空设施，还是直接执行 OPLAN 316 全面入侵古巴？",
+        "前者意图给赫鲁晓夫保留外交回旋；后者将彻底解决「门口插刀」问题，但极可能引发苏联在欧洲方向（尤其柏林）的连锁反应。"
+      ],
+      dialogs: [
+        { who: "李梅将军",       what: "若仅空袭基地，过两天他们又能修起来；只有彻底入侵，才能根除问题。" },
+        { who: "罗伯特·F·肯尼迪", what: "若我们登陆古巴，赫鲁晓夫就必须在欧洲找回面子 —— 柏林必将沦陷，第三次世界大战自此开始。" },
+        { who: "约翰·F·肯尼迪",  what: "我必须选择「最坏情况下损失最小」的那条路 —— 而我此刻并不确定哪一条是。" }
+      ],
+      decision: { question: "在空袭升级中，应取何打击范围？", maker: "约翰·F·肯尼迪" },
+      choices: [
+        { label: "OPLAN 316 全面入侵古巴",   hint: "彻底拔除 — 走向苏美直接战争结局", next: "end_B" },
+        { label: "仅精准空袭导弹基地",         hint: "有限战争 — 走向危机失控结局",     next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "第三幕  ·  执行委员会",
+      sceneTitle: "罗伯特的秘密外交方案",
+      progressIndex: 2,
+      castOnStage: ["罗伯特·F·肯尼迪", "约翰·F·肯尼迪", "阿纳托利·多布雷宁"],
+      narrative: [
+        "肯尼迪暂未升级，转而采纳罗伯特的方案 —— 利用「执委会」（ExComm）外的非正式渠道，与苏联达成秘密交易。罗伯特提出三条可能：通过苏联驻美大使多布雷宁直接秘密会晤、通过联合国秘书长吴丹公开斡旋、或通过北约盟国（如英国麦克米伦或土耳其外长）间接传话。",
+        "时间紧迫，每一种方式都有得失：秘密外交快速但易被国内鹰派质疑出卖盟友；联合国公开斡旋程序冗长但合法性高；盟国斡旋则可能让土耳其拒绝撤除木星导弹。"
+      ],
+      dialogs: [
+        { who: "罗伯特·F·肯尼迪", what: "约翰，多布雷宁是赫鲁晓夫信任的人 —— 我可以今晚就到苏联使馆敲门。" },
+        { who: "腊斯克国务卿",   what: "我倾向走联合国 —— 至少留下文件记录，避免日后扯皮。" },
+        { who: "麦克米伦（来电）", what: "肯尼迪先生，英国愿意作为传话人，但土耳其方面不一定配合。" }
+      ],
+      decision: { question: "罗伯特应选择哪条秘密外交路径？", maker: "罗伯特·F·肯尼迪" },
+      choices: [
+        { label: "亲自秘密会晤多布雷宁，传递木星撤弹意向", hint: "直接渠道 — 正史选择",              next: "n4" },
+        { label: "通过联合国秘书长吴丹公开斡旋",             hint: "多边外交 — 偏离正史的国际路线",   next: "n3a" },
+        { label: "通过英国与土耳其间接传话",                 hint: "盟国斡旋 — 偏离正史的盟邦路线",   next: "end_D" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "分支  ·  联合国大厦",
+      sceneTitle: "公开斡旋的两种打法",
+      progressIndex: 3,
+      castOnStage: ["罗伯特·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "罗伯特放弃直接接触多布雷宁，改请联合国秘书长吴丹介入。然在多边外交中，仍须在两种打法之间抉择：是要求安理会立即就「撤导弹换不入侵」决议进行投票（利于美国合法性，但势必激怒苏联）？还是仅请联合国派遣调查团进入古巴，先搞清现状（中立但极耗时间）？",
+        "公开斡旋的优点是国际合法性，缺点是过程冗长，而苏联导弹基地仍在每分钟逼近完工。"
+      ],
+      dialogs: [
+        { who: "吴丹",             what: "总统先生，联合国可以扮演中立调停人 —— 但若美国坚持立即决议，苏联可能行使否决权而僵局。" },
+        { who: "罗伯特·F·肯尼迪",  what: "我们没时间等几个月的调查团，可仍然需要保住法理高地。" },
+        { who: "赫鲁晓夫（电报）",  what: "我们欢迎联合国调查 —— 但不接受单边决议。" }
+      ],
+      decision: { question: "在多边斡旋中，应取何路径？", maker: "罗伯特·F·肯尼迪" },
+      choices: [
+        { label: "推动安理会立即就撤导弹决议投票", hint: "求合法性 — 走向面子保住但拖延的结局", next: "end_E" },
+        { label: "请联合国调查团进入古巴中立核查", hint: "求中立性 — 走向调查耗时的结局",       next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "第四幕  ·  克里姆林宫",
+      sceneTitle: "赫鲁晓夫的最后抉择",
+      progressIndex: 3,
+      castOnStage: ["尼基塔·赫鲁晓夫", "菲德尔·卡斯特罗", "阿纳托利·多布雷宁"],
+      narrative: [
+        "10 月 27 日深夜，多布雷宁紧急电报传至莫斯科：罗伯特·F·肯尼迪当面承诺，若苏联从古巴撤导弹，美方将于「半年后悄然撤除土耳其木星导弹」，并公开承诺「不入侵古巴」—— 但土耳其撤弹一事「绝不可见诸文字」。",
+        "与此同时，卡斯特罗的电报也送达克里姆林宫，措辞激烈：「即便古巴消失，也不能让帝国主义胜利 —— 必要时苏联应对美国先发动核打击！」 赫鲁晓夫连读两次，沉默良久。",
+        "他面前是三个选项：拒绝交易并公开升级；接受秘密交易、向国内宣布「保护了古巴」；或者公开宣称胜利、要求美国书面承诺撤土耳其导弹。每一个选择都将塑造此后 30 年的冷战走向。"
+      ],
+      dialogs: [
+        { who: "卡斯特罗（电报）", what: "如果美国入侵古巴，希望您不必犹豫立即对帝国主义实施核打击！" },
+        { who: "多布雷宁（电报）", what: "罗伯特强调，如果几小时内不能达成协议，他无法保证肯尼迪能继续压住军方。" },
+        { who: "赫鲁晓夫",         what: "为了挽救几百万、几千万个生命……我们必须接受这个交易。" }
+      ],
+      decision: { question: "在最后时刻，赫鲁晓夫应如何抉择？", maker: "尼基塔·赫鲁晓夫" },
+      choices: [
+        { label: "拒绝交易并公开升级反制",         hint: "硬碰硬 — 偏离正史的升级路线",       next: "end_G" },
+        { label: "接受秘密交易，撤导弹换不入侵",   hint: "体面退场 — 正史选择",                next: "end_H" },
+        { label: "接受撤导弹但要求美国书面承诺撤土耳其", hint: "公开记录 — 偏离正史的硬要面子路线", next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "立即空袭  ·  战火失控",
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "肯尼迪批准 10 月 17 日凌晨「外科手术式」空袭。事后才发现：古巴战场已部署 162 件战术核弹头与 12 枚已组装就绪的「月球」战术核导弹，前线苏军指挥官有授权在「美军入侵情况下」自主发射。",
+        "美军登陆部队尚未上岸便遭到战术核打击，关塔那摩与坦帕周边美军基地遭核报复。赫鲁晓夫被迫在欧洲方向回应 —— 西柏林沦陷，北约与华约在中欧爆发地面战争。10 月底，全球进入相互核报复阶段。这场被误以为是「外科手术」的打击，最终成为人类文明的休止符。"
+      ],
+      reflection: "<b>反事实推演：</b>「外科手术式打击」往往是事后才被证明的概念 —— 在它真正落下之前，没有人能保证只伤及目标。这个分支的可怕之处在于：<b>正史中关于古巴战术核弹头的真相，要等到冷战后才被披露</b>。当年若肯尼迪听从李梅将军，整个人类的命运就交给了一个连决策者自己都没掌握全貌的「黑盒」。"
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "全面入侵  ·  柏林沦陷",
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "肯尼迪批准 OPLAN 316 全面入侵古巴。10 月 30 日，美军 14 万人登陆古巴东部。卡斯特罗在哈瓦那广播中号召「祖国或死亡」。",
+        "赫鲁晓夫在国内强硬派压力下，于 11 月 1 日宣布对西柏林实施陆路封锁，并在民主德国发起对北约边界的「示警性入侵」。中欧爆发常规战争，双方都在等待对方先动用核武器。1962 年圣诞节前，柏林墙两侧同步陷入核冬天。"
+      ],
+      reflection: "<b>反事实推演：</b>地缘政治中，「在自家门口的胜利」常常意味着「在远方的失败」。这个分支提醒：<b>大国对抗中，胜利点很少能被局限在局部 —— 它必然会在另一处对称地展开</b>。古巴问题的解决，必然引发柏林问题的爆发。"
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "精准空袭  ·  危机失控",
+      castOnStage: ["约翰·F·肯尼迪"],
+      narrative: [
+        "美军仅对古巴导弹基地实施精准空袭，导弹基地与雷达站被悉数摧毁。然苏军前线指挥官在通讯中断、误以为美军全面入侵的情况下，对关塔那摩美军基地发射了一枚「月球」战术核导弹。",
+        "美方误以为这是赫鲁晓夫的有限核报复，以同等当量回击。事态在 6 小时内升级到战略层面。最终在双方惊恐中通过热线达成停火，但关塔那摩、奥连特省、以及佛罗里达南端已成核荒原。「有限战争」一词从此进入历史词典 —— 用以警示「有限」二字之不可控。"
+      ],
+      reflection: "<b>反事实推演：</b>「有限」是事后追认的，不是事前承诺的。这个分支揭示：<b>在战争升级中，「自我克制」依赖于双方对彼此意图的准确解读 —— 而战争本身恰恰会让这种解读失准</b>。"
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "盟国斡旋  ·  土耳其抗命",
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "罗伯特通过英国麦克米伦向赫鲁晓夫传话「美方愿撤土耳其木星导弹」。然消息走漏后，土耳其总统居纳尔派人到伊斯坦布尔与北约盟友密谈，明确「拒绝撤除木星导弹」并公开抗议美国「拿盟国做交易」。",
+        "肯尼迪陷入北约信任危机。赫鲁晓夫见美方「连自家盟友都说不动」，要价加码：要求美方公开承诺、白纸黑字签字。最后达成的协议比正史更慢、更屈辱，且土耳其、希腊从此与美国关系产生长期裂痕。"
+      ],
+      reflection: "<b>反事实推演：</b>多边外交的优势是合法性，劣势是控制力。这个分支提醒：<b>当一个国家试图通过盟友传话来交易盟友的利益时，常常会同时失去盟友与对手的信任</b>。"
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "安理会僵局  ·  面子大于里子",
+      castOnStage: ["罗伯特·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "美方推动安理会就「苏联立即从古巴撤除导弹」决议进行投票，苏联如期行使否决权。决议被否决但「美方道义高地」被各国默认。",
+        "然而苏联导弹基地继续推进，11 月 1 日完成 24 枚 SS-4 导弹的部署 —— 美东海岸全部进入打击半径。最终美方不得不在没有任何安全保证的情况下，私下与苏联达成「撤土耳其导弹+不入侵古巴」的协议。「面子保住了，里子全输」。"
+      ],
+      reflection: "<b>反事实推演：</b>程序合法性不能替代实质安全。这个分支揭示：<b>当紧迫的现实问题被放进慢节奏的多边程序中时，结果往往是「程序赢了、现实输了」</b>。"
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "调查团核查  ·  时不待我",
+      castOnStage: ["罗伯特·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "联合国调查团于 10 月 30 日抵达古巴。然卡斯特罗以「主权事项」为由拒绝进入军事禁区，调查陷入僵局。同期苏联导弹基地继续推进，至 11 月中旬全部就绪。",
+        "美方在「事实已被认证」的情况下不得不接受现状 —— 苏联导弹永久部署在古巴，作为对美国土耳其导弹的对称回应。从此美国本土进入「五分钟核打击」时代，整个冷战防御体系被迫重建。"
+      ],
+      reflection: "<b>反事实推演：</b>中立性不能在所有场景下取代决断力。这个分支揭示：<b>当问题的本质是时间窗口而非合法性时，「程序中立」就成了对己方的绑架</b>。"
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "拒绝交易  ·  核战边缘超越",
+      castOnStage: ["尼基塔·赫鲁晓夫", "约翰·F·肯尼迪"],
+      narrative: [
+        "赫鲁晓夫被卡斯特罗激进言辞与国内强硬派拉扯，未接受秘密交易，反而公开宣布「苏联将以全面战争回应任何对古巴的攻击」。",
+        "10 月 28 日凌晨，美国战略空军司令部进入 DEFCON 1（最高战备）。赫鲁晓夫在 24 小时内意识到自己已被推到无法回头的位置，紧急通过多布雷宁恳请重新谈判。然此刻肯尼迪已陷入军方「全面打击」的内部压力中，回旋余地骤减。最终通过热线在最后 6 小时达成停火，但人类离核战不超过 90 分钟 —— 后世史学家将这段时间称为「赫鲁晓夫的疯狂周末」。"
+      ],
+      reflection: "<b>反事实推演：</b>决策者最危险的时刻，不是没有选项，而是被外部压力推到「不得不强硬」的位置。这个分支揭示：<b>赫鲁晓夫真正的勇气，不在于敢推到危机边缘，而在于敢从边缘退回</b> —— 而这种「退回」的勇气，比「推进」的勇气更稀缺。"
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "正史结局 · CANONICAL",
+      tagClass: "canonical",
+      title: "秘密交易  ·  体面退场",
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫", "罗伯特·F·肯尼迪", "阿纳托利·多布雷宁"],
+      narrative: [
+        "10 月 28 日上午，赫鲁晓夫通过莫斯科广播宣布：苏联将拆除并撤回部署在古巴的导弹。肯尼迪则公开承诺「美国不入侵古巴」。土耳其木星导弹的撤除作为秘密附加条款 —— 直到 1989 年才被解密档案证实。",
+        "卡斯特罗对被排除在谈判之外极为愤怒，与莫斯科关系自此出现裂痕。10 月 29 日，全世界从战争边缘退回。1963 年，美苏建立直通热线（红色电话），并签订《部分禁止核试验条约》。冷战进入「相互保证毁灭」（MAD）下的有限缓和阶段。"
+      ],
+      reflection: "<b>历史的真实走向：</b>古巴导弹危机被普遍视为人类最接近核毁灭的 13 天。它的化解依赖于<b>三件极为脆弱的事</b>：肯尼迪顶住军方压力、赫鲁晓夫顶住国内压力、以及多布雷宁与罗伯特之间的私人信任。<br><br>这一结局也提醒我们：<b>「危机管理」的本质不是消灭对手的选项，而是给对手保留一个体面的出口</b>。罗伯特允诺秘密撤土耳其导弹，正是这种「给对方保留体面」的最高明示范。这一原则至今仍是国际危机谈判的金科玉律。"
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "公开签字  ·  撕裂之后",
+      castOnStage: ["尼基塔·赫鲁晓夫", "约翰·F·肯尼迪"],
+      narrative: [
+        "赫鲁晓夫在卡斯特罗与国内强硬派的双重压力下，要求美方公开书面承诺撤除土耳其导弹，否则不撤古巴导弹。肯尼迪在国内政治压力下不愿如此「丢面子」—— 双方陷入两周的公开口水战。",
+        "最终在多布雷宁努力下达成协议，但美方公开撤土耳其导弹之事在国内引发「让步外交」的两党论战。肯尼迪 1964 年大选受挫，险些败选；土耳其与希腊感到被出卖，与美国关系长期紧张；赫鲁晓夫则在 1964 年因「冒险主义」被勃列日涅夫推翻。三方各失其所，几乎无人成为赢家。"
+      ],
+      reflection: "<b>反事实推演：</b>「面子」与「里子」常常是互相替代的资源 —— 当一方坚持要将「秘密交易」变成「公开胜利」时，胜利的果实往往会因此变质。这个分支揭示：<b>外交的智慧，常常体现在「让对方拿走面子，自己拿走里子」的克制中。</b>"
+    }
+  };
+
+  const STORY_PROGRESS_LABELS = [
+    "导弹现身加勒比上空",
+    "海上封锁与公开摊牌",
+    "执行委员会的犹豫斡旋",
+    "克里姆林宫的最后抉择",
+    "退场之后与冷战缓和"
+  ];
+
+  /* ============================================================
+     Passages — English
+     ============================================================ */
+  const PASSAGES_EN = {
+
+    "start": {
+      type: "start",
+      epEmoji: "🚀",
+      epTitle: "Cuban Missile Crisis",
+      epSub: "C A R I B B E A N   ·   O C T O B E R   1 9 6 2",
+      desc: "On October 14, 1962, a U-2 reconnaissance aircraft photographed Soviet medium-range ballistic missile sites under construction near San Cristóbal in western Cuba. For Washington, this meant Moscow could strike the major cities of America's East Coast within five minutes. Kennedy convened the Executive Committee of the National Security Council behind closed doors for thirteen days. Khrushchev weighed his options between Moscow and Havana. Castro prepared Havana for annihilation. The thirteen days in which humanity came closest to all-out nuclear war would be decided by a handful of exhausted, anxious leaders acting on incomplete intelligence.",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "Act I  ·  The Reconnaissance Photos",
+      sceneTitle: "Missiles Spotted Over the Caribbean",
+      progressIndex: 0,
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫", "菲德尔·卡斯特罗"],
+      narrative: [
+        "On the morning of October 16, National Security Advisor McGeorge Bundy placed the photographs on the desk of the Oval Office: 'Mr. President — the Soviets are deploying medium-range missiles in Cuba. The SS-4 among them can reach Washington.'",
+        "General Curtis LeMay, Chairman of the Joint Chiefs, advocated an immediate air strike followed by an invasion of Cuba. Secretary of State Dean Rusk favored a diplomatic approach. Robert F. Kennedy proposed a third option: a naval blockade. With roughly ten to fourteen days before the Soviet missile sites would be operational, the President had to settle on a basic course of action within hours."
+      ],
+      dialogs: [
+        { who: "李梅将军",        what: "Mr. President, the only answer is a 'surgical' air strike followed immediately by a landing. Once those missiles are armed, New York and Washington will be five minutes from nuclear destruction." },
+        { who: "罗伯特·F·肯尼迪", what: "John, we cannot become the nation that launches a Pearl Harbor-style surprise attack. A blockade gives Khrushchev an off-ramp and buys us time." },
+        { who: "约翰·F·肯尼迪",   what: "If I strike first, history will compare me to Tojo. But if I do nothing, the missiles will be sitting there very soon." }
+      ],
+      decision: { question: "Among three basic strategies, which path should Kennedy take?", maker: "约翰·F·肯尼迪" },
+      choices: [
+        { label: "Launch an immediate air strike on Cuba and prepare for invasion", hint: "Hawk's route — a war path diverging from history",     next: "end_A" },
+        { label: "Announce a naval 'quarantine' blockade of Cuba",                hint: "The middle path — the historical choice",               next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "Act II  ·  The Naval Confrontation",
+      sceneTitle: "The Naval Quarantine and the Public Showdown",
+      progressIndex: 1,
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫", "菲德尔·卡斯特罗"],
+      narrative: [
+        "On October 22, Kennedy delivered a nationwide television address announcing a 'quarantine' of Cuba — a naval cordon against all offensive weapons bound for the island. The next day Khrushchev publicly denounced the 'piratical blockade,' but ordered one Soviet freighter carrying missiles, the Alexandrovsk, to slow down and test the American response.",
+        "U-2 aircraft over Cuba were repeatedly tracked by Soviet SAM surface-to-air missiles. On 'Black Saturday,' October 27, a U-2 was shot down over Cuba and its pilot, Major Rudolf Anderson, was killed. The Joint Chiefs again pressed for a full air strike. Kennedy faced a new decision: escalate from 'quarantine' to military action, or hold the blockade and fight for diplomatic time."
+      ],
+      dialogs: [
+        { who: "李梅将军",        what: "Mr. President, our pilot has been shot down! If we don't act now, our allies will start thinking America is a paper tiger." },
+        { who: "罗伯特·F·肯尼迪", what: "John, Khrushchev may not have ordered that U-2 shootdown himself — it was more likely a field commander's call. We cannot let one accident ignite the whole war." },
+        { who: "约翰·F·肯尼迪",   what: "What we are trying to avoid right now is accidental Armageddon." }
+      ],
+      decision: { question: "After the U-2 is shot down, how should Kennedy respond?", maker: "约翰·F·肯尼迪" },
+      choices: [
+        { label: "Immediately escalate to air strikes and an amphibious invasion", hint: "Hawk's counterstrike — an escalation route diverging from history", next: "n2a" },
+        { label: "Hold the line: no escalation, continue blockade and diplomacy",  hint: "Restrained waiting — the historical choice",                       next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "Branch  ·  The Trigger Pulled",
+      sceneTitle: "Two Scales of Military Escalation",
+      progressIndex: 2,
+      castOnStage: ["约翰·F·肯尼迪", "李梅将军"],
+      narrative: [
+        "Under immense internal pressure, Kennedy authorizes military action against Cuba. But the scope of the strike still presents two distinct options: a 'surgical' air campaign limited to missile sites and air-defense installations, or the full OPLAN 316 invasion of Cuba.",
+        "The former aims to leave Khrushchev diplomatic room to maneuver; the latter would permanently eliminate 'the knife at the door,' but would almost certainly trigger a Soviet chain reaction in Europe — above all in Berlin."
+      ],
+      dialogs: [
+        { who: "李梅将军",        what: "If we only bomb the bases, they'll have them rebuilt in two days. Only a full invasion pulls the problem out by the root." },
+        { who: "罗伯特·F·肯尼迪", what: "If we land in Cuba, Khrushchev must recover his prestige somewhere in Europe — Berlin will fall, and World War III begins there." },
+        { who: "约翰·F·肯尼迪",   what: "I have to choose the path with the smallest losses in the worst-case scenario — and right now I'm not sure which one that is." }
+      ],
+      decision: { question: "In the escalation to military action, what scale of strike should be chosen?", maker: "约翰·F·肯尼迪" },
+      choices: [
+        { label: "OPLAN 316: full-scale invasion of Cuba",    hint: "Total eradication — leads to direct U.S.-Soviet war",    next: "end_B" },
+        { label: "Surgical air strikes on missile sites only", hint: "Limited war — leads to the crisis-out-of-control ending", next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "Act III  ·  The Executive Committee",
+      sceneTitle: "The ExComm's Deliberations and Back-Channel Maneuvering",
+      progressIndex: 2,
+      castOnStage: ["罗伯特·F·肯尼迪", "约翰·F·肯尼迪", "阿纳托利·多布雷宁"],
+      narrative: [
+        "Kennedy opts not to escalate and instead adopts Robert's proposal — using an informal channel outside the ExComm to reach a secret deal with the Soviets. Robert identifies three possibilities: a direct secret meeting with Soviet Ambassador Dobrynin, mediation through UN Secretary-General U Thant, or indirect communication via NATO allies such as Britain's Macmillan or the Turkish foreign minister.",
+        "Time is short, and each option carries trade-offs. Secret diplomacy is fast but risks accusations at home of selling out allies; UN mediation is slow but carries legal legitimacy; going through allies risks Turkey refusing to remove its Jupiter missiles."
+      ],
+      dialogs: [
+        { who: "罗伯特·F·肯尼迪", what: "John, Dobrynin is a man Khrushchev trusts — I can knock on the Soviet Embassy door tonight." },
+        { who: "腊斯克国务卿",    what: "I lean toward the UN route — at least it leaves a paper trail and prevents arguments later." },
+        { who: "麦克米伦（来电）", what: "Mr. Kennedy, Britain is willing to serve as an intermediary — but Turkey may not cooperate." }
+      ],
+      decision: { question: "Which back-channel diplomatic path should Robert choose?", maker: "罗伯特·F·肯尼迪" },
+      choices: [
+        { label: "Meet Dobrynin personally in secret and signal willingness to withdraw the Jupiter missiles from Turkey", hint: "Direct channel — the historical choice",                  next: "n4" },
+        { label: "Ask UN Secretary-General U Thant to mediate publicly",                                                  hint: "Multilateral diplomacy — an international route diverging from history", next: "n3a" },
+        { label: "Pass word indirectly through Britain and Turkey",                                                        hint: "Allied mediation — an allied-route diverging from history",             next: "end_D" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "Branch  ·  The UN Building",
+      sceneTitle: "Two Approaches to Public Mediation",
+      progressIndex: 3,
+      castOnStage: ["罗伯特·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "Robert abandons direct contact with Dobrynin and instead asks UN Secretary-General U Thant to intervene. But within multilateral diplomacy there is still a fork: demand an immediate Security Council vote on a 'remove missiles in exchange for non-invasion' resolution (good for American legitimacy, but certain to enrage the Soviets), or simply request a UN inspection team to enter Cuba and establish the facts (neutral, but extremely time-consuming).",
+        "The advantage of public mediation is international legitimacy; the disadvantage is that the process is slow, while Soviet missile sites are drawing closer to operational readiness by the minute."
+      ],
+      dialogs: [
+        { who: "吴丹",            what: "Mr. President, the United Nations can serve as a neutral mediator — but if the U.S. insists on an immediate vote, the Soviet Union will likely veto it and a deadlock will follow." },
+        { who: "罗伯特·F·肯尼迪", what: "We have no time to wait months for an inspection team, yet we still need to hold the moral high ground." },
+        { who: "赫鲁晓夫（电报）", what: "We welcome a UN investigation — but we will not accept a unilateral resolution." }
+      ],
+      decision: { question: "Within multilateral mediation, which path should be taken?", maker: "罗伯特·F·肯尼迪" },
+      choices: [
+        { label: "Push the Security Council to vote immediately on a missile-removal resolution", hint: "Seek legitimacy — leads to a face-saving but delayed outcome", next: "end_E" },
+        { label: "Request a UN inspection team to enter Cuba for neutral verification",           hint: "Seek neutrality — leads to an inspection-delay outcome",       next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "Act IV  ·  The Kremlin",
+      sceneTitle: "The Kremlin's Final Decision",
+      progressIndex: 3,
+      castOnStage: ["尼基塔·赫鲁晓夫", "菲德尔·卡斯特罗", "阿纳托利·多布雷宁"],
+      narrative: [
+        "Late on the night of October 27, an urgent cable from Dobrynin reached Moscow: Robert F. Kennedy had personally pledged that if the Soviet Union withdrew its missiles from Cuba, the U.S. would 'quietly remove the Jupiter missiles from Turkey within six months' and publicly commit to a 'non-invasion of Cuba' — but the Turkey withdrawal 'must never appear in writing.'",
+        "At the same moment, a cable from Castro also arrived at the Kremlin, its language extreme: 'Even if Cuba is destroyed, imperialism must not prevail — if necessary, the Soviet Union should launch a nuclear first strike against the United States!' Khrushchev read it twice and fell silent for a long time.",
+        "Before him lay three options: reject the deal and publicly escalate; accept the secret deal and announce to the Soviet public that Cuba had been protected; or publicly claim victory and demand a written American commitment to withdraw the Turkish missiles. Each choice would shape the Cold War for the next thirty years."
+      ],
+      dialogs: [
+        { who: "卡斯特罗（电报）", what: "If the United States invades Cuba, I hope you will not hesitate to immediately strike imperialism with nuclear weapons!" },
+        { who: "多布雷宁（电报）", what: "Robert stressed that if an agreement cannot be reached within a few hours, he cannot guarantee that Kennedy will be able to hold back the military." },
+        { who: "赫鲁晓夫",        what: "To save millions and tens of millions of lives … we must accept this deal." }
+      ],
+      decision: { question: "At the final moment, how should Khrushchev choose?", maker: "尼基塔·赫鲁晓夫" },
+      choices: [
+        { label: "Reject the deal and publicly escalate",                                           hint: "Hardball — an escalation route diverging from history",         next: "end_G" },
+        { label: "Accept the secret deal: withdraw missiles in exchange for non-invasion",          hint: "A dignified exit — the historical choice",                     next: "end_H" },
+        { label: "Accept the missile withdrawal but demand a written U.S. commitment on Turkey",   hint: "Public record — a face-demanding route diverging from history", next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS — English
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Immediate Air Strike · War Spirals Out of Control",
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "Kennedy approves a 'surgical' air strike for the early hours of October 17. It is only afterward that the truth emerges: Cuba was already home to 162 tactical nuclear warheads and 12 fully assembled 'Luna' tactical missiles, and Soviet field commanders had standing authorization to fire them 'in the event of an American invasion.'",
+        "U.S. landing forces are hit by tactical nuclear strikes before they reach the beach. American bases near Guantánamo and Tampa suffer nuclear retaliation. Khrushchev is forced to respond along the European front — West Berlin falls, and NATO and Warsaw Pact forces clash in a ground war across Central Europe. By the end of October the world is in a phase of mutual nuclear exchange. The strike that was supposed to be 'surgical' becomes the final punctuation mark of human civilization."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> A 'surgical strike' is almost always a concept validated in hindsight — before it lands, no one can guarantee that only the target will be hit. What makes this branch terrifying is that <b>the truth about Soviet tactical warheads in Cuba was not revealed until after the Cold War ended</b>. Had Kennedy listened to General LeMay, the fate of all humanity would have been left to a 'black box' whose contents the decision-makers themselves did not fully understand."
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Full-Scale Invasion · Berlin Falls",
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "Kennedy approves OPLAN 316, the full-scale invasion of Cuba. On October 30, 140,000 U.S. troops land in eastern Cuba. Castro broadcasts from Havana: 'Homeland or death.' Under pressure from hardliners at home, Khrushchev announces a land blockade of West Berlin on November 1 and launches a 'warning incursion' against NATO's border in East Germany. Conventional war erupts in Central Europe; both sides wait for the other to use nuclear weapons first. Before Christmas 1962, nuclear winter descends on both sides of the Berlin Wall."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> In geopolitics, 'victory in your own backyard' often means 'defeat far away.' This branch is a reminder that <b>in great-power confrontations, the point of victory is rarely containable to a single theater — it will always open symmetrically elsewhere</b>. Resolving the Cuba problem inevitably detonates the Berlin problem."
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Surgical Air Strikes · Crisis Out of Control",
+      castOnStage: ["约翰·F·肯尼迪"],
+      narrative: [
+        "U.S. forces carry out precision air strikes targeting only Cuban missile sites; the bases and radar stations are destroyed. But a Soviet field commander, his communications cut off and believing a full American invasion is under way, fires one 'Luna' tactical nuclear missile at the U.S. base at Guantánamo.",
+        "Washington interprets this as Khrushchev's limited nuclear retaliation and responds in kind. The situation escalates to the strategic level within six hours. In the end a ceasefire is reached through the hotline in mutual panic — but Guantánamo, Oriente Province, and the southern tip of Florida are nuclear wastelands. The phrase 'limited war' enters the historical lexicon — as a warning about how 'limited' can become uncontrollable."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> 'Limited' is a label applied in retrospect, not a guarantee given in advance. This branch reveals that <b>in an escalating conflict, 'self-restraint' depends on both sides accurately reading each other's intentions — and war itself is precisely what destroys that accuracy</b>."
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Allied Mediation · Turkey Defies Washington",
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "Robert passes word through Britain's Macmillan to Khrushchev that 'the U.S. is willing to remove the Jupiter missiles from Turkey.' But after the message leaks, Turkish President Gürsel convenes secret talks with NATO allies in Istanbul and flatly 'refuses to remove the Jupiter missiles,' publicly protesting that America is 'trading an ally's interests.'",
+        "Kennedy finds himself mired in a NATO credibility crisis. Khrushchev, seeing that the U.S. 'cannot even persuade its own allies,' raises his price: he demands a public commitment from America, signed in black and white. The agreement that is eventually reached comes later and at greater humiliation than in the historical outcome, and Turkey and Greece carry a long-term rift with the United States ever after."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> The advantage of multilateral diplomacy is legitimacy; the disadvantage is control. This branch reminds us that <b>when a nation tries to trade away an ally's interests by passing word through that very ally, it often loses the trust of both the ally and the adversary at the same time</b>."
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Security Council Deadlock · Face Saved, Substance Lost",
+      castOnStage: ["罗伯特·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "The U.S. pushes the Security Council to vote on a resolution demanding the immediate Soviet withdrawal of missiles from Cuba. The Soviet Union exercises its veto as expected. The resolution fails, but America's moral high ground is silently acknowledged by most nations.",
+        "Soviet missile sites continue to advance, however. By November 1 all 24 SS-4 missiles are operational — every city on America's East Coast is now within range. The U.S. is ultimately forced to reach a private 'remove Turkey missiles + non-invasion of Cuba' agreement with the Soviets without any formal security guarantee. 'Face was saved; the substance was entirely lost.'"
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Procedural legitimacy cannot substitute for substantive security. This branch reveals that <b>when an urgent real-world problem is fed into a slow-moving multilateral process, the result is often that the procedure wins while reality loses</b>."
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "UN Inspection Team · Time Will Not Wait",
+      castOnStage: ["罗伯特·F·肯尼迪", "尼基塔·赫鲁晓夫"],
+      narrative: [
+        "A UN inspection team arrives in Cuba on October 30. But Castro invokes 'sovereignty' to bar the team from military restricted zones; the inspection stalls. Meanwhile Soviet missile sites continue to progress and are fully operational by mid-November.",
+        "With 'facts on the ground now verified,' the U.S. is forced to accept the status quo — Soviet missiles permanently stationed in Cuba as a symmetric response to the American missiles in Turkey. From that point on, the U.S. homeland enters the era of 'five-minute nuclear strike,' and the entire Cold War defense architecture has to be rebuilt from scratch."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Neutrality cannot replace decisiveness in every context. This branch reveals that <b>when the essence of a problem is a closing time window rather than a question of legitimacy, 'procedural neutrality' becomes a trap that binds only oneself</b>."
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Rejected Deal · Beyond the Nuclear Brink",
+      castOnStage: ["尼基塔·赫鲁晓夫", "约翰·F·肯尼迪"],
+      narrative: [
+        "Pulled between Castro's inflammatory rhetoric and domestic hardliners, Khrushchev rejects the secret deal and instead publicly declares that 'the Soviet Union will respond to any attack on Cuba with all-out war.'",
+        "In the early hours of October 28, U.S. Strategic Air Command goes to DEFCON 1. Khrushchev realizes within 24 hours that he has been pushed to a point of no return and urgently appeals through Dobrynin for renewed negotiations. But by now Kennedy is under crushing internal pressure from the military for a 'full strike,' and his room to maneuver has almost vanished. A ceasefire is reached through the hotline in the final six hours, but humanity had come within ninety minutes of nuclear war — a period historians later called 'Khrushchev's Mad Weekend.'"
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> The most dangerous moment for a decision-maker is not when there are no options, but when external pressure forces them into the position of 'having no choice but to be tough.' This branch reveals that <b>Khrushchev's true courage lay not in daring to push the crisis to the brink, but in daring to step back from the brink</b> — and that the courage to retreat is rarer than the courage to advance."
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "Canonical Ending · CANONICAL",
+      tagClass: "canonical",
+      title: "The Secret Deal · A Dignified Exit",
+      castOnStage: ["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫", "罗伯特·F·肯尼迪", "阿纳托利·多布雷宁"],
+      narrative: [
+        "On the morning of October 28, Khrushchev announced over Moscow Radio that the Soviet Union would dismantle and withdraw the missiles deployed in Cuba. Kennedy publicly pledged that 'the United States will not invade Cuba.' The withdrawal of the Jupiter missiles from Turkey was a secret codicil to the deal — not confirmed by declassified documents until 1989.",
+        "Castro was furious at being excluded from the negotiations, and the relationship between Havana and Moscow cracked from that point on. On October 29 the world stepped back from the edge of war. In 1963, the U.S. and USSR established a direct hotline (the 'red telephone') and signed the Partial Nuclear Test Ban Treaty. The Cold War entered a period of limited détente under Mutually Assured Destruction."
+      ],
+      reflection: "<b>The true course of history:</b> The Cuban Missile Crisis is widely regarded as the thirteen days in which humanity came closest to nuclear annihilation. Its resolution rested on <b>three extraordinarily fragile things</b>: Kennedy holding back the military, Khrushchev holding back domestic hardliners, and the personal trust between Dobrynin and Robert Kennedy.<br><br>This ending also reminds us that <b>the essence of 'crisis management' is not destroying the adversary's options, but leaving the adversary a dignified exit</b>. Robert's secret promise to remove the Turkish missiles was the finest demonstration of that principle — one that remains the gold standard of international crisis negotiation to this day."
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Signed in Public · Torn Apart Afterward",
+      castOnStage: ["尼基塔·赫鲁晓夫", "约翰·F·肯尼迪"],
+      narrative: [
+        "Squeezed between Castro and domestic hardliners, Khrushchev demands a public written U.S. commitment to remove the Turkish missiles; otherwise he will not remove the Cuban missiles. Kennedy, facing domestic political pressure, is unwilling to 'lose face' so openly — both sides sink into two weeks of very public recriminations.",
+        "An agreement is eventually reached through Dobrynin's efforts, but the public U.S. withdrawal from Turkey triggers a bipartisan domestic debate about 'appeasement diplomacy.' Kennedy narrowly escapes defeat in the 1964 election. Turkey and Greece feel betrayed and drift from the U.S. for years. Khrushchev is toppled by Brezhnev in 1964 on charges of 'adventurism.' All three parties lose something; virtually no one emerges a winner."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> 'Face' and 'substance' are often substitutes for the same resource — when one side insists on turning a 'secret deal' into a 'public victory,' the fruit of that victory tends to rot in the process. This branch reveals that <b>the wisdom of diplomacy often lies in the restraint of 'letting the other side take the face while you take the substance.'</b>"
+    }
+  };
+
+  /* ============================================================
+     Story progress labels
+     ============================================================ */
+  const STORY_PROGRESS_LABELS_EN = [
+    "Missiles Spotted Over the Caribbean",
+    "The Naval Quarantine and the Public Showdown",
+    "The ExComm's Deliberations and Back-Channel Maneuvering",
+    "The Kremlin's Final Decision",
+    "The Aftermath and the Thaw in the Cold War"
+  ];
+
+  const state = {
+    pathTrace: []
+  };
+
+  function renderCast(names) {
+    const list = document.getElementById("cast-list");
+    const cast = getCast();
+    list.innerHTML = "";
+    (names || []).forEach(key => {
+      const c = cast[key];
+      if (!c) return;
+      const row = document.createElement("div");
+      row.className = "cast-row";
+      row.innerHTML = `
+        <div class="av">${c.avatar}</div>
+        <div class="info">
+          <div class="name">${currentLang === 'en' ? c.name : key}</div>
+          <div class="role">${c.title}</div>
+          <div class="desc">${c.desc}</div>
+        </div>`;
+      list.appendChild(row);
+    });
+  }
+
+  function renderProgress(currentIndex) {
+    const list = document.getElementById("progress-list");
+    const labels = getLabels();
+    list.innerHTML = "";
+    labels.forEach((label, i) => {
+      const row = document.createElement("div");
+      let cls = "step";
+      if (currentIndex != null) {
+        if (i < currentIndex) cls += " done";
+        else if (i === currentIndex) cls += " current";
+      }
+      row.className = cls;
+      row.innerHTML = `<span class="dot">●</span><span>${i + 1}. ${label}</span>`;
+      list.appendChild(row);
+    });
+    const meta = document.getElementById("meta-progress");
+    if (meta) {
+      const display = currentIndex == null ? 0 : Math.min(currentIndex + 1, labels.length);
+      meta.textContent = currentLang === 'en'
+        ? `Act ${display} / ${labels.length}`
+        : `第 ${display} / ${labels.length} 幕`;
+    }
+  }
+
+  function go(passageId, choiceIndex) {
+    if (choiceIndex != null) {
+      const last = state.pathTrace[state.pathTrace.length - 1];
+      if (last && last.choiceIndex == null) last.choiceIndex = choiceIndex;
+    }
+    render(passageId);
+  }
+
+  function render(passageId) {
+    currentPassageId = passageId;
+    const passages = getPassages();
+    const p = passages[passageId];
+    if (!p) return;
+
+    const area = document.getElementById("passage-area");
+    area.innerHTML = "";
+
+    const card = document.createElement("section");
+    card.className = "stage fade-in" + (p.type === "ending" ? " ending" : "") + (p.type === "start" ? " start" : "");
+
+    if (p.type === "start") {
+      const startLabel = currentLang === 'en' ? 'Begin this story →' : '开始这段历史 →';
+      card.innerHTML = `
+        <div class="stage-body">
+          <div class="ep-emoji">${p.epEmoji}</div>
+          <div class="ep-title">${p.epTitle}</div>
+          <div class="ep-sub">${p.epSub}</div>
+          <p class="ep-desc">${p.desc}</p>
+          <button class="start-btn" id="start-btn">${startLabel}</button>
+        </div>`;
+      area.appendChild(card);
+      renderCast(["约翰·F·肯尼迪", "尼基塔·赫鲁晓夫", "菲德尔·卡斯特罗", "罗伯特·F·肯尼迪", "阿纳托利·多布雷宁"]);
+      renderProgress(null);
+      document.getElementById("start-btn").onclick = () => {
+        state.pathTrace = [];
+        render(p.next);
+      };
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (p.type === "scene") {
+      state.pathTrace.push({ passageId: passageId, choiceIndex: null });
+
+      const headHtml = `
+        <div class="stage-head">
+          <div>
+            <div class="chapter">${p.chapter}</div>
+            <div class="scene-title">${p.sceneTitle}</div>
+          </div>
+          <div class="right-tag">SCENE  ${String(p.progressIndex + 1).padStart(2, "0")}</div>
+        </div>`;
+
+      let bodyHtml = `<div class="stage-body">`;
+      p.narrative.forEach((para, i) => {
+        bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`;
+      });
+
+      if (p.dialogs && p.dialogs.length) {
+        bodyHtml += `<div class="dialogs">`;
+        p.dialogs.forEach(d => {
+          if (d.direction) {
+            bodyHtml += `<div class="stage-direction">— ${d.direction} —</div>`;
+          } else {
+            const av = (CAST[d.who] && CAST[d.who].avatar) || "·";
+            const speakerName = currentLang === 'en' ? (CAST_EN[d.who] ? CAST_EN[d.who].name : d.who) : d.who;
+            bodyHtml += `<div class="line">
+              <div class="who"><span class="av">${av}</span>${speakerName}</div>
+              <div class="what">${d.what}</div>
+            </div>`;
+          }
+        });
+        bodyHtml += `</div>`;
+      }
+
+      if (p.decision) {
+        const makerAv = (CAST[p.decision.maker] && CAST[p.decision.maker].avatar) || "·";
+        const makerName = currentLang === 'en' ? (CAST_EN[p.decision.maker] ? CAST_EN[p.decision.maker].name : p.decision.maker) : p.decision.maker;
+        const decLabel = currentLang === 'en' ? '▼ KEY DECISION' : '▼ 关键抉择 KEY DECISION';
+        const makerLabel = currentLang === 'en'
+          ? `Decision by ${makerAv} <b>${makerName}</b>`
+          : `由 ${makerAv} <b>${makerName}</b> 拍板`;
+        bodyHtml += `
+          <div class="decision">
+            <div class="label">${decLabel}</div>
+            <div class="question">${p.decision.question}</div>
+            <div class="maker">${makerLabel}</div>
+          </div>`;
+      }
+
+      if (p.choices && p.choices.length) {
+        bodyHtml += `<div class="choices">`;
+        p.choices.forEach((c, i) => {
+          bodyHtml += `<button class="choice-btn" data-next="${c.next}" data-index="${i}">
+            <span class="arrow">▶</span>${c.label}
+            ${c.hint ? `<span class="hint">${c.hint}</span>` : ""}
+          </button>`;
+        });
+        bodyHtml += `</div>`;
+      }
+
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+
+      renderCast(p.castOnStage);
+      renderProgress(p.progressIndex);
+
+      card.querySelectorAll(".choice-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const next = btn.getAttribute("data-next");
+          const idx = parseInt(btn.getAttribute("data-index"), 10);
+          go(next, idx);
+        });
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (p.type === "ending") {
+      const endChapter = currentLang === 'en' ? 'END  ·  THE END' : '终  ·  THE END';
+      const headHtml = `
+        <div class="stage-head">
+          <div>
+            <div class="chapter">${endChapter}</div>
+            <div class="scene-title">${p.title}</div>
+          </div>
+          <div class="right-tag">EPISODE COMPLETE</div>
+        </div>`;
+
+      let bodyHtml = `<div class="stage-body">
+        <div class="ending-tag ${p.tagClass || ""}">${p.tag}</div>
+        <div class="ending-title">${p.title}</div>`;
+
+      p.narrative.forEach((para, i) => {
+        bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`;
+      });
+
+      bodyHtml += `<div class="reflection">${p.reflection}</div>`;
+
+      if (state.pathTrace.length) {
+        const ptTitle = currentLang === 'en' ? '▼ YOUR STORY PATH' : '▼ 你走过的剧情线 STORY PATH';
+        const endLabel = currentLang === 'en' ? 'Ending reached:' : '抵达结局：';
+        bodyHtml += `<div class="path-trace">
+          <div class="pt-title">${ptTitle}</div>
+          <ol>`;
+        state.pathTrace.forEach(t => {
+          const tp = passages[t.passageId];
+          const sceneName = tp ? tp.sceneTitle : t.passageId;
+          let choiceStr = '';
+          if (t.choiceIndex != null && tp && tp.choices && tp.choices[t.choiceIndex]) {
+            choiceStr = ` — <i style="color:var(--accent-2)">${tp.choices[t.choiceIndex].label}</i>`;
+          }
+          bodyHtml += `<li>${sceneName}${choiceStr}</li>`;
+        });
+        bodyHtml += `<li>${endLabel} <b style="color:var(--accent-2)">${p.title}</b></li>`;
+        bodyHtml += `</ol></div>`;
+      }
+
+      const restartLabel = currentLang === 'en' ? '↺  Restart' : '↺  重新开始（Restart）';
+      bodyHtml += `<div class="actions">
+        <button id="restart-btn">${restartLabel}</button>
+      </div>`;
+
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+
+      renderCast(p.castOnStage);
+      renderProgress(getLabels().length - 1);
+
+      document.getElementById("restart-btn").addEventListener("click", () => {
+        state.pathTrace = [];
+        render("start");
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+  }
+
+  // boot
+  updateStaticUI();
+  render("start");
+</script>
+</body>
+</html>

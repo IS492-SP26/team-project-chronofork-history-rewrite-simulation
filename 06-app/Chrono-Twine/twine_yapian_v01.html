@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>First Opium War · Twine IDN Baseline</title>
+<style>
+  /* ============================================================
+     Twine IDN Baseline · 第一次鸦片战争爆发
+     Static branching narrative · NO LLM / NO backtracking /
+     NO divergence engine. Choices are limited to preset options.
+     ============================================================ */
+
+  :root {
+    --bg-0: #1a120b;
+    --bg-1: #211a12;
+    --bg-2: #2a2118;
+    --bg-card: #2f261b;
+    --ink-0: #f3e7d2;
+    --ink-1: #d9c8a8;
+    --ink-2: #a89579;
+    --ink-3: #7a6a52;
+    --accent: #c0392b;
+    --accent-2: #e8c14a;
+    --accent-3: #5d8a4e;
+    --rule: #4a3a26;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+    --serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif SC", "Times New Roman", serif;
+    --sans: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans SC", -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink-0); font-family: var(--serif); line-height: 1.7; min-height: 100vh; }
+  body { background: radial-gradient(circle at 20% 0%, rgba(192, 57, 43, 0.08), transparent 40%), radial-gradient(circle at 80% 100%, rgba(232, 193, 74, 0.06), transparent 50%), var(--bg-0); }
+  .app { max-width: 1080px; margin: 0 auto; padding: 24px 24px 60px; }
+
+  header.episode { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: linear-gradient(135deg, var(--bg-2), var(--bg-1)); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 18px; }
+  .episode .title-block { display: flex; align-items: center; gap: 14px; }
+  .episode .emoji { font-size: 32px; line-height: 1; }
+  .episode .title { font-size: 22px; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
+  .episode .sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; letter-spacing: 2px; font-family: var(--sans); }
+  .episode .meta { text-align: right; font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .episode .meta .tag { display: inline-block; padding: 3px 8px; border: 1px solid var(--rule); border-radius: 3px; margin-left: 6px; color: var(--ink-1); }
+
+  .layout { display: grid; grid-template-columns: 1fr 280px; gap: 18px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } aside.side { order: 2; } }
+
+  .stage { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); overflow: hidden; }
+  .stage-head { padding: 14px 22px; border-bottom: 1px solid var(--rule); background: linear-gradient(180deg, rgba(232, 193, 74, 0.06), transparent); display: flex; align-items: center; justify-content: space-between; }
+  .stage-head .chapter { color: var(--accent-2); font-size: 13px; letter-spacing: 4px; font-family: var(--sans); }
+  .stage-head .scene-title { font-size: 20px; font-weight: 600; color: var(--ink-0); margin-top: 2px; }
+  .stage-head .right-tag { font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .stage-body { padding: 22px 26px; }
+  .narrative { font-size: 16px; color: var(--ink-1); text-indent: 2em; margin: 0 0 16px; }
+  .narrative.lead { color: var(--ink-0); font-size: 16.5px; }
+
+  .dialogs { margin: 18px 0 6px; padding: 14px 16px; background: rgba(0, 0, 0, 0.18); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
+  .dialogs .line { display: flex; gap: 10px; margin: 8px 0; align-items: baseline; }
+  .dialogs .who { flex: 0 0 96px; text-align: right; color: var(--accent-2); font-weight: 600; font-size: 14px; font-family: var(--sans); }
+  .dialogs .who .av { margin-right: 4px; }
+  .dialogs .what { flex: 1; color: var(--ink-1); font-size: 15px; line-height: 1.65; }
+  .dialogs .what::before { content: "「"; color: var(--ink-3); }
+  .dialogs .what::after { content: "」"; color: var(--ink-3); }
+
+  .decision { margin-top: 22px; padding: 16px 18px; border: 1px dashed var(--accent-2); border-radius: 6px; background: rgba(232, 193, 74, 0.04); }
+  .decision .label { font-size: 12px; letter-spacing: 3px; color: var(--accent-2); font-family: var(--sans); margin-bottom: 6px; }
+  .decision .question { font-size: 16px; color: var(--ink-0); font-weight: 600; margin-bottom: 4px; }
+  .decision .maker { font-size: 13px; color: var(--ink-2); font-family: var(--sans); }
+
+  .choices { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .choice-btn { display: block; width: 100%; text-align: left; background: var(--bg-2); color: var(--ink-0); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 16px; font-family: var(--serif); font-size: 15px; line-height: 1.55; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.05s; }
+  .choice-btn:hover { background: #3a2d1f; border-color: var(--accent-2); color: var(--accent-2); }
+  .choice-btn:active { transform: translateY(1px); }
+  .choice-btn .arrow { color: var(--accent); margin-right: 8px; font-weight: 700; }
+  .choice-btn .hint { display: block; margin-top: 4px; font-size: 12.5px; color: var(--ink-3); font-family: var(--sans); }
+
+  aside.side { display: flex; flex-direction: column; gap: 14px; }
+  .panel { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .panel h3 { margin: 0 0 10px; font-size: 13px; color: var(--accent-2); letter-spacing: 3px; font-family: var(--sans); font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+  .cast-list .cast-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+  .cast-list .cast-row:last-child { border-bottom: none; }
+  .cast-list .av { font-size: 22px; flex: 0 0 28px; text-align: center; }
+  .cast-list .info .name { font-weight: 600; color: var(--ink-0); font-size: 14px; }
+  .cast-list .info .role { font-size: 11.5px; color: var(--ink-2); font-family: var(--sans); }
+  .cast-list .info .desc { font-size: 12px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
+
+  .progress-list .step { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; font-family: var(--sans); color: var(--ink-3); }
+  .progress-list .step .dot { flex: 0 0 12px; color: var(--rule); font-size: 11px; }
+  .progress-list .step.done { color: var(--ink-1); }
+  .progress-list .step.done .dot { color: var(--accent-3); }
+  .progress-list .step.current { color: var(--accent-2); font-weight: 600; }
+  .progress-list .step.current .dot { color: var(--accent); }
+
+  .ending .stage-head { background: linear-gradient(180deg, rgba(192, 57, 43, 0.18), transparent); }
+  .ending .ending-tag { display: inline-block; padding: 4px 12px; background: var(--accent); color: var(--ink-0); font-size: 12px; letter-spacing: 3px; border-radius: 3px; font-family: var(--sans); margin-bottom: 10px; }
+  .ending .ending-tag.canonical { background: var(--accent-3); }
+  .ending .ending-title { font-size: 26px; font-weight: 700; color: var(--accent-2); margin: 4px 0 14px; }
+  .ending .reflection { margin-top: 18px; padding: 14px 16px; background: rgba(0, 0, 0, 0.2); border-left: 3px solid var(--accent-2); border-radius: 0 6px 6px 0; font-size: 14.5px; color: var(--ink-1); font-family: var(--sans); line-height: 1.7; }
+  .ending .reflection b { color: var(--accent-2); }
+  .ending .path-trace { margin-top: 16px; padding: 12px 14px; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--rule); border-radius: 6px; font-family: var(--sans); font-size: 13px; color: var(--ink-2); }
+  .ending .path-trace .pt-title { color: var(--accent-2); font-weight: 600; margin-bottom: 6px; font-size: 12px; letter-spacing: 2px; }
+  .ending .path-trace ol { margin: 0; padding-left: 20px; }
+  .ending .path-trace ol li { margin: 3px 0; color: var(--ink-1); }
+  .ending .actions { margin-top: 22px; display: flex; gap: 10px; }
+  .ending .actions button { flex: 1; padding: 12px 16px; background: var(--bg-2); border: 1px solid var(--rule); border-radius: 6px; color: var(--ink-0); font-family: var(--serif); font-size: 15px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .ending .actions button:hover { background: #3a2d1f; border-color: var(--accent-2); color: var(--accent-2); }
+
+  .start .stage-body { text-align: center; padding: 44px 36px; }
+  .start .ep-emoji { font-size: 68px; margin-bottom: 8px; }
+  .start .ep-title { font-size: 32px; font-weight: 700; color: var(--accent-2); letter-spacing: 4px; margin-bottom: 6px; }
+  .start .ep-sub { font-size: 13px; color: var(--ink-2); letter-spacing: 6px; font-family: var(--sans); margin-bottom: 22px; }
+  .start .ep-desc { text-align: left; color: var(--ink-1); font-size: 15.5px; text-indent: 2em; line-height: 1.85; margin: 0 auto 20px; max-width: 640px; }
+  .start .start-btn { display: inline-block; margin-top: 14px; padding: 14px 36px; background: var(--accent); color: var(--ink-0); border: none; border-radius: 6px; font-family: var(--serif); font-size: 16px; letter-spacing: 4px; cursor: pointer; transition: background 0.15s, transform 0.05s; }
+  .start .start-btn:hover { background: #d44a3a; }
+  .start .start-btn:active { transform: translateY(1px); }
+
+  footer.foot { margin-top: 26px; text-align: center; color: var(--ink-3); font-size: 12px; letter-spacing: 2px; font-family: var(--sans); }
+  footer.foot .pipe { margin: 0 8px; }
+  .fade-in { animation: fadeIn 0.35s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-1); }
+  ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  /* ---------- Back to home ---------- */
+  .back-home {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.05s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .back-home:hover {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+  .back-home:active { transform: translateY(1px); }
+
+  /* ---------- Lang toggle ---------- */
+  .lang-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .lang-toggle:hover {
+    background: var(--accent-2);
+    color: #1a120b;
+    border-color: var(--accent-2);
+  }
+
+</style>
+</head>
+<body>
+<a class="back-home" id="back-home-link" href="index.html">← Home</a>
+<button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">中文</button>
+
+<div class="app">
+
+  <header class="episode">
+    <div class="title-block">
+      <div class="emoji">🚢</div>
+      <div>
+        <div class="title" id="ep-title-el">The First Opium War</div>
+        <div class="sub">OPIUM WAR · A.D. 1839 – 1842 · CHINA &amp; UK</div>
+      </div>
+    </div>
+    <div class="meta">
+      Twine IDN Baseline
+      <span class="tag" id="meta-progress">Act 0 / 5</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main id="passage-area"></main>
+    <aside class="side">
+      <div class="panel">
+        <h3 id="cast-panel-h">CAST</h3>
+        <div class="cast-list" id="cast-list"></div>
+      </div>
+      <div class="panel">
+        <h3 id="story-panel-h">STORY PROGRESS</h3>
+        <div class="progress-list" id="progress-list"></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="foot">
+    Twine IDN Baseline · Static Branching Narrative
+    <span class="pipe">|</span> Episode 02 — <span id="foot-ep-name">第一次鸦片战争爆发</span>
+    <span class="pipe">|</span> v1.0
+  </footer>
+</div>
+
+<script>
+  /* ============================================================
+     Language support
+     ============================================================ */
+  let currentLang = localStorage.getItem('lang') || 'en';
+  let currentPassageId = 'start';
+
+  function toggleLang() {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    localStorage.setItem('lang', currentLang);
+    updateStaticUI();
+    render(currentPassageId);
+  }
+
+  function getPassages() { return currentLang === 'en' ? PASSAGES_EN : PASSAGES; }
+  function getCast()     { return currentLang === 'en' ? CAST_EN     : CAST;     }
+  function getLabels()   { return currentLang === 'en' ? STORY_PROGRESS_LABELS_EN : STORY_PROGRESS_LABELS; }
+
+  function updateStaticUI() {
+    const isEn = currentLang === 'en';
+    document.title = isEn ? 'First Opium War · Twine IDN Baseline' : '第一次鸦片战争 · Twine IDN Baseline';
+    document.getElementById('ep-title-el').textContent   = isEn ? 'The First Opium War' : '第一次鸦片战争';
+    document.getElementById('cast-panel-h').textContent  = isEn ? 'CAST'                : '登场人物 CAST';
+    document.getElementById('story-panel-h').textContent = isEn ? 'STORY PROGRESS'      : '剧情进度 STORY';
+    document.getElementById('back-home-link').textContent = isEn ? '← Home'             : '← 返回首页';
+    document.getElementById('lang-toggle').textContent   = isEn ? '中文'                 : 'EN';
+    document.getElementById('foot-ep-name').textContent  = isEn ? 'First Opium War Outbreak' : '第一次鸦片战争爆发';
+  }
+
+  /* ============================================================
+     Cast — Chinese
+     ============================================================ */
+  const CAST = {
+    "道光帝":   { avatar: "👑", title: "清朝皇帝",                  desc: "在鸦片与对英政策上摇摆不定，决断节奏直接影响战争走向。" },
+    "林则徐":   { avatar: "📜", title: "钦差大臣·虎门销烟主导者",   desc: "奉命南下严禁鸦片，主持虎门销烟，强硬态度直接触发英方武力反应。" },
+    "查理·义律": { avatar: "🎩", title: "驻华商务监督（英方代表）",  desc: "拒绝接受清廷对英侨司法权，坚决维护英商利益并向伦敦呈报冲突。" },
+    "亨利·巴麦尊": { avatar: "📘", title: "英国外交大臣",            desc: "在伦敦主导对华政策，将禁烟与封闭贸易视为打破旧秩序的机会。" },
+    "璞鼎查":   { avatar: "⚓", title: "英国远东舰队指挥官",          desc: "执行伦敦的对华战争方案，决定登陆、封锁与炮击的具体走向。" }
+  };
+
+  /* ============================================================
+     Cast — English
+     ============================================================ */
+  const CAST_EN = {
+    "道光帝":    { avatar: "👑", name: "Emperor Daoguang",    title: "Emperor of the Qing Dynasty",              desc: "Vacillating between suppression and negotiation, his indecision turned a customs dispute into a national catastrophe." },
+    "林则徐":    { avatar: "📜", name: "Lin Zexu",             title: "Imperial Commissioner · Anti-Opium Envoy",  desc: "Led the destruction of over 20,000 chests of opium at Humen, triggering Britain's military response." },
+    "查理·义律": { avatar: "🎩", name: "Charles Elliot",       title: "British Chief Superintendent of Trade",     desc: "Used the Humen seizure as a pretext to call for military intervention, shaping early British war aims." },
+    "亨利·巴麦尊": { avatar: "📘", name: "Henry Palmerston",   title: "British Foreign Secretary",                 desc: "The architect of the punitive expedition; insisted on opening China's markets by force." },
+    "璞鼎查":    { avatar: "⚓", name: "Henry Pottinger",      title: "British Plenipotentiary · Final Commander",  desc: "Led the final British campaign that forced the signing of the Treaty of Nanking." },
+    "许乃济":    { avatar: "💊", name: "Xu Naiji",             title: "Qing Court Official",                        desc: "Proposed legalizing and taxing opium as a pragmatic alternative to prohibition." },
+    "穆彰阿":    { avatar: "🏯", name: "Mujangga",             title: "Grand Secretary · Conservative Faction",    desc: "Wielded enormous influence at court and consistently opposed Lin Zexu's hard line against Britain." },
+    "近臣":      { avatar: "👤", name: "Court Advisor",        title: "Imperial Court Official",                   desc: "A senior court official advising the Emperor on policy." },
+    "议员（反对派）": { avatar: "🏛️", name: "Opposition MP",  title: "British Parliament, Opposition Bench",      desc: "A parliamentarian who questioned the moral and legal basis of the Palmerston government's war policy." }
+  };
+
+  /* ============================================================
+     Passages — Chinese (original)
+     ============================================================ */
+  const PASSAGES = {
+
+    "start": {
+      type: "start",
+      epEmoji: "🚢",
+      epTitle: "第一次鸦片战争",
+      epSub: "C H I N A   ·   1 8 3 9   –   1 8 4 2",
+      desc: "十九世纪三十年代末，英国对华鸦片走私已使白银大量外流、社会风气日坏。道光帝面对廷臣弛禁与严禁两派激烈争论，最终选用主战派林则徐南下广州查禁。林则徐在虎门当众销烟两万余箱，震动英商。远在伦敦的外交大臣巴麦尊将此视为「打破中国贸易封锁」的天赐契机，远东舰队随即整装南下。一场被后世视为中国近代史开端的冲突，正在珠江口的硝烟中悄然展开。",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "第一幕  ·  虎门前夜",
+      sceneTitle: "禁烟之议与圣裁犹疑",
+      progressIndex: 0,
+      castOnStage: ["道光帝", "林则徐"],
+      narrative: [
+        "道光十八年，京师朝会上「弛禁派」与「严禁派」展开激辩。前者以许乃济为代表，主张准许鸦片合法化以征税防漏银；后者以黄爵滋、林则徐为代表，疾呼若不严禁，「数十年后，中原几无可以御敌之兵，且无可以充饷之银」。",
+        "道光帝忧心于白银外流与吏治腐败，又惧惮列强船坚炮利。是顺世姑息以保贸易稳定，还是断然起用林则徐南下严办，成为这位皇帝执政以来最重大的抉择之一。"
+      ],
+      dialogs: [
+        { who: "林则徐",  what: "若犹泄泄视之，是使数十年后，中原几无可以御敌之兵，且无可以充饷之银。臣愿赴广东，断绝祸根。" },
+        { who: "许乃济",  what: "鸦片之禁愈严而漏卮愈巨，不如准其入口、按例征税，使漏银可控。" },
+        { who: "道光帝",  what: "白银外流，国库空虚；然若激怒英夷，沿海生事又当如何处之？" }
+      ],
+      decision: { question: "在两派激辩之中，道光帝应作何决定？", maker: "道光帝" },
+      choices: [
+        { label: "默许弛禁，姑息容忍以保贸易", hint: "维持贸易表面稳定 — 偏离正史的妥协路线", next: "end_A" },
+        { label: "钦点林则徐南下严行查禁",     hint: "震慑英商，掀开虎门一页 — 正史选择",       next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "第二幕  ·  虎门销烟",
+      sceneTitle: "白烟万箱与伦敦回声",
+      progressIndex: 1,
+      castOnStage: ["林则徐", "查理·义律", "亨利·巴麦尊"],
+      narrative: [
+        "林则徐抵粤后封锁商馆，逼缴鸦片二万余箱，于虎门海滩当众化烟入海，前后历时二十三日。义律一面将英商保护其下，一面将「英国国旗遭辱、英商财产被毁」的奏报星夜送回伦敦。",
+        "巴麦尊接报后，召集议会研讨对华方略。是以经贸协商、扩大通商口岸的方式善后，还是干脆诉诸武力以「教训这个闭关自守的帝国」？议会分歧明显，唯巴麦尊态度暧昧而坚决。"
+      ],
+      dialogs: [
+        { who: "查理·义律", what: "贵阁下，清廷不仅没收英国臣民合法财产，更对我国领事权置若罔闻 —— 此乃对大不列颠尊严的公然挑战。" },
+        { who: "亨利·巴麦尊", what: "若中国拒绝以平等方式与我贸易，便须以另一种方式让她接受。" },
+        { who: "议员（反对派）", what: "为鸦片走私而开战，于英国之名誉无益 —— 此战必将载入耻辱史册。" }
+      ],
+      decision: { question: "巴麦尊应如何回应虎门销烟？", maker: "亨利·巴麦尊" },
+      choices: [
+        { label: "经贸协商，争取扩大通商权益",   hint: "试图以谈判换取市场 — 偏离正史的和平路线", next: "n2a" },
+        { label: "诉诸武力，远征舰队整装东进",   hint: "以炮舰打开中国大门 — 正史选择",            next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "分支  ·  谈判桌前",
+      sceneTitle: "经贸协商的两难",
+      progressIndex: 2,
+      castOnStage: ["亨利·巴麦尊", "查理·义律", "林则徐"],
+      narrative: [
+        "巴麦尊指示义律「以谈判先行、武力为后盾」。义律奉命赴广州，与林则徐就鸦片赔偿、英商保护、商馆秩序等条款进行多轮磋商。然清廷视通商为「天朝恩惠」，与西方对等贸易观念格格不入。",
+        "谈判表面礼仪有加，实则寸步难行。英商焦躁，伦敦舆论转向。义律向巴麦尊请示：是退让以促成有限通商协议，还是抬高姿态、以拒商相威胁？"
+      ],
+      dialogs: [
+        { who: "查理·义律",   what: "林公，英商所求不过依各国通例守法贸易，并非干涉天朝政教。可否准许在广州之外另开口岸？" },
+        { who: "林则徐",     what: "通商之事，向例由广州十三行管之，遵循旧制方为长治久安。开新口岸非吾所敢专。" },
+        { who: "亨利·巴麦尊", what: "义律先生，谈判尚有进展则继续；若林公一味推宕，则当撤侨示警，使其知我意之坚。" }
+      ],
+      decision: { question: "义律应如何拿捏谈判尺度？", maker: "亨利·巴麦尊" },
+      choices: [
+        { label: "退让以求有限通商协定", hint: "广州一口先行妥协 — 走向有限开放的结局", next: "end_B" },
+        { label: "撤侨示警，强压清廷让步", hint: "以贸易封锁施压 — 走向僵局结局",         next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "第三幕  ·  舰队启航",
+      sceneTitle: "远东舰队的进军方向",
+      progressIndex: 2,
+      castOnStage: ["亨利·巴麦尊", "璞鼎查", "查理·义律"],
+      narrative: [
+        "议会以微弱多数批准对华军费，远东舰队由璞鼎查统率，集结战舰十六艘、运船二十七艘、陆军四千余人，于 1840 年 6 月抵达珠江口。",
+        "巴麦尊给予璞鼎查极大的战术裁量权 —— 是从华南珠江口循序北上，逐处迫使清廷议和；还是绕过广州，直驱长江口与天津，以最短时间逼近政治中枢？"
+      ],
+      dialogs: [
+        { who: "璞鼎查",     what: "广州虽富庶却离京遥远，纵然攻下亦难撼动北京；惟直击长江口与白河口，方可使道光帝不得不议。" },
+        { who: "亨利·巴麦尊", what: "速度与震慑同样重要 —— 但若集结过缓而清廷整军以待，则我方军费与议会耐性都将告罄。" },
+        { who: "查理·义律",   what: "我倾向于先取珠江口诸炮台，使广州行商先行屈服，以为下一步铺垫。" }
+      ],
+      decision: { question: "远东舰队应取何方略？", maker: "璞鼎查" },
+      choices: [
+        { label: "兵力集结过缓，坐失先机", hint: "调度迟滞 — 偏离正史的失败路线",       next: "end_D" },
+        { label: "先攻华南珠江口，循序北上", hint: "稳扎稳打 — 正史选择",                next: "n4" },
+        { label: "绕过广州，直捣长江口与天津", hint: "速战速决 — 偏离正史的激进北进路线", next: "n3a" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "分支  ·  北上奇袭",
+      sceneTitle: "白河口与京畿震动",
+      progressIndex: 3,
+      castOnStage: ["璞鼎查", "道光帝"],
+      narrative: [
+        "璞鼎查弃广州不攻，率主力舰队北上，于天津白河口外抛锚示威。一夜之间，京畿震动，道光帝罕见地在养心殿连夜召见琦善与穆彰阿，问对良久。",
+        "璞鼎查站在「兰加沙」号舰桥上，望着天津方向若隐若现的海岸 —— 是仅以围攻天津迫和而止，还是继续北上、直逼京师以求最大政治震慑？"
+      ],
+      dialogs: [
+        { who: "道光帝",   what: "夷舰竟至天津！速召琦善赴津，许之以「便宜行事」之权，务必使其退兵。" },
+        { who: "璞鼎查",   what: "若此时止步天津，可以最低代价换取最有利和约；若继续北上，恐使道光帝走投无路而召集列强斡旋。" },
+        { who: "近臣",     what: "陛下，京畿守军不过五万，且火器不修久矣 —— 万不可让英舰再北一步。" }
+      ],
+      decision: { question: "璞鼎查应如何用兵？", maker: "璞鼎查" },
+      choices: [
+        { label: "围而不打天津，等清廷使节议和", hint: "迅速收尾 — 走向轻条约结局",       next: "end_E" },
+        { label: "继续北上直逼京师，逼宫求和",   hint: "极限施压 — 走向列强联军结局",     next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "第四幕  ·  广州震荡",
+      sceneTitle: "炮台沦陷与圣意摇摆",
+      progressIndex: 3,
+      castOnStage: ["璞鼎查", "道光帝", "林则徐"],
+      narrative: [
+        "璞鼎查率舰队封锁珠江口，攻陷虎门、沙角诸炮台，水师提督关天培战死虎门。林则徐在前线一面筹防一面上奏战况，朝中主战与主和争论再起。",
+        "道光帝在战报与赔款数字之间反复权衡 —— 是坚持主战、誓不议和；是接受现实、遣琦善赴广州谈判；还是干脆派使臣赴俄、法，谋求外援以制英？这三种选择，将分别把清廷推向截然不同的命运。"
+      ],
+      dialogs: [
+        { who: "林则徐",   what: "臣前所议，火攻、坚壁、长围皆未能尽用 —— 若朝廷坚守主战，臣愿以身先卒，誓与英夷周旋于沿海。" },
+        { who: "穆彰阿",   what: "兵者凶器，圣人不得已而用之。今英舰北上、京畿震动，议和方能纾国难。" },
+        { who: "道光帝",   what: "战与和、抑或求外援 —— 朕一念之间，关乎社稷存亡。" }
+      ],
+      decision: { question: "在战败压力下，道光帝应如何抉择？", maker: "道光帝" },
+      choices: [
+        { label: "拒绝议和，誓言死战到底",         hint: "孤注一掷 — 偏离正史的死战结局",     next: "end_G" },
+        { label: "遣琦善赴广州议和并签条约",       hint: "签订《南京条约》— 正史选择",         next: "end_H" },
+        { label: "遣使北赴俄、南赴法，谋求外援",   hint: "以夷制夷 — 偏离正史的外援结局",     next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "弛禁姑息  ·  鸦烟弥漫",
+      castOnStage: ["道光帝"],
+      narrative: [
+        "道光帝默许弛禁派主张，准许鸦片按例征税通关。短期内国库表面增收，廷议似无大碍；然不出十年，吸食人口爆增，绿营士卒、漕运胥吏吸食成瘾者比比皆是。",
+        "白银继续外流，户部账面收入与实际购买力同步崩塌。地方治安日坏，太平天国前夜的社会矛盾被加倍累积。英方再无开战借口，却已不必动武 —— 中国的国势从内部瓦解。"
+      ],
+      reflection: "<b>反事实推演：</b>以税收换取贸易稳定，看似避免了战争，实则让国家以一种更慢、更不可逆的方式崩塌。林则徐当年所警「无可以御敌之兵、无可以充饷之银」一语成谶。这个分支提醒：<b>表面妥协，往往换来更深的结构性危机。</b>"
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "广州一口  ·  有限通商",
+      castOnStage: ["亨利·巴麦尊", "查理·义律", "林则徐"],
+      narrative: [
+        "在巴麦尊与林则徐的多轮拉锯之后，双方达成「广州一口先行通商」的有限协定 —— 英商在广州享有领事保护与一定司法豁免，鸦片走私则双方不再公开追究。",
+        "战争被推迟了二十年。然清廷未能借此契机进行制度变革，英国则将注意力转向印度与东南亚。直到 1860 年代，英法联军以更新的借口卷土重来 —— 历史的关口只是被延后，未被绕开。"
+      ],
+      reflection: "<b>反事实推演：</b>谈判可以争取时间，但若不能将时间转化为变革，便只是把代价后移给下一代人。这个分支揭示：<b>外部压力的延后，并不等同于内部问题的解决。</b>"
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "撤侨示警  ·  谈判破裂",
+      castOnStage: ["查理·义律", "林则徐"],
+      narrative: [
+        "义律奉命撤离广州英商，停泊于澳门外洋示威。林则徐认为「夷人技穷，必然就范」，封港抗夷，双方陷入数月对峙。",
+        "贸易停滞使广州市面凋敝，伦敦议会反对派趁势抨击巴麦尊「外交无能」。一年后，巴麦尊不得不重启战争议案 —— 与正史相比，战争不仅没能避免，还以更被动的姿态打响。"
+      ],
+      reflection: "<b>反事实推演：</b>外交的强硬若没有相应的实力支撑，往往会以更糟的方式回到原点。这个分支提醒：<b>边缘策略需要清醒评估对方的容忍极限，否则强硬便沦为僵局。</b>"
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "英军调度迟滞  ·  清廷整军",
+      castOnStage: ["璞鼎查", "林则徐"],
+      narrative: [
+        "远东舰队因后勤、瘟疫、经费等连环延误，迟迟未能集结成军。这给了林则徐宝贵的整备时间 —— 他在虎门加铸大炮、训练水勇、修筑沙袋木栅，并争取得到广州十三行的军费支持。",
+        "1841 年英军终于发起进攻时，已遭到远比正史更顽强的抵抗。一场原本可能速胜的远征，演变为旷日持久的消耗战。议会内反战派抬头，最终英国不得不接受一份更接近平等的有限通商协议而退兵。"
+      ],
+      reflection: "<b>反事实推演：</b>历史的结果常常取决于「谁更准备充分」。这个分支提醒：<b>速度与时机的重要性，往往不亚于战略本身。</b>正史中清廷的失败，相当程度上输在了「未能利用对方的延误」。"
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "围天津  ·  轻条约",
+      castOnStage: ["璞鼎查", "道光帝"],
+      narrative: [
+        "璞鼎查在天津白河口耀武扬威而不真攻。道光帝惊惶之下，急遣琦善「便宜行事」，于天津外洋达成草约：开广州、福州两口通商，赔款英商损失五百万银元，但保留关税自主与司法管辖。",
+        "草约虽于清廷而言已是奇耻，但相比正史中的《南京条约》（割让香港、赔款 2100 万银元、五口通商），损失明显更轻。然这次「避战求和」也让清廷误以为「夷人不过求商」，错失了对内变革的迫切感。"
+      ],
+      reflection: "<b>反事实推演：</b>避免最坏结果，并不意味着获得了最好结果。这个分支揭示：<b>外部压力若被过早解除，常常会让一个体系丧失自我变革的紧迫感</b> —— 而这正是清廷未来五十年悲剧的伏笔。"
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "兵临京师  ·  列强联军",
+      castOnStage: ["璞鼎查", "道光帝"],
+      narrative: [
+        "璞鼎查继续北上，舰队抵大沽口外。道光帝避走承德，京师人心惶惶。法、俄两国闻讯，借机派员「调停」并要求一并通商。原本英国独家的对华交涉，演变为多国共同瓜分的雏形。",
+        "1842 年签订的不再是单边的《南京条约》，而是英、法、俄三国联合的《大沽附约》—— 中国一次性丧失关税、司法、领土三方面主权，外国势力入华深度远超正史。第二次鸦片战争提前二十年到来。"
+      ],
+      reflection: "<b>反事实推演：</b>极限施压往往迫使弱方走向更危险的路径 —— 引入第三方力量。这个分支提醒：<b>当一国实力悬殊却又走投无路时，「拉外援以制衡」会让局面变得更不可控。</b>"
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "拒和死战  ·  京畿沦陷",
+      castOnStage: ["道光帝", "林则徐", "璞鼎查"],
+      narrative: [
+        "道光帝采纳林则徐主战之议，撤换琦善，下诏「朕志已决，誓与英夷周旋到底」。然清军武器陈旧、训练废弛，连番海战、陆战皆败，英军一路北上至大沽口。",
+        "1842 年秋，英舰直入白河，道光帝仓皇北狩。京师被迫签订城下之盟，赔款增至四千万银元，割让香港之外更将舟山、厦门一并划予英国。清廷威信扫地，地方督抚开始离心，太平天国之乱提前爆发于湖南。"
+      ],
+      reflection: "<b>反事实推演：</b>勇气与决心若没有相应实力的支撑，便会演变为更沉重的代价。这个分支提醒：<b>战略选择必须基于实力的诚实评估</b> —— 正史中道光帝最终的「议和」虽屈辱，却避免了更深远的崩溃。"
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "正史结局 · CANONICAL",
+      tagClass: "canonical",
+      title: "南京条约  ·  近代之始",
+      castOnStage: ["道光帝", "璞鼎查", "查理·义律"],
+      narrative: [
+        "1842 年 8 月，英舰封锁长江、围困南京。道光帝在主战、主和派激烈争论后，遣耆英、伊里布赴江宁与璞鼎查谈判。8 月 29 日，《南京条约》于「皋华丽」号签订：开广州、厦门、福州、宁波、上海五口通商；割让香港岛；赔款 2100 万银元；废除公行制度；约定关税。",
+        "次年又签订《虎门条约》《五口通商章程》，确立领事裁判权与片面最惠国待遇。一个延续了两千年的「天朝」朝贡体系在此动摇，中国被强行卷入近代世界格局。林则徐被贬伊犁，临行前题诗「苟利国家生死以，岂因祸福避趋之」—— 一个时代的开端，也是另一个时代的余响。"
+      ],
+      reflection: "<b>历史的真实走向：</b>《南京条约》是中国近代史的开端，也是「天朝」想象的终结。它的意义远超军事胜负 —— 它强制将中国带入一个由西方主导的「条约体系」之中，开启了此后近一个世纪的不平等条约时代。<br><br>这一结局也提醒我们：<b>关键时刻的妥协，常常包含着对未来更深远变革的隐性承诺</b>。林则徐的悲剧在于他超前于时代；道光帝的悲剧则在于他未能将「割地赔款」转化为「自上而下的彻底改革」。"
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "求外援以制英  ·  列强分食",
+      castOnStage: ["道光帝", "璞鼎查"],
+      narrative: [
+        "道光帝既不愿屈和又不敢死战，转而遣使北赴俄、南赴法，许以贸易与边疆通商利益，请其「调停」对英。然俄法两国岂会真心助清 —— 反借此机会染指中国边疆与江海口岸。",
+        "至 1843 年，清廷不仅与英签订城下之盟，还须分别与俄、法签订附约，分别让出新疆贸易通道、长江三口通商权。「以夷制夷」非但未能制英，反招狼入室。从此中国边疆与口岸被多国共同蚕食，中央威信加倍衰落。"
+      ],
+      reflection: "<b>反事实推演：</b>「以夷制夷」是清廷此后数十年反复使用的策略，但每一次都将自己置于更被动的地位。这个分支揭示：<b>当一个国家自身缺乏实力时，引入第三方往往只会让自己被多方蚕食。</b>真正的出路只能来自内部的变革。"
+    }
+  };
+
+  /* ============================================================
+     Passages — English
+     ============================================================ */
+  const PASSAGES_EN = {
+
+    "start": {
+      type: "start",
+      epEmoji: "🚢",
+      epTitle: "The First Opium War",
+      epSub: "C H I N A   ·   1 8 3 9  –  1 8 4 2",
+      desc: "In the late 1830s, British opium smuggling into China had drained vast quantities of silver and corroded public morality. Emperor Daoguang faced fierce debate between the 'relaxation' and 'prohibition' factions at court, ultimately dispatching the hard-line Lin Zexu south to Canton to enforce a ban. Lin publicly destroyed over 20,000 chests of opium at Humen, stunning the British merchant community. Foreign Secretary Palmerston in London saw this as a providential opportunity to 'break China's trade blockade,' and the Far East Fleet immediately prepared to sail east. A conflict that later generations would regard as the beginning of China's modern history was quietly igniting in the smoke over the Pearl River estuary.",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "Act I  ·  Eve of Humen",
+      sceneTitle: "The Opium Suppression Debate and the Emperor's Hesitation",
+      progressIndex: 0,
+      castOnStage: ["道光帝", "林则徐"],
+      narrative: [
+        "In the 18th year of the Daoguang reign, the imperial court in Beijing was consumed by fierce debate between the 'relaxation' faction, led by Xu Naiji — who advocated legalizing opium and taxing it to stop the silver drain — and the 'strict prohibition' faction, championed by Huang Juezi and Lin Zexu, who warned that without firm action, 'within decades China will have neither soldiers fit to repel an enemy nor silver to fill the treasury.'",
+        "Emperor Daoguang fretted over the outflow of silver and corruption among officials, yet feared the firepower of Western gunboats. Whether to tolerate the status quo to preserve trade stability, or boldly appoint Lin Zexu to go south and enforce a strict ban, became one of the most consequential decisions of his reign."
+      ],
+      dialogs: [
+        { who: "林则徐",  what: "If we continue to look on indifferently, within decades China will have neither soldiers fit to repel an enemy nor silver to fill the treasury. I am willing to go to Guangdong and cut out the root of this calamity." },
+        { who: "许乃济",  what: "The stricter the prohibition, the greater the silver leak. It would be better to permit opium to enter legally, taxed according to precedent, so the drain on silver can be controlled." },
+        { who: "道光帝",  what: "Silver flows out and the treasury is empty — yet if we provoke the English barbarians into stirring trouble along the coast, how shall we deal with that?" }
+      ],
+      decision: { question: "Amid the clash of the two factions, what decision should Emperor Daoguang make?", maker: "道光帝" },
+      choices: [
+        { label: "Tacitly permit relaxation; tolerate the trade to preserve stability", hint: "Maintain the surface appearance of trade stability — a compromise route diverging from history", next: "end_A" },
+        { label: "Appoint Lin Zexu to go south and enforce a strict prohibition",       hint: "Shock the British merchants and open the Humen chapter — the historical choice",              next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "Act II  ·  The Humen Burning",
+      sceneTitle: "Twenty Thousand Chests and London's Response",
+      progressIndex: 1,
+      castOnStage: ["林则徐", "查理·义律", "亨利·巴麦尊"],
+      narrative: [
+        "After arriving in Canton, Lin Zexu blockaded the foreign factories and compelled the surrender of over 20,000 chests of opium, which were publicly dissolved in seawater on the beach at Humen over twenty-three days. Charles Elliot shielded the British merchants while sending urgent dispatches back to London claiming that 'the British flag had been insulted and British property destroyed.'",
+        "On receiving the reports, Palmerston convened Parliament to debate China policy. Should Britain seek a negotiated commercial settlement and press for more open treaty ports, or simply resort to force to 'teach this closed-off empire a lesson'? Parliament was divided, but Palmerston's position — though outwardly ambiguous — was resolute."
+      ],
+      dialogs: [
+        { who: "查理·义律", what: "Your Lordship, the Qing court has not only confiscated the lawful property of British subjects, but treats our consular rights with utter contempt — this is a brazen affront to the dignity of Great Britain." },
+        { who: "亨利·巴麦尊", what: "If China refuses to trade with us on equal terms, she must be made to accept trade on another set of terms." },
+        { who: "议员（反对派）", what: "To go to war for the sake of opium smuggling does no credit to Britain's honor — this war will be inscribed in the annals of shame." }
+      ],
+      decision: { question: "How should Palmerston respond to the Humen destruction?", maker: "亨利·巴麦尊" },
+      choices: [
+        { label: "Pursue commercial negotiations; press for expanded trading rights", hint: "Attempt to win market access through diplomacy — a peaceful route diverging from history", next: "n2a" },
+        { label: "Resort to force; dispatch the expeditionary fleet eastward",         hint: "Open China's doors with gunboats — the historical choice",                                next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "Branch  ·  At the Negotiating Table",
+      sceneTitle: "The Dilemma of Commercial Negotiations",
+      progressIndex: 2,
+      castOnStage: ["亨利·巴麦尊", "查理·义律", "林则徐"],
+      narrative: [
+        "Palmerston instructed Elliot to 'lead with diplomacy and hold force in reserve.' Elliot duly traveled to Canton and held several rounds of talks with Lin Zexu on opium compensation, protection of British merchants, and rules for the factories. Yet the Qing court regarded trade as a 'celestial grace,' wholly at odds with Western notions of reciprocal commerce.",
+        "The negotiations were outwardly courteous but made no headway whatsoever. British merchants grew restless and London opinion began to shift. Elliot consulted Palmerston: should Britain concede to a limited trade agreement, or adopt a harder posture and threaten to withdraw from commerce altogether?"
+      ],
+      dialogs: [
+        { who: "查理·义律",   what: "Commissioner Lin, all that British merchants seek is to trade in accordance with the laws observed among all nations — not to interfere in the Celestial Court's governance. Would it be possible to open a port beyond Canton?" },
+        { who: "林则徐",     what: "Trade has always been managed by the Thirteen Hongs in Canton; following established precedent is the path to lasting order. Opening a new port is not something I can decide on my own." },
+        { who: "亨利·巴麦尊", what: "Mr. Elliot, if the negotiations show progress, continue. But if Commissioner Lin persists in stalling, withdraw the British community as a warning — let him know we mean what we say." }
+      ],
+      decision: { question: "How should Elliot calibrate the limits of the negotiation?", maker: "亨利·巴麦尊" },
+      choices: [
+        { label: "Concede and seek a limited trade agreement", hint: "Accept a Canton-only compromise — leads to the limited opening ending", next: "end_B" },
+        { label: "Withdraw the British community as a warning; press the Qing to yield", hint: "Apply pressure through a trade embargo — leads to the deadlock ending", next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "Act III  ·  The Fleet Sets Sail",
+      sceneTitle: "The Far East Fleet's Direction of March",
+      progressIndex: 2,
+      castOnStage: ["亨利·巴麦尊", "璞鼎查", "查理·义律"],
+      narrative: [
+        "Parliament approved the war expenditure by a slim majority. The Far East Fleet, commanded by Henry Pottinger, assembled sixteen warships, twenty-seven transport vessels, and over four thousand troops, arriving at the Pearl River estuary in June 1840.",
+        "Palmerston granted Pottinger wide tactical discretion — should the fleet advance northward methodically from the Pearl River in the south, compelling the Qing court to negotiate at each step? Or should it bypass Canton altogether and drive straight to the Yangtze estuary and Tianjin, reaching the political center in the shortest possible time?"
+      ],
+      dialogs: [
+        { who: "璞鼎查",     what: "Canton is wealthy but far from Beijing — even if we take it, we will struggle to shake the capital. Only by striking directly at the Yangtze estuary and the Baihe River mouth can we force Emperor Daoguang to the negotiating table." },
+        { who: "亨利·巴麦尊", what: "Speed and shock value are equally important — but if we assemble too slowly and the Qing have time to muster their forces, our war budget and Parliament's patience will both be exhausted." },
+        { who: "查理·义律",   what: "I favor taking the Pearl River forts first, forcing the Canton merchants to submit, and using that as a foundation for the next step." }
+      ],
+      decision: { question: "What strategy should the Far East Fleet adopt?", maker: "璞鼎查" },
+      choices: [
+        { label: "Forces assemble too slowly; the initiative is lost",         hint: "Logistical delays — a failing route diverging from history",         next: "end_D" },
+        { label: "Attack the Pearl River in the south first; advance northward methodically", hint: "Steady and methodical — the historical choice",           next: "n4" },
+        { label: "Bypass Canton; drive straight to the Yangtze and Tianjin",  hint: "Swift and decisive — an aggressive northern strike diverging from history", next: "n3a" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "Branch  ·  The Strike North",
+      sceneTitle: "The Baihe River Mouth and the Capital in Shock",
+      progressIndex: 3,
+      castOnStage: ["璞鼎查", "道光帝"],
+      narrative: [
+        "Pottinger left Canton unattacked and led the main fleet northward, dropping anchor off the Baihe River mouth outside Tianjin as a show of force. In a single night the capital was thrown into panic; Emperor Daoguang made the rare move of summoning Qishan and Mujangga to the Palace of Mental Cultivation for a lengthy emergency audience.",
+        "Pottinger stood on the bridge of HMS Cornwallis, watching the dimly visible coastline in the direction of Tianjin — should he stop at besieging Tianjin and press for a peace settlement, or continue north and advance directly on Beijing to achieve maximum political shock?"
+      ],
+      dialogs: [
+        { who: "道光帝",   what: "The barbarian warships have reached Tianjin! Summon Qishan to Tianjin at once and grant him 'full discretionary authority' — he must make them withdraw their troops at all costs." },
+        { who: "璞鼎查",   what: "If I stop here at Tianjin, I can extract the most favorable peace terms at the lowest cost. If I continue north, I risk driving Emperor Daoguang into a corner and prompting him to seek foreign powers as mediators." },
+        { who: "近臣",     what: "Your Majesty, the capital's garrison numbers barely fifty thousand, and their firearms have long been neglected — we absolutely cannot allow the English ships to advance one step further north." }
+      ],
+      decision: { question: "How should Pottinger deploy his forces?", maker: "璞鼎查" },
+      choices: [
+        { label: "Besiege Tianjin without attacking; await Qing envoys to negotiate", hint: "A swift conclusion — leads to the lighter-treaty ending",     next: "end_E" },
+        { label: "Continue north; press directly on Beijing to force a settlement",   hint: "Maximum pressure — leads to the joint foreign powers ending", next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "Act IV  ·  Canton in Shock",
+      sceneTitle: "The Forts Fall and the Emperor Wavers",
+      progressIndex: 3,
+      castOnStage: ["璞鼎查", "道光帝", "林则徐"],
+      narrative: [
+        "Pottinger's fleet blockaded the Pearl River and overran the Humen and Shajiao forts; Naval Commander Guan Tianpei died in action at Humen. Lin Zexu continued to organize defenses on the front lines while sending battle reports to Beijing, where the debate between the pro-war and pro-peace factions intensified once more.",
+        "Emperor Daoguang weighed the battle dispatches against the reparations figures — should he hold firm for war and refuse to negotiate; accept reality and send Qishan to Canton to parley; or dispatch envoys north to Russia and south to France to seek foreign support to check Britain? These three choices would push the Qing court toward entirely different fates."
+      ],
+      dialogs: [
+        { who: "林则徐",   what: "The measures I proposed earlier — fire-attacks, entrenched fortifications, prolonged encirclement — none has been fully employed. If the court holds firm for war, I am willing to be the first into the breach, vowing to grapple with the English barbarians along the coast." },
+        { who: "穆彰阿",   what: "War is a dire instrument, used by the sage only when he has no alternative. Now that English ships are pressing north and the capital is in shock, only a peace settlement can relieve the national crisis." },
+        { who: "道光帝",   what: "War or peace — or seeking foreign assistance — one thought from me will decide the fate of the dynasty." }
+      ],
+      decision: { question: "Under the pressure of military defeat, how should Emperor Daoguang choose?", maker: "道光帝" },
+      choices: [
+        { label: "Refuse to negotiate; vow to fight to the last",                          hint: "All-or-nothing gamble — a fight-to-the-death route diverging from history", next: "end_G" },
+        { label: "Send Qishan to Canton to negotiate and sign a treaty",                    hint: "Sign the Treaty of Nanking — the historical choice",                        next: "end_H" },
+        { label: "Dispatch envoys north to Russia and south to France to seek foreign aid", hint: "Use barbarians to check barbarians — a foreign-aid route diverging from history", next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Opium Tolerated · The Country Hollowed from Within",
+      castOnStage: ["道光帝"],
+      narrative: [
+        "Emperor Daoguang tacitly accepted the relaxation faction's proposal and permitted opium to enter legally under a schedule of duties. In the short term the treasury appeared to gain revenue and court debate seemed to quiet; yet within a decade the number of addicts had exploded, and soldiers of the Green Standard Army and grain-transport clerks were addicted in droves.",
+        "Silver continued to drain out, and the Ministry of Revenue's nominal income and real purchasing power collapsed in tandem. Local order deteriorated; the social contradictions on the eve of the Taiping Rebellion accumulated at a doubled rate. Britain had no longer any pretext for war — and no longer needed one. China's national strength disintegrated from within."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Trading tax revenue for trade stability appeared to avoid war, but in reality it allowed the state to collapse in a slower and more irreversible way. Lin Zexu's warning — 'no soldiers fit to repel an enemy, no silver to fill the treasury' — became a prophecy fulfilled. This branch reminds us: <b>surface-level compromise often purchases a deeper structural crisis.</b>"
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Canton Alone · Limited Trade",
+      castOnStage: ["亨利·巴麦尊", "查理·义律", "林则徐"],
+      narrative: [
+        "After multiple rounds of tug-of-war between Palmerston and Lin Zexu, the two sides reached a limited agreement — 'commence trade first through Canton alone': British merchants in Canton would enjoy consular protection and a degree of legal immunity, while both parties would tacitly drop the public pursuit of opium smuggling.",
+        "War was delayed by twenty years. Yet the Qing court failed to seize this opportunity to undertake institutional reform, while Britain redirected its attention to India and Southeast Asia. By the 1860s, Anglo-French forces returned under a fresh pretext — the historical gate had merely been deferred, not bypassed."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Negotiation can buy time, but if that time cannot be converted into reform, it merely shifts the cost onto the next generation. This branch reveals: <b>the deferral of external pressure is not equivalent to the resolution of internal problems.</b>"
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Withdrawal as Warning · Negotiations Collapse",
+      castOnStage: ["查理·义律", "林则徐"],
+      narrative: [
+        "Elliot was ordered to evacuate the British merchant community from Canton and anchor offshore near Macao as a show of force. Lin Zexu concluded that 'the barbarians had exhausted their tricks and would inevitably submit,' sealed the port, and the two sides fell into a standoff lasting months.",
+        "The halt in trade devastated Canton's economy; in London, the parliamentary opposition seized on the moment to attack Palmerston for 'diplomatic incompetence.' One year later, Palmerston was compelled to reopen the case for war — compared with actual history, the war had not only failed to be avoided but was launched from a more passive position."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Diplomatic toughness without commensurate power backing often leads back to the starting point — but in a worse condition. This branch reminds us: <b>a brinkmanship strategy requires a clear-eyed assessment of the adversary's tolerance threshold; otherwise hardness degenerates into deadlock.</b>"
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "British Forces Delayed · The Qing Army Prepares",
+      castOnStage: ["璞鼎查", "林则徐"],
+      narrative: [
+        "The Far East Fleet was plagued by a chain of logistical failures, outbreaks of disease, and funding delays that prevented it from mustering in time. This gave Lin Zexu precious time to prepare: he had new cannon cast at Humen, trained water militia, built sandbag and timber barricades, and secured military funding from the Canton Thirteen Hongs.",
+        "When British forces finally launched their assault in 1841, they met resistance far more tenacious than in actual history. An expedition that should have been a swift victory became a drawn-out war of attrition. The anti-war faction in Parliament gained ground, and Britain was ultimately compelled to accept a more equitable limited trade agreement and withdraw."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Historical outcomes often hinge on 'who is better prepared.' This branch reminds us: <b>the importance of speed and timing is often no less than that of strategy itself.</b> The Qing court's defeat in actual history owed much to its failure to exploit the adversary's delays."
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Tianjin Besieged · A Lighter Treaty",
+      castOnStage: ["璞鼎查", "道光帝"],
+      narrative: [
+        "Pottinger demonstrated his power at the Baihe River mouth without pressing a real attack. Emperor Daoguang, in his alarm, urgently dispatched Qishan with 'full discretionary authority'; a draft agreement was reached offshore at Tianjin: open Canton and Fuzhou to trade, pay the British merchants five million silver dollars in compensation, but retain tariff autonomy and judicial jurisdiction.",
+        "Though the draft was already a humiliation for the Qing court, the losses were noticeably lighter than in actual history — the Treaty of Nanking (cession of Hong Kong, 21 million silver dollars in reparations, five treaty ports). Yet this 'peace at any price' also led the Qing court to the mistaken belief that 'the barbarians are only after trade,' causing it to miss the urgent impetus for internal reform."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Avoiding the worst outcome does not mean achieving the best outcome. This branch reveals: <b>when external pressure is lifted too early, it often causes a system to lose the urgency for self-reform</b> — and that is precisely the prelude to the Qing court's tragedy over the following fifty years."
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Forces at the Capital's Gates · The Powers Unite",
+      castOnStage: ["璞鼎查", "道光帝"],
+      narrative: [
+        "Pottinger continued north; the fleet reached the mouth of the Dagu. Emperor Daoguang fled to Chengde; the capital was seized by panic. France and Russia, hearing the news, seized the opportunity to send representatives offering to 'mediate' and demanding inclusion in any trade agreement. What had been Britain's exclusive negotiation with China evolved into the embryo of a multilateral carve-up.",
+        "The treaty signed in 1842 was no longer the one-sided Treaty of Nanking but the Dagu Convention, jointly imposed by Britain, France, and Russia — China lost sovereignty over customs, judiciary, and territory all at once, and the depth of foreign penetration far exceeded actual history. The Second Opium War arrived twenty years ahead of schedule."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Extreme pressure often drives the weaker party toward a more dangerous path — bringing in third-party powers. This branch reminds us: <b>when a country is vastly outmatched yet has its back to the wall, 'summoning foreign leverage to restore balance' makes the situation far less controllable.</b>"
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Refuse Peace, Fight to the Last · The Capital Falls",
+      castOnStage: ["道光帝", "林则徐", "璞鼎查"],
+      narrative: [
+        "Emperor Daoguang adopted Lin Zexu's pro-war counsel, dismissed Qishan, and issued an edict declaring: 'Our imperial resolve is set — we swear to grapple with the English barbarians to the end.' But Qing weapons were antiquated and its troops undertrained; successive engagements at sea and on land all ended in defeat, and British forces advanced northward to the Dagu.",
+        "In the autumn of 1842, British ships penetrated the Baihe River and Emperor Daoguang fled north in panic. Beijing was compelled to sign a treaty under duress: reparations rose to forty million silver dollars, and in addition to Hong Kong, Zhoushan and Xiamen were also ceded to Britain. The Qing court's authority was shattered; provincial governors-general began to distance themselves from Beijing; the Taiping Rebellion erupted prematurely in Hunan."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Courage and resolve without commensurate power only lead to heavier consequences. This branch reminds us: <b>strategic choices must be grounded in an honest assessment of one's own strength</b> — the Emperor Daoguang of actual history ultimately chose negotiation; humiliating as it was, it averted a far deeper collapse."
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "Canonical Ending · CANONICAL",
+      tagClass: "canonical",
+      title: "The Treaty of Nanking · The Dawn of the Modern Era",
+      castOnStage: ["道光帝", "璞鼎查", "查理·义律"],
+      narrative: [
+        "In August 1842, British warships blockaded the Yangtze and besieged Nanjing. After fierce debate between the pro-war and pro-peace factions, Emperor Daoguang dispatched Qiying and Ilibu to Jiangning to negotiate with Pottinger. On August 29, the Treaty of Nanking was signed aboard HMS Cornwallis: five ports — Canton, Amoy, Fuzhou, Ningbo, and Shanghai — were opened to trade; Hong Kong Island was ceded; 21 million silver dollars in reparations were to be paid; the Co-hong monopoly was abolished; and tariff rates were fixed.",
+        "The following year the Supplementary Treaty of the Bogue and the General Regulations of Trade confirmed extraterritoriality and one-sided most-favored-nation status. A tributary system that had endured for two thousand years was shattered; China was forcibly incorporated into the modern global order. Lin Zexu was exiled to Ili; before departing he wrote: 'If it benefits the nation, I'll lay down my life — how could I let personal fortune determine what's right?' — a lament that marked both the beginning of one era and the fading echo of another."
+      ],
+      reflection: "<b>The true course of history:</b> The Treaty of Nanking was the starting point of China's modern history and the end of the 'Celestial Empire' self-conception. Its significance far exceeds military victory or defeat — it forcibly integrated China into a Western-dominated 'treaty system,' inaugurating nearly a century of unequal treaties.<br><br>This ending also reminds us: <b>compromise at a critical moment often contains an implicit promise of far deeper future transformation.</b> Lin Zexu's tragedy lay in being ahead of his time; Emperor Daoguang's tragedy lay in his failure to convert 'territorial cession and reparations' into 'sweeping, top-down reform.'"
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Seek Foreign Aid to Check Britain · The Powers Divide the Spoils",
+      castOnStage: ["道光帝", "璞鼎查"],
+      narrative: [
+        "Unwilling to submit yet too afraid to fight to the death, Emperor Daoguang instead dispatched envoys north to Russia and south to France, offering trade concessions and frontier commercial privileges as inducements for them to 'mediate' the dispute with Britain. But Russia and France had no intention of genuinely aiding the Qing — they seized the opportunity to extend their reach into China's frontier regions and coastal ports.",
+        "By 1843, the Qing court had not only signed a capitulatory treaty with Britain, but also had to conclude separate protocols with Russia and France, ceding trade routes through Xinjiang and commercial rights at three Yangtze ports to each. 'Using barbarians to check barbarians' had not checked Britain at all — it had invited wolves through the door. Henceforth, China's frontiers and ports were jointly nibbled away by multiple powers, and the central government's authority declined at an accelerated rate."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> 'Using barbarians to check barbarians' was a strategy the Qing court employed repeatedly over the following decades, yet each time it placed itself in a more passive position. This branch reveals: <b>when a country lacks the power to stand on its own, bringing in third parties typically only results in being nibbled away by multiple parties simultaneously.</b> The only genuine path out could come from internal transformation."
+    }
+  };
+
+  /* ============================================================
+     Story progress labels
+     ============================================================ */
+  const STORY_PROGRESS_LABELS = [
+    "禁烟之议与圣裁犹疑",
+    "虎门销烟与伦敦回声",
+    "远东舰队的进军方向",
+    "广州震荡与圣意摇摆",
+    "条约缔结与近代之始"
+  ];
+
+  const STORY_PROGRESS_LABELS_EN = [
+    "The Opium Suppression Debate and the Emperor's Choice",
+    "The Humen Burning and London's Response",
+    "The Far East Fleet's Direction of March",
+    "Canton Falls and the Emperor Wavers",
+    "The Treaty of Nanking and History's Verdict"
+  ];
+
+  const state = {
+    pathTrace: []  // array of {passageId, choiceIndex}
+  };
+
+  function renderCast(names) {
+    const list = document.getElementById("cast-list");
+    const cast = getCast();
+    list.innerHTML = "";
+    (names || []).forEach(key => {
+      const c = cast[key];
+      if (!c) return;
+      const row = document.createElement("div");
+      row.className = "cast-row";
+      row.innerHTML = `
+        <div class="av">${c.avatar}</div>
+        <div class="info">
+          <div class="name">${currentLang === 'en' ? c.name : key}</div>
+          <div class="role">${c.title}</div>
+          <div class="desc">${c.desc}</div>
+        </div>`;
+      list.appendChild(row);
+    });
+  }
+
+  function renderProgress(currentIndex) {
+    const list = document.getElementById("progress-list");
+    const labels = getLabels();
+    list.innerHTML = "";
+    labels.forEach((label, i) => {
+      const row = document.createElement("div");
+      let cls = "step";
+      if (currentIndex != null) {
+        if (i < currentIndex) cls += " done";
+        else if (i === currentIndex) cls += " current";
+      }
+      row.className = cls;
+      row.innerHTML = `<span class="dot">●</span><span>${i + 1}. ${label}</span>`;
+      list.appendChild(row);
+    });
+    const meta = document.getElementById("meta-progress");
+    if (meta) {
+      const display = currentIndex == null ? 0 : Math.min(currentIndex + 1, labels.length);
+      meta.textContent = currentLang === 'en'
+        ? `Act ${display} / ${labels.length}`
+        : `第 ${display} / ${labels.length} 幕`;
+    }
+  }
+
+  function go(passageId, choiceIndex) {
+    if (choiceIndex != null) {
+      const last = state.pathTrace[state.pathTrace.length - 1];
+      if (last && last.choiceIndex == null) last.choiceIndex = choiceIndex;
+    }
+    render(passageId);
+  }
+
+  function render(passageId) {
+    currentPassageId = passageId;
+    const passages = getPassages();
+    const p = passages[passageId];
+    if (!p) return;
+
+    const area = document.getElementById("passage-area");
+    area.innerHTML = "";
+    const card = document.createElement("section");
+    card.className = "stage fade-in" + (p.type === "ending" ? " ending" : "") + (p.type === "start" ? " start" : "");
+
+    if (p.type === "start") {
+      const startLabel = currentLang === 'en' ? 'Begin this story →' : '开始这段历史 →';
+      card.innerHTML = `<div class="stage-body"><div class="ep-emoji">${p.epEmoji}</div><div class="ep-title">${p.epTitle}</div><div class="ep-sub">${p.epSub}</div><p class="ep-desc">${p.desc}</p><button class="start-btn" id="start-btn">${startLabel}</button></div>`;
+      area.appendChild(card);
+      renderCast(["道光帝", "林则徐", "查理·义律", "亨利·巴麦尊", "璞鼎查"]);
+      renderProgress(null);
+      document.getElementById("start-btn").onclick = () => { state.pathTrace = []; render(p.next); };
+      window.scrollTo({ top: 0, behavior: "smooth" }); return;
+    }
+
+    if (p.type === "scene") {
+      state.pathTrace.push({ passageId: passageId, choiceIndex: null });
+      const headHtml = `<div class="stage-head"><div><div class="chapter">${p.chapter}</div><div class="scene-title">${p.sceneTitle}</div></div><div class="right-tag">SCENE  ${String(p.progressIndex + 1).padStart(2, "0")}</div></div>`;
+      let bodyHtml = `<div class="stage-body">`;
+      p.narrative.forEach((para, i) => { bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`; });
+      if (p.dialogs && p.dialogs.length) {
+        bodyHtml += `<div class="dialogs">`;
+        p.dialogs.forEach(d => {
+          const av = (CAST[d.who] && CAST[d.who].avatar) || "·";
+          const speakerName = currentLang === 'en' ? (CAST_EN[d.who] ? CAST_EN[d.who].name : d.who) : d.who;
+          bodyHtml += `<div class="line"><div class="who"><span class="av">${av}</span>${speakerName}</div><div class="what">${d.what}</div></div>`;
+        });
+        bodyHtml += `</div>`;
+      }
+      if (p.decision) {
+        const makerAv = (CAST[p.decision.maker] && CAST[p.decision.maker].avatar) || "·";
+        const makerName = currentLang === 'en' ? (CAST_EN[p.decision.maker] ? CAST_EN[p.decision.maker].name : p.decision.maker) : p.decision.maker;
+        const decLabel = currentLang === 'en' ? '▼ KEY DECISION' : '▼ 关键抉择 KEY DECISION';
+        const makerLabel = currentLang === 'en' ? `Decision by ${makerAv} <b>${makerName}</b>` : `由 ${makerAv} <b>${makerName}</b> 拍板`;
+        bodyHtml += `<div class="decision"><div class="label">${decLabel}</div><div class="question">${p.decision.question}</div><div class="maker">${makerLabel}</div></div>`;
+      }
+      if (p.choices && p.choices.length) {
+        bodyHtml += `<div class="choices">`;
+        p.choices.forEach((c, i) => {
+          bodyHtml += `<button class="choice-btn" data-next="${c.next}" data-index="${i}"><span class="arrow">▶</span>${c.label}${c.hint ? `<span class="hint">${c.hint}</span>` : ""}</button>`;
+        });
+        bodyHtml += `</div>`;
+      }
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+      renderCast(p.castOnStage); renderProgress(p.progressIndex);
+      card.querySelectorAll(".choice-btn").forEach(btn => {
+        btn.addEventListener("click", () => { go(btn.getAttribute("data-next"), parseInt(btn.getAttribute("data-index"), 10)); });
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" }); return;
+    }
+
+    if (p.type === "ending") {
+      const endChapter = currentLang === 'en' ? 'END  ·  THE END' : '终  ·  THE END';
+      const headHtml = `<div class="stage-head"><div><div class="chapter">${endChapter}</div><div class="scene-title">${p.title}</div></div><div class="right-tag">EPISODE COMPLETE</div></div>`;
+      let bodyHtml = `<div class="stage-body"><div class="ending-tag ${p.tagClass || ""}">${p.tag}</div><div class="ending-title">${p.title}</div>`;
+      p.narrative.forEach((para, i) => { bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`; });
+      bodyHtml += `<div class="reflection">${p.reflection}</div>`;
+      if (state.pathTrace.length) {
+        const ptTitle = currentLang === 'en' ? '▼ YOUR STORY PATH' : '▼ 你走过的剧情线 STORY PATH';
+        const endLabel = currentLang === 'en' ? 'Ending reached:' : '抵达结局：';
+        bodyHtml += `<div class="path-trace"><div class="pt-title">${ptTitle}</div><ol>`;
+        state.pathTrace.forEach(t => {
+          const tp = passages[t.passageId];
+          const sceneName = tp ? tp.sceneTitle : t.passageId;
+          let choiceStr = '';
+          if (t.choiceIndex != null && tp && tp.choices && tp.choices[t.choiceIndex]) {
+            choiceStr = ` — <i style="color:var(--accent-2)">${tp.choices[t.choiceIndex].label}</i>`;
+          }
+          bodyHtml += `<li>${sceneName}${choiceStr}</li>`;
+        });
+        bodyHtml += `<li>${endLabel} <b style="color:var(--accent-2)">${p.title}</b></li></ol></div>`;
+      }
+      const restartLabel = currentLang === 'en' ? '↺  Restart' : '↺  重新开始（Restart）';
+      bodyHtml += `<div class="actions"><button id="restart-btn">${restartLabel}</button></div></div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+      renderCast(p.castOnStage); renderProgress(getLabels().length - 1);
+      document.getElementById("restart-btn").addEventListener("click", () => { state.pathTrace = []; render("start"); });
+      window.scrollTo({ top: 0, behavior: "smooth" }); return;
+    }
+  }
+
+  // boot
+  updateStaticUI();
+  render("start");
+</script>
+</body>
+</html>

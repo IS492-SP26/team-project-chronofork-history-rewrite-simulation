@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hundred Days' Reform · Twine IDN Baseline</title>
+<style>
+  :root { --bg-0: #1a120b; --bg-1: #211a12; --bg-2: #2a2118; --bg-card: #2f261b; --ink-0: #f3e7d2; --ink-1: #d9c8a8; --ink-2: #a89579; --ink-3: #7a6a52; --accent: #c0392b; --accent-2: #e8c14a; --accent-3: #5d8a4e; --rule: #4a3a26; --shadow: 0 6px 24px rgba(0, 0, 0, 0.45); --serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif SC", "Times New Roman", serif; --sans: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans SC", -apple-system, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink-0); font-family: var(--serif); line-height: 1.7; min-height: 100vh; }
+  body { background: radial-gradient(circle at 20% 0%, rgba(192, 57, 43, 0.08), transparent 40%), radial-gradient(circle at 80% 100%, rgba(232, 193, 74, 0.06), transparent 50%), var(--bg-0); }
+  .app { max-width: 1080px; margin: 0 auto; padding: 24px 24px 60px; }
+  header.episode { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: linear-gradient(135deg, var(--bg-2), var(--bg-1)); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 18px; }
+  .episode .title-block { display: flex; align-items: center; gap: 14px; }
+  .episode .emoji { font-size: 32px; line-height: 1; }
+  .episode .title { font-size: 22px; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
+  .episode .sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; letter-spacing: 2px; font-family: var(--sans); }
+  .episode .meta { text-align: right; font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .episode .meta .tag { display: inline-block; padding: 3px 8px; border: 1px solid var(--rule); border-radius: 3px; margin-left: 6px; color: var(--ink-1); }
+  .layout { display: grid; grid-template-columns: 1fr 280px; gap: 18px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } aside.side { order: 2; } }
+  .stage { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); overflow: hidden; }
+  .stage-head { padding: 14px 22px; border-bottom: 1px solid var(--rule); background: linear-gradient(180deg, rgba(232, 193, 74, 0.06), transparent); display: flex; align-items: center; justify-content: space-between; }
+  .stage-head .chapter { color: var(--accent-2); font-size: 13px; letter-spacing: 4px; font-family: var(--sans); }
+  .stage-head .scene-title { font-size: 20px; font-weight: 600; color: var(--ink-0); margin-top: 2px; }
+  .stage-head .right-tag { font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .stage-body { padding: 22px 26px; }
+  .narrative { font-size: 16px; color: var(--ink-1); text-indent: 2em; margin: 0 0 16px; }
+  .narrative.lead { color: var(--ink-0); font-size: 16.5px; }
+  .dialogs { margin: 18px 0 6px; padding: 14px 16px; background: rgba(0, 0, 0, 0.18); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
+  .dialogs .line { display: flex; gap: 10px; margin: 8px 0; align-items: baseline; }
+  .dialogs .who { flex: 0 0 96px; text-align: right; color: var(--accent-2); font-weight: 600; font-size: 14px; font-family: var(--sans); }
+  .dialogs .who .av { margin-right: 4px; }
+  .dialogs .what { flex: 1; color: var(--ink-1); font-size: 15px; line-height: 1.65; }
+  .dialogs .what::before { content: "「"; color: var(--ink-3); }
+  .dialogs .what::after { content: "」"; color: var(--ink-3); }
+  .decision { margin-top: 22px; padding: 16px 18px; border: 1px dashed var(--accent-2); border-radius: 6px; background: rgba(232, 193, 74, 0.04); }
+  .decision .label { font-size: 12px; letter-spacing: 3px; color: var(--accent-2); font-family: var(--sans); margin-bottom: 6px; }
+  .decision .question { font-size: 16px; color: var(--ink-0); font-weight: 600; margin-bottom: 4px; }
+  .decision .maker { font-size: 13px; color: var(--ink-2); font-family: var(--sans); }
+  .choices { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .choice-btn { display: block; width: 100%; text-align: left; background: var(--bg-2); color: var(--ink-0); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 16px; font-family: var(--serif); font-size: 15px; line-height: 1.55; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.05s; }
+  .choice-btn:hover { background: #3a2d1f; border-color: var(--accent-2); color: var(--accent-2); }
+  .choice-btn:active { transform: translateY(1px); }
+  .choice-btn .arrow { color: var(--accent); margin-right: 8px; font-weight: 700; }
+  .choice-btn .hint { display: block; margin-top: 4px; font-size: 12.5px; color: var(--ink-3); font-family: var(--sans); }
+  aside.side { display: flex; flex-direction: column; gap: 14px; }
+  .panel { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .panel h3 { margin: 0 0 10px; font-size: 13px; color: var(--accent-2); letter-spacing: 3px; font-family: var(--sans); font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+  .cast-list .cast-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+  .cast-list .cast-row:last-child { border-bottom: none; }
+  .cast-list .av { font-size: 22px; flex: 0 0 28px; text-align: center; }
+  .cast-list .info .name { font-weight: 600; color: var(--ink-0); font-size: 14px; }
+  .cast-list .info .role { font-size: 11.5px; color: var(--ink-2); font-family: var(--sans); }
+  .cast-list .info .desc { font-size: 12px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
+  .progress-list .step { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; font-family: var(--sans); color: var(--ink-3); }
+  .progress-list .step .dot { flex: 0 0 12px; color: var(--rule); font-size: 11px; }
+  .progress-list .step.done { color: var(--ink-1); } .progress-list .step.done .dot { color: var(--accent-3); }
+  .progress-list .step.current { color: var(--accent-2); font-weight: 600; } .progress-list .step.current .dot { color: var(--accent); }
+  .ending .stage-head { background: linear-gradient(180deg, rgba(192, 57, 43, 0.18), transparent); }
+  .ending .ending-tag { display: inline-block; padding: 4px 12px; background: var(--accent); color: var(--ink-0); font-size: 12px; letter-spacing: 3px; border-radius: 3px; font-family: var(--sans); margin-bottom: 10px; }
+  .ending .ending-tag.canonical { background: var(--accent-3); }
+  .ending .ending-title { font-size: 26px; font-weight: 700; color: var(--accent-2); margin: 4px 0 14px; }
+  .ending .reflection { margin-top: 18px; padding: 14px 16px; background: rgba(0, 0, 0, 0.2); border-left: 3px solid var(--accent-2); border-radius: 0 6px 6px 0; font-size: 14.5px; color: var(--ink-1); font-family: var(--sans); line-height: 1.7; }
+  .ending .reflection b { color: var(--accent-2); }
+  .ending .path-trace { margin-top: 16px; padding: 12px 14px; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--rule); border-radius: 6px; font-family: var(--sans); font-size: 13px; color: var(--ink-2); }
+  .ending .path-trace .pt-title { color: var(--accent-2); font-weight: 600; margin-bottom: 6px; font-size: 12px; letter-spacing: 2px; }
+  .ending .path-trace ol { margin: 0; padding-left: 20px; } .ending .path-trace ol li { margin: 3px 0; color: var(--ink-1); }
+  .ending .actions { margin-top: 22px; display: flex; gap: 10px; }
+  .ending .actions button { flex: 1; padding: 12px 16px; background: var(--bg-2); border: 1px solid var(--rule); border-radius: 6px; color: var(--ink-0); font-family: var(--serif); font-size: 15px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .ending .actions button:hover { background: #3a2d1f; border-color: var(--accent-2); color: var(--accent-2); }
+  .start .stage-body { text-align: center; padding: 44px 36px; }
+  .start .ep-emoji { font-size: 68px; margin-bottom: 8px; }
+  .start .ep-title { font-size: 32px; font-weight: 700; color: var(--accent-2); letter-spacing: 4px; margin-bottom: 6px; }
+  .start .ep-sub { font-size: 13px; color: var(--ink-2); letter-spacing: 6px; font-family: var(--sans); margin-bottom: 22px; }
+  .start .ep-desc { text-align: left; color: var(--ink-1); font-size: 15.5px; text-indent: 2em; line-height: 1.85; margin: 0 auto 20px; max-width: 640px; }
+  .start .start-btn { display: inline-block; margin-top: 14px; padding: 14px 36px; background: var(--accent); color: var(--ink-0); border: none; border-radius: 6px; font-family: var(--serif); font-size: 16px; letter-spacing: 4px; cursor: pointer; transition: background 0.15s, transform 0.05s; }
+  .start .start-btn:hover { background: #d44a3a; } .start .start-btn:active { transform: translateY(1px); }
+  footer.foot { margin-top: 26px; text-align: center; color: var(--ink-3); font-size: 12px; letter-spacing: 2px; font-family: var(--sans); }
+  footer.foot .pipe { margin: 0 8px; }
+  .fade-in { animation: fadeIn 0.35s ease; } @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-track { background: var(--bg-1); } ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  /* ---------- Back to home ---------- */
+  .back-home {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.05s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .back-home:hover {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+  .back-home:active { transform: translateY(1px); }
+
+  /* ---------- Lang toggle ---------- */
+  .lang-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .lang-toggle:hover {
+    background: var(--accent-2);
+    color: #1a120b;
+    border-color: var(--accent-2);
+  }
+
+</style>
+</head>
+<body>
+<a class="back-home" id="back-home-link" href="index.html">← Home</a>
+<button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">中文</button>
+
+<div class="app">
+  <header class="episode">
+    <div class="title-block">
+      <div class="emoji">📜</div>
+      <div>
+        <div class="title" id="ep-title-el">The Hundred Days' Reform</div>
+        <div class="sub">HUNDRED DAYS' REFORM · A.D. 1898 · QING DYNASTY</div>
+      </div>
+    </div>
+    <div class="meta">Twine IDN Baseline <span class="tag" id="meta-progress">Act 0 / 5</span></div>
+  </header>
+  <div class="layout">
+    <main id="passage-area"></main>
+    <aside class="side">
+      <div class="panel"><h3 id="cast-panel-h">CAST</h3><div class="cast-list" id="cast-list"></div></div>
+      <div class="panel"><h3 id="story-panel-h">STORY PROGRESS</h3><div class="progress-list" id="progress-list"></div></div>
+    </aside>
+  </div>
+  <footer class="foot">Twine IDN Baseline · Static Branching Narrative <span class="pipe">|</span> Episode 03 — <span id="foot-ep-name">戊戌变法</span> <span class="pipe">|</span> v1.0</footer>
+</div>
+<script>
+  /* ============================================================
+     Language support
+     ============================================================ */
+  let currentLang = localStorage.getItem('lang') || 'en';
+  let currentPassageId = 'start';
+
+  function toggleLang() {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    localStorage.setItem('lang', currentLang);
+    updateStaticUI();
+    render(currentPassageId);
+  }
+
+  function getPassages() { return currentLang === 'en' ? PASSAGES_EN : PASSAGES; }
+  function getCast()     { return currentLang === 'en' ? CAST_EN     : CAST;     }
+  function getLabels()   { return currentLang === 'en' ? STORY_PROGRESS_LABELS_EN : STORY_PROGRESS_LABELS; }
+
+  function updateStaticUI() {
+    const isEn = currentLang === 'en';
+    document.title = isEn ? "Hundred Days' Reform · Twine IDN Baseline" : '戊戌变法 · Twine IDN Baseline';
+    document.getElementById('ep-title-el').textContent   = isEn ? "The Hundred Days' Reform" : '戊戌变法';
+    document.getElementById('cast-panel-h').textContent  = isEn ? 'CAST'           : '登场人物 CAST';
+    document.getElementById('story-panel-h').textContent = isEn ? 'STORY PROGRESS' : '剧情进度 STORY';
+    document.getElementById('back-home-link').textContent = isEn ? '← Home'         : '← 返回首页';
+    document.getElementById('lang-toggle').textContent   = isEn ? '中文'             : 'EN';
+    document.getElementById('foot-ep-name').textContent  = isEn ? "Hundred Days' Reform" : '戊戌变法';
+  }
+
+  /* ============================================================
+     Cast — Chinese
+     ============================================================ */
+  const CAST = {
+    "光绪帝":   { avatar: "👑", title: "名义上的最高决策者",     desc: "试图以制度革新挽救衰弱帝国，借皇权强化富国强兵。" },
+    "慈禧太后": { avatar: "🦚", title: "实际最高权力掌控者",     desc: "对激进改革深感不安，最终联合守旧派发动政变。" },
+    "康有为":   { avatar: "📜", title: "变法理论与方案总设计师",  desc: "上书光绪提出变法主张，戊戌新政的主要思想源头。" },
+    "梁启超":   { avatar: "🖋️", title: "舆论与组织动员核心人物",  desc: "创办报刊鼓吹变法，塑造改革舆论环境。" },
+    "荣禄":     { avatar: "🛡️", title: "军权与政变执行者",        desc: "掌握京师与北洋武装，与慈禧密切配合执行政变。" }
+  };
+
+  /* ============================================================
+     Cast — English
+     ============================================================ */
+  const CAST_EN = {
+    "光绪帝":  { avatar: "👑", name: "Emperor Guangxu",        title: "The Qing Emperor · Reform Patron",           desc: "Backed the reformers and issued the hundred-day reform edicts, but lacked real power to counter the Empress Dowager." },
+    "慈禧太后": { avatar: "🦚", name: "Empress Dowager Cixi",   title: "Empress Dowager · True Power Behind the Throne", desc: "Launched the Coup of 1898, arrested the Emperor, and executed the Six Gentlemen, ending the reform movement." },
+    "康有为":  { avatar: "📜", name: "Kang Youwei",            title: "Reform Leader · Constitutional Monarchist",  desc: "The ideological architect of the Hundred Days' Reform, advocating a Japanese-style constitutional monarchy." },
+    "梁启超":  { avatar: "🖋️", name: "Liang Qichao",           title: "Reformist Journalist · Kang's Disciple",     desc: "Fled to Japan after the coup and continued propagating reformist ideas through journalism." },
+    "荣禄":    { avatar: "🛡️", name: "Ronglu",                 title: "Empress Dowager's Military Strongman",       desc: "Commanded the New Army units loyal to the Empress Dowager, making him the decisive instrument of the coup." },
+    "翁同龢":  { avatar: "📖", name: "Weng Tonghe",            title: "Emperor's Tutor · Reform Patron",            desc: "The Emperor's personal tutor who introduced Kang Youwei to the court and championed the reform movement." },
+    "袁世凯":  { avatar: "⚔️", name: "Yuan Shikai",            title: "Commander, New Army",                        desc: "Held the key military power the reformers hoped to use against Ronglu; instead he betrayed the plot to the Empress Dowager." },
+    "守旧大臣": { avatar: "👤", name: "Conservative Official",  title: "Qing Court, Conservative Faction",          desc: "A court official opposed to the reform edicts, loyal to the Empress Dowager's faction." },
+    "守旧派密报": { avatar: "📩", name: "Conservative Informant", title: "Qing Court, Conservative Faction",        desc: "Relayed intelligence about the reformers' plans to the Empress Dowager's faction." }
+  };
+
+  /* ============================================================
+     Passages — Chinese (original)
+     ============================================================ */
+  const PASSAGES = {
+
+    "start": {
+      type: "start",
+      epEmoji: "📜",
+      epTitle: "戊戌变法",
+      epSub: "B E I J I N G   ·   A . D .   1 8 9 8",
+      desc: "光绪二十四年，甲午之耻未消，胶澳、旅大相继被列强强租。光绪帝在维新派康有为、梁启超的影响下，试图自上而下推行制度变革，从科举、官制到工商、军备一并革新。然而真正的最高权力始终在慈禧太后与守旧派手中。一场维持仅 103 天的改革，在皇权与宫廷、新政与旧法、激进与稳健之间剧烈摇摆 —— 它的成败，将决定大清能否走上一条不同于革命的近代化道路。",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "第一幕  ·  甲午余烬",
+      sceneTitle: "公车上书与圣上抉择",
+      progressIndex: 0,
+      castOnStage: ["光绪帝", "康有为", "慈禧太后", "荣禄"],
+      narrative: [
+        "甲午之败，举国震动。康有为联合千余举人「公车上书」，请求拒和、迁都、变法。光绪帝读罢，于颐和园前向太后请训：变与不变，恳乞圣裁。",
+        "宫中势力盘根错节：慈禧虽已名义「归政」，但实权未移；荣禄掌北洋军权；翁同龢主帝党；李莲英为西后耳目。光绪手中，几乎只有诏书与一支毛笔。是公开起用康梁、走上「百日维新」之路，还是先安守现状、徐图后举？"
+      ],
+      dialogs: [
+        { who: "康有为",   what: "皇上不变法，则祖宗之地与祖宗之民不能保。变而不全变，犹与不变同也！" },
+        { who: "翁同龢",   what: "上意已动，臣愿在帝师之位为上斡旋；然西后心思，仍须谨慎。" },
+        { who: "光绪帝",   what: "甲午之耻，朕日不能寐。若非变法，何以告祖宗？然太后之意若何，朕亦不能无虑。" }
+      ],
+      decision: { question: "在维新与稳健之间，光绪应作何选择？", maker: "光绪帝" },
+      choices: [
+        { label: "暂缓变法，避免激怒慈禧",     hint: "稳重观望 — 偏离正史的延宕路线",        next: "end_A" },
+        { label: "公开下诏明定国是，起用康梁", hint: "百日维新启幕 — 正史选择",                next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "第二幕  ·  新政诏下",
+      sceneTitle: "西后归政与暗潮涌动",
+      progressIndex: 1,
+      castOnStage: ["光绪帝", "慈禧太后", "康有为", "梁启超", "荣禄"],
+      narrative: [
+        "光绪帝颁《明定国是诏》，召康有为入对、任命梁启超主时务报。新政诏令日下数道：废八股、办学堂、设译书局、裁冗员……朝中守旧大臣闻之色变，纷纷向颐和园递牌子。",
+        "慈禧太后表面颔首许之，却密召荣禄入园。她须决断：是即刻撤销诏令、回宫亲政；还是暂时容忍，待时机成熟再图反扑？"
+      ],
+      dialogs: [
+        { who: "慈禧太后", what: "皇帝既要变法，便由他变去。然新军军权、人事用人，须仍出于荣禄之手。" },
+        { who: "荣禄",     what: "禀老佛爷，京畿与北洋军令俱在臣处，一旦有不测，臣可即刻控京师诸门。" },
+        { who: "守旧大臣", what: "百日之内连下九十道诏，祖宗之法岂可一旦尽废 —— 跪请太后训政以正纲纪！" }
+      ],
+      decision: { question: "面对新政推行，慈禧应如何应对？", maker: "慈禧太后" },
+      choices: [
+        { label: "立即出手撤诏并训政",   hint: "速战速决 — 偏离正史的早政变路线",      next: "n2a" },
+        { label: "退居颐和园，暂时容忍并观望", hint: "藏锋待发 — 正史选择",              next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "分支  ·  早政变",
+      sceneTitle: "颐和园密议与即刻还宫",
+      progressIndex: 2,
+      castOnStage: ["慈禧太后", "荣禄", "光绪帝"],
+      narrative: [
+        "慈禧未待新政深入，仅二十日便以「皇帝病重」为由，下旨「太后亲临听政」。荣禄率董福祥所部入京，控制九门。光绪被请至瀛台「养病」。",
+        "新政诏令尚未及推行，便被一一收回。康有为闻讯仓皇出京。然而，慈禧仍须决断：是公开软禁光绪、彻底清算维新党，还是暗中分化拉拢以稳定朝局？"
+      ],
+      dialogs: [
+        { who: "慈禧太后", what: "皇帝太年轻了，被几个穷举人哄住，竟欲翻天 —— 哀家不能再让他胡来。" },
+        { who: "荣禄",     what: "维新党人多浮躁书生，臣可借「越职奏事」一案逐一清退；至于皇帝，仍以礼待之，以免外议汹涌。" },
+        { who: "光绪帝",   what: "朕之诏书…竟连墨迹未干便被废止…" }
+      ],
+      decision: { question: "早政变之后，慈禧应如何处置？", maker: "慈禧太后" },
+      choices: [
+        { label: "软禁光绪，彻底清算维新党",   hint: "硬手处置 — 走向变法早夭的结局",      next: "end_B" },
+        { label: "暗中分化，拉拢温和维新派",   hint: "怀柔分化 — 走向维新派分裂的结局",   next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "第三幕  ·  新政加速",
+      sceneTitle: "百日之中的踟蹰与冒进",
+      progressIndex: 2,
+      castOnStage: ["光绪帝", "康有为", "梁启超", "荣禄"],
+      narrative: [
+        "慈禧表面退居颐和园「归政」，实则通过荣禄严密监控京师朝局。光绪在康梁鼓动下，新政诏令日渐密集 —— 短短百日，下诏一百八十余道，几乎触动每一处既得利益。",
+        "守旧派联名抗议、京师人心浮动，光绪手中既无兵权又无可用之臣。康有为意识到：若不借助军力护驾，新政随时可能被颠覆。然而借助军力，也可能反招其反。"
+      ],
+      dialogs: [
+        { who: "梁启超",   what: "主上百日来下诏不下百二十道，然多数被各部尚书束之高阁，未能下达。" },
+        { who: "康有为",   what: "若非借袁世凯新军三千入京护驾，难保西后不会突然回銮。我等当与谭嗣同密议。" },
+        { who: "光绪帝",   what: "朕…实在不愿再走兵谏一途。然太后回銮之机迫在眉睫，又当如何？" }
+      ],
+      decision: { question: "面对新政被掣肘的现实，康有为应如何选择？", maker: "康有为" },
+      choices: [
+        { label: "安守诏令，循序推进新政",     hint: "回归温和 — 偏离正史的稳健路线",     next: "end_D" },
+        { label: "密谋袁世凯新军入卫紫禁城",   hint: "兵谏护驾 — 正史选择",                next: "n4" },
+        { label: "联合英日公使施压调停",       hint: "借助列强 — 偏离正史的外援路线",     next: "n3a" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "分支  ·  外力调停",
+      sceneTitle: "公使馆里的密议",
+      progressIndex: 3,
+      castOnStage: ["康有为", "梁启超"],
+      narrative: [
+        "康有为放弃军事冒险，转而拜会英、日公使，希望借助外力为光绪护身。日本前首相伊藤博文恰访华于此时，被邀至紫禁城与光绪密谈一日，引来朝野震动。",
+        "外力是把双刃剑 —— 是动用海军在天津外洋示威以威慑西后，还是仅借舆论造势？前者直接干涉内政，可能彻底激怒慈禧；后者无强制力，恐难挽危局。"
+      ],
+      dialogs: [
+        { who: "梁启超",   what: "伊藤博文劝皇上「以新制改旧国」，临行尚许以维新派庇护之意。" },
+        { who: "康有为",   what: "若英日海军于天津外洋示威，西后必不敢动；若仅靠舆论，恐难震慑。" },
+        { who: "守旧派密报", what: "（密报西后）维新党与日人勾结，欲倾覆社稷！" }
+      ],
+      decision: { question: "借助外力的方式，康有为应如何把握？", maker: "康有为" },
+      choices: [
+        { label: "请英日海军于天津外洋示威", hint: "极限施压 — 走向列强干涉的结局",   next: "end_E" },
+        { label: "仅借公使与舆论施压",       hint: "温和施压 — 走向国际孤立的结局",   next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "第四幕  ·  围园密谋",
+      sceneTitle: "袁世凯小站与紫禁城孤注",
+      progressIndex: 3,
+      castOnStage: ["康有为", "梁启超", "慈禧太后", "荣禄"],
+      narrative: [
+        "谭嗣同奉命星夜赴小站，密见袁世凯：「皇上已有密诏，请你诛荣禄、围颐和园、护驾还政」。袁面色凝重，应曰「请容三思」，然出门即奔天津荣禄府上密报。",
+        "九月二十日，慈禧得报，雷霆震怒。她须立即决定：是即刻回銮发动政变，还是再观望几日待袁世凯彻底告发，亦或干脆发兵围攻颐和园外维新党？时间窗口已收窄至小时。"
+      ],
+      dialogs: [
+        { who: "袁世凯",   what: "皇上密诏…臣戎马在外，未敢妄动；然此事关乎社稷，臣不得不据实报中堂。" },
+        { who: "荣禄",     what: "老佛爷，袁世凯尚未明降，但风声已起 —— 须以最快速度回銮，控制九门，方可万无一失！" },
+        { who: "慈禧太后", what: "好一个皇帝、好一个康有为 —— 哀家若再容情，便对不住列祖列宗！" }
+      ],
+      decision: { question: "在风声起处，慈禧应如何用兵？", maker: "慈禧太后" },
+      choices: [
+        { label: "静待袁世凯彻底告发再行动",   hint: "求稳过头 — 偏离正史的延误路线",       next: "end_G" },
+        { label: "立即回銮发动戊戌政变",       hint: "迅雷不及掩耳 — 正史选择",              next: "end_H" },
+        { label: "调董福祥围攻颐和园外党人",   hint: "硬碰硬出兵 — 偏离正史的暴力清算路线", next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "维新流产  ·  体制延残",
+      castOnStage: ["光绪帝", "康有为"],
+      narrative: [
+        "光绪帝最终选择隐忍 —— 维新派的奏折被层层压下，康梁等人留滞京师却无诏可奉。半年后，列强进一步瓜分东北、华南，朝堂震动而无所变。",
+        "无外部压力则无内部动力，戊戌变法从未真正发生。然而被压抑的求变之力并未消散 —— 三年后，义和团骤起；十年后，立宪运动登场；十三年后，辛亥革命爆发。清廷在没有「百日维新」缓冲的情况下，更早地走向了崩塌。"
+      ],
+      reflection: "<b>反事实推演：</b>不变法看似避免了政变的风险，却也让体制丧失了自我变革的最后窗口期。这个分支提醒：<b>在结构性危机面前，「不作为」也是一种作为</b> —— 它用「现状的稳定」换来了「未来的崩塌」。"
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "早政变  ·  维新夭折",
+      castOnStage: ["慈禧太后", "光绪帝"],
+      narrative: [
+        "慈禧未待新政深入便突然回銮。康有为出逃日本，谭嗣同死于狱中，光绪被囚瀛台。新政百余道诏令仅有寥寥数条得以执行便被尽数收回。",
+        "由于改革几未真正展开，社会感受不到任何变革的痕迹，士林对清廷彻底失望。两年后义和团之乱与八国联军入京同时引爆 —— 由于没有了百日维新所积累的舆论缓冲，慈禧避走西安时几乎没有任何「立宪派」愿出面斡旋。"
+      ],
+      reflection: "<b>反事实推演：</b>政变的「速度」与「彻底」往往会让被推翻的事物失去任何留存可能。这个分支揭示：<b>过早地扼杀变革，也会过早地丧失重新选择的余地。</b>正史中百日维新虽然失败，却为此后立宪派埋下了思想种子。"
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "暗中分化  ·  维新党裂",
+      castOnStage: ["慈禧太后", "梁启超"],
+      narrative: [
+        "慈禧未公开发动政变，而是密谕李鸿章、张之洞拉拢温和维新派，给予官职以分化激进派。康有为坚持原议，被孤立后出走海外；梁启超则被荣禄延揽进总理衙门。",
+        "维新派内部分裂为「在朝改良派」与「在野激进派」，前者依附旧体制无所作为，后者流亡海外渐转向革命。十年后，前者销声匿迹，后者成为同盟会的思想骨干 —— 改革失败的能量，最终全部导入了革命。"
+      ],
+      reflection: "<b>反事实推演：</b>分化拉拢看似比硬手镇压更聪明，实则制造了更隐蔽的失败 —— 它让改革派失去内部统一性，而又未能真正让其参与决策。这个分支提醒：<b>真正的妥协必须辅以真正的让权，否则只是另一种形式的清洗。</b>"
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "循序推进  ·  慢火新政",
+      castOnStage: ["光绪帝", "康有为", "梁启超"],
+      narrative: [
+        "康有为放弃军事冒险，与梁启超共同拟订新政「分期施行表」，将八股、官制等敏感改革推迟，先推行学堂、译书、商务等争议较小者。",
+        "新政推行虽缓，却渐有实绩 —— 京师大学堂顺利开办，译书局译出大批西学经典，江南商务大有起色。慈禧虽不悦，却找不到立即政变的理由。「百日维新」延续为「三年新政」，为后来的「清末新政」奠定了远比正史更厚实的基础。"
+      ],
+      reflection: "<b>反事实推演：</b>改革的成败往往不取决于「方向是否正确」，而取决于「节奏是否合宜」。这个分支揭示：<b>激进派最大的敌人，常常不是反对派，而是自己的速度。</b>正史中戊戌变法之所以失败，相当程度上输在了「百日内下诏百八十道」的不可执行性。"
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "外舰干涉  ·  半亡之兆",
+      castOnStage: ["康有为", "慈禧太后"],
+      narrative: [
+        "英日海军应康有为之请，于天津大沽口外集结示威。慈禧太后无奈暂缓回銮，新政得以再延数月。然外力一旦介入，便不会轻易撤离 —— 英日借机要求增开通商口岸、获取铁路矿权。",
+        "新政在外援下苟延残喘，但清廷威信彻底扫地。各省督抚视北京为「外国保镖下的傀儡朝廷」，南洋诸总督渐萌自立之心。两年后，清廷中央实际权威已全面瓦解，与列强协议签订更多丧权辱国的附约。"
+      ],
+      reflection: "<b>反事实推演：</b>引入外力以解内忧，从来都是双刃剑。这个分支提醒：<b>当一个改革派需要靠外国军舰来保护自己时，无论改革本身如何高尚，它的合法性也已经被掏空。</b>"
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "舆论造势  ·  国际孤立",
+      castOnStage: ["康有为", "梁启超"],
+      narrative: [
+        "康有为不敢请外舰干涉，仅与英日公使密议舆论支持。日本《时事新报》、英国《泰晤士报》连续刊文支持中国维新。然舆论无强制力，慈禧不为所动。",
+        "维新党借助外国舆论的努力，反被守旧派斥为「勾结洋人、危害宗社」。慈禧政变如期发动，且由于「通敌」之嫌，对维新党的清算更加严厉 —— 谭嗣同等六君子之外，又有数十人被牵连流放或处决。"
+      ],
+      reflection: "<b>反事实推演：</b>没有实力支撑的国际同情，常常不仅无效，反而会成为政敌攻击的把柄。这个分支揭示：<b>国际关系中，「被同情」与「被尊重」是两件完全不同的事</b> —— 前者廉价，后者昂贵。"
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "袁倒戈早  ·  变局错位",
+      castOnStage: ["慈禧太后", "光绪帝"],
+      narrative: [
+        "慈禧选择再观望几日，然袁世凯连夜赴津密报荣禄后，事机已早走漏。康梁先期察觉，连夜出京，谭嗣同则坚持留京被捕。",
+        "由于慈禧动手稍晚，光绪得以连下数道罪己诏与请太后训政之奏，使外界对政变的「剧本」存疑。慈禧不得不在政变后保留更多温和维新派以堵悠悠之口 —— 但这也使得清廷内部派系更为复杂，新政既未全废、亦未真行，朝局陷入数年泥淖。"
+      ],
+      reflection: "<b>反事实推演：</b>关键时刻的「再等一下」，常常会让原本可控的局面变成左右为难。这个分支提醒：<b>在权力博弈中，时间窗口的把握往往比方略本身更具决定性。</b>"
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "正史结局 · CANONICAL",
+      tagClass: "canonical",
+      title: "戊戌政变  ·  维新梦碎",
+      castOnStage: ["光绪帝", "慈禧太后", "康有为", "梁启超", "荣禄"],
+      narrative: [
+        "光绪二十四年八月初六（1898 年 9 月 21 日）凌晨，慈禧太后从颐和园回銮，宣布「训政」，囚禁光绪于瀛台。荣禄率军控制京师九门。康有为前一日已乘英舰赴港，梁启超经日本公使馆出走东京。",
+        "谭嗣同、林旭、杨深秀、杨锐、刘光第、康广仁六人被斩于菜市口，史称「戊戌六君子」。新政诏令除京师大学堂等少数项目得以保留外，其余尽数被废。百日维新仅历 103 天，中国失去了一次相对和平的近代化转型机会。"
+      ],
+      reflection: "<b>历史的真实走向：</b>戊戌变法虽然失败，却在思想与舆论层面播下了深远的种子 —— 梁启超在日本创办《新民丛报》，启蒙了一代知识分子；十三年后的辛亥革命，直接继承了戊戌党人未竟的事业。<br><br>这一结局也提醒我们：<b>改革的失败方式，往往会决定继之而来的革命方式。</b>戊戌之痛，使近代中国选择了远比维新更激进的道路 —— 这条路的起点，正是被斩于菜市口的那六位青年。"
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "兵围颐和园  ·  宗室震动",
+      castOnStage: ["慈禧太后", "荣禄", "光绪帝"],
+      narrative: [
+        "慈禧不仅回銮政变，还令董福祥率甘军围攻颐和园外维新党住所，谭嗣同等人在巷战中战死。京师血光冲天，宗室王公震恐，纷纷上书请太后「以宽大为怀」。",
+        "暴力清算虽彻底，却使慈禧政权失去几乎所有道义合法性。太后晚年益发猜忌，导致庚子年间盲目支持义和团对外宣战，引发八国联军入京的更大灾难。清廷自此一蹶不振，十年内即告倾覆。"
+      ],
+      reflection: "<b>反事实推演：</b>极端的清洗常常带来反噬。这个分支揭示：<b>政变的代价，不仅在于被清洗的人付出生命，更在于胜利者自己也丧失了继续统治的合法性。</b>正史中慈禧的「相对克制」（仅斩六君子），实际上为清廷又延续了十多年命运。"
+    }
+  };
+
+  /* ============================================================
+     Passages — English
+     ============================================================ */
+  const PASSAGES_EN = {
+
+    "start": {
+      type: "start",
+      epEmoji: "📜",
+      epTitle: "The Hundred Days' Reform",
+      epSub: "Q I N G   D Y N A S T Y   ·   1 8 9 8",
+      desc: "In the twenty-fourth year of the Guangxu reign, the humiliation of the First Sino-Japanese War still stung, and Jiaozhou Bay and Lüshun had been leased to foreign powers. Influenced by reformers Kang Youwei and Liang Qichao, Emperor Guangxu sought to drive sweeping institutional change from the top down — overhauling the civil-service examinations, the bureaucracy, commerce, and the military all at once. Yet real supreme power remained firmly in the hands of Empress Dowager Cixi and the conservative faction. A reform that lasted a mere 103 days swung violently between imperial authority and court intrigue, new policies and old law, radicalism and caution — its outcome would determine whether the Qing Dynasty could find a path to modernity without revolution.",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "ACT I  ·  EMBERS OF THE SINO-JAPANESE WAR",
+      sceneTitle: "The Petition Drive and the Emperor's Choice",
+      progressIndex: 0,
+      castOnStage: ["光绪帝", "康有为", "慈禧太后", "荣禄"],
+      narrative: [
+        "The defeat in the First Sino-Japanese War sent shockwaves through the empire. Kang Youwei rallied over a thousand examination candidates in the 'Public Carriage Memorial,' demanding that China reject the peace treaty, move the capital, and enact reforms. After reading the petition, Emperor Guangxu sought an audience with the Empress Dowager at the Summer Palace, asking for her imperial sanction: should he change course, or hold steady?",
+        "Power at court was deeply entangled: though Cixi had nominally 'returned government' to the Emperor, real authority had never left her hands; Ronglu commanded the Beiyang Army; Weng Tonghe led the Emperor's faction; and Li Lianying served as Cixi's eyes and ears. The Emperor held little more than imperial edicts and a calligraphy brush. Should he openly appoint Kang and Liang and embark on the Hundred Days' Reform — or bide his time and wait for a better moment?"
+      ],
+      dialogs: [
+        { who: "康有为",   what: "If Your Majesty does not reform, the lands and people of your ancestors cannot be preserved. Reform that is only partial is no reform at all!" },
+        { who: "翁同龢",   what: "His Majesty's mind is already stirred. I am willing to mediate from my position as imperial tutor — yet the Empress Dowager's intentions must still be handled with great care." },
+        { who: "光绪帝",   what: "The shame of the Sino-Japanese War keeps me sleepless through the night. Without reform, how can I face our ancestors? And yet I cannot ignore what the Empress Dowager may think." }
+      ],
+      decision: { question: "Caught between reform and caution, what choice should Emperor Guangxu make?", maker: "光绪帝" },
+      choices: [
+        { label: "Delay reform to avoid provoking the Empress Dowager",   hint: "Cautious restraint — Alternative Ending · Diverges from History",  next: "end_A" },
+        { label: "Issue an edict proclaiming national purpose and appoint Kang and Liang", hint: "The Hundred Days' Reform begins — Canonical Ending · CANONICAL", next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "ACT II  ·  THE REFORM EDICTS DESCEND",
+      sceneTitle: "The Reform Edicts and Gathering Opposition",
+      progressIndex: 1,
+      castOnStage: ["光绪帝", "慈禧太后", "康有为", "梁启超", "荣禄"],
+      narrative: [
+        "Emperor Guangxu issued the 'Edict Defining National Purpose,' summoned Kang Youwei for a personal audience, and appointed Liang Qichao to head the Current Affairs Journal. Reform edicts poured out day after day: abolishing the eight-legged essay, founding new schools, establishing translation bureaus, cutting sinecures... Conservative officials at court turned pale and sent a stream of memorial petitions to the Summer Palace.",
+        "The Empress Dowager outwardly nodded her assent, but secretly summoned Ronglu to the palace. She had to decide: should she immediately revoke the edicts and return to direct rule — or tolerate the situation for now and wait for the right moment to strike back?"
+      ],
+      dialogs: [
+        { who: "慈禧太后", what: "If the Emperor wishes to reform, let him reform. But command of the new armies and the power to appoint officials must remain in Ronglu's hands." },
+        { who: "荣禄",     what: "Your Majesty, all military orders for the capital region and the Beiyang Army pass through me. Should anything go wrong, I can seal the city gates of Beijing at a moment's notice." },
+        { who: "守旧大臣", what: "Ninety edicts in a hundred days — can the laws of our ancestors be swept away overnight? We kneel and implore the Empress Dowager to resume governance and restore proper order!" }
+      ],
+      decision: { question: "Faced with the advance of the reforms, how should Empress Dowager Cixi respond?", maker: "慈禧太后" },
+      choices: [
+        { label: "Act immediately — revoke the edicts and resume direct rule",   hint: "Swift decisive action — Alternative Ending · Diverges from History",  next: "n2a" },
+        { label: "Withdraw to the Summer Palace and bide her time",              hint: "Patience and vigilance — Canonical Ending · CANONICAL",               next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "BRANCH  ·  THE EARLY COUP",
+      sceneTitle: "Secret Council at the Summer Palace and the Immediate Return to Court",
+      progressIndex: 2,
+      castOnStage: ["慈禧太后", "荣禄", "光绪帝"],
+      narrative: [
+        "Before the reforms had a chance to take hold — barely twenty days in — Cixi issued an edict on the pretext that 'the Emperor is gravely ill,' declaring that 'the Empress Dowager will personally attend to governance.' Ronglu led Dong Fuxiang's forces into Beijing and took control of the Nine Gates. Emperor Guangxu was escorted to the Ocean Terrace to 'recuperate.'",
+        "The reform edicts were revoked one by one before they could be enacted. Kang Youwei fled the capital in panic. But Cixi still had to decide: should she openly place Guangxu under house arrest and conduct a thorough purge of the reformers — or quietly divide and co-opt them to stabilize the court?"
+      ],
+      dialogs: [
+        { who: "慈禧太后", what: "The Emperor is far too young. A handful of destitute examination men flattered him into thinking he could turn heaven upside down. I cannot allow this to go on." },
+        { who: "荣禄",     what: "The reformers are mostly headstrong bookmen. I can dismiss them one by one on charges of 'overstepping their authority.' As for the Emperor, he should still be treated with outward respect, to avoid a public outcry." },
+        { who: "光绪帝",   what: "My edicts… revoked before the ink had even dried…" }
+      ],
+      decision: { question: "After the early coup, how should Empress Dowager Cixi deal with the aftermath?", maker: "慈禧太后" },
+      choices: [
+        { label: "Place Guangxu under house arrest and thoroughly purge the reformers", hint: "Hard line — Alternative Ending · Diverges from History",       next: "end_B" },
+        { label: "Quietly divide the reformers and co-opt the moderate wing",           hint: "Soft divide — Alternative Ending · Diverges from History",       next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "ACT III  ·  THE REFORMS ACCELERATE",
+      sceneTitle: "Hesitations and Overreach in the Hundred Days",
+      progressIndex: 2,
+      castOnStage: ["光绪帝", "康有为", "梁启超", "荣禄"],
+      narrative: [
+        "Cixi had outwardly retreated to the Summer Palace and 'returned governance,' but in reality she was using Ronglu to keep a close watch on the capital's court politics. Spurred on by Kang and Liang, Emperor Guangxu issued reform edicts at an ever-increasing pace — in barely a hundred days, over a hundred and eighty edicts were promulgated, touching virtually every vested interest in the empire.",
+        "Conservative officials protested in unison, and confidence in Beijing was shaken. The Emperor had neither military authority nor capable officials he could rely on. Kang Youwei realized that without the protection of military force, the reforms could be overturned at any moment — yet seeking military backing might itself trigger the very disaster they feared."
+      ],
+      dialogs: [
+        { who: "梁启超",   what: "His Majesty has issued no fewer than a hundred and twenty edicts in these hundred days, yet most have been shelved by the department heads and never carried out." },
+        { who: "康有为",   what: "Unless Yuan Shikai brings three thousand of his New Army troops into Beijing to protect the Emperor, there is no guarantee the Empress Dowager won't suddenly return to court. We must consult secretly with Tan Sitong." },
+        { who: "光绪帝",   what: "I… truly have no wish to resort to a military remonstrance. Yet the threat of the Empress Dowager's return is pressing. What should be done?" }
+      ],
+      decision: { question: "Facing the reality that the reforms are being blocked at every turn, what course of action should Kang Youwei choose?", maker: "康有为" },
+      choices: [
+        { label: "Stay within the edicts and advance the reforms step by step",  hint: "Moderate course — Alternative Ending · Diverges from History",   next: "end_D" },
+        { label: "Secretly plan for Yuan Shikai's New Army to guard the Forbidden City", hint: "Military remonstrance — Canonical Ending · CANONICAL",    next: "n4" },
+        { label: "Enlist the British and Japanese ministers to apply diplomatic pressure", hint: "Foreign leverage — Alternative Ending · Diverges from History", next: "n3a" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "BRANCH  ·  FOREIGN MEDIATION",
+      sceneTitle: "Secret Talks at the Legation Quarter",
+      progressIndex: 3,
+      castOnStage: ["康有为", "梁启超"],
+      narrative: [
+        "Kang Youwei abandoned the military gamble and turned instead to meeting with the British and Japanese ministers, hoping that foreign influence could shield Emperor Guangxu. Japan's former Prime Minister Ito Hirobumi happened to be visiting China at that moment; he was invited to the Forbidden City for a full day of private consultations with the Emperor, sending shockwaves through the entire court.",
+        "Foreign leverage was a double-edged sword. Should they call on foreign navies to stage a show of force off Tianjin to deter the Empress Dowager — or simply use the press and diplomatic opinion to apply pressure? The former meant direct interference in China's internal affairs and risked enraging Cixi entirely; the latter carried no coercive power and might prove utterly unable to save the situation."
+      ],
+      dialogs: [
+        { who: "梁启超",   what: "Ito Hirobumi urged His Majesty to 'transform the old order through new institutions,' and as he left, he hinted that he could offer the reformers some measure of protection." },
+        { who: "康有为",   what: "If British and Japanese warships gather off Tianjin for a show of force, the Empress Dowager would not dare to move. If we rely only on public opinion, I fear we cannot shake her." },
+        { who: "守旧派密报", what: "(Secret report to the Empress Dowager) The reformers are in league with the Japanese, plotting to overthrow the dynasty!" }
+      ],
+      decision: { question: "In choosing how to use foreign leverage, how should Kang Youwei calibrate his approach?", maker: "康有为" },
+      choices: [
+        { label: "Request that British and Japanese navies stage a show of force off Tianjin", hint: "Maximum pressure — Alternative Ending · Diverges from History",  next: "end_E" },
+        { label: "Rely only on ministerial pressure and media opinion",                        hint: "Soft pressure — Alternative Ending · Diverges from History",     next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "ACT IV  ·  THE PLOT TO SURROUND THE GARDEN",
+      sceneTitle: "Yuan Shikai at Xiaozhan and the Palace's Last Gamble",
+      progressIndex: 3,
+      castOnStage: ["康有为", "梁启超", "慈禧太后", "荣禄"],
+      narrative: [
+        "Tan Sitong rode through the night to Xiaozhan and met secretly with Yuan Shikai: 'The Emperor has a secret edict — he asks you to execute Ronglu, surround the Summer Palace, and escort His Majesty back to power.' Yuan's expression darkened; he replied, 'Please allow me three days to consider,' — but the moment he left, he rode straight to Ronglu's residence in Tianjin with the full report.",
+        "On the twentieth day of the ninth month, the news reached Cixi and she erupted in fury. She had to decide immediately: should she return to court at once and launch the coup — or wait a few more days for Yuan Shikai to deliver a complete confession — or simply send troops to surround the reformers gathered outside the Summer Palace? The window of time had narrowed to hours."
+      ],
+      dialogs: [
+        { who: "袁世凯",   what: "The Emperor's secret edict… I am a soldier in the field and dare not act rashly. But this matter concerns the dynasty itself, and I have no choice but to report it truthfully to the Grand Secretary." },
+        { who: "荣禄",     what: "Your Majesty, Yuan Shikai has not yet declared himself openly, but word is already spreading. You must return to court with all possible speed, seize the Nine Gates, and leave nothing to chance!" },
+        { who: "慈禧太后", what: "What an Emperor! What a Kang Youwei! If I show any more forbearance, I will have failed every one of our imperial ancestors!" }
+      ],
+      decision: { question: "With word of the plot already spreading, how should Empress Dowager Cixi deploy her forces?", maker: "慈禧太后" },
+      choices: [
+        { label: "Wait until Yuan Shikai has submitted a full confession before acting", hint: "Over-cautious — Alternative Ending · Diverges from History",              next: "end_G" },
+        { label: "Return to court immediately and launch the Coup of 1898",             hint: "Strike like thunder — Canonical Ending · CANONICAL",                       next: "end_H" },
+        { label: "Send Dong Fuxiang's forces to surround the reformers near the Summer Palace", hint: "Direct military assault — Alternative Ending · Diverges from History", next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS — English
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Reform Stillborn · The System Lingers On",
+      castOnStage: ["光绪帝", "康有为"],
+      narrative: [
+        "Emperor Guangxu ultimately chose to endure in silence. The reformers' memorials were suppressed at every level; Kang and Liang remained stranded in Beijing with no imperial mandate to act. Six months later, foreign powers pressed further into Manchuria and South China, and the court was shaken — yet nothing changed.",
+        "Without external pressure there was no internal drive, and the Hundred Days' Reform never truly happened. Yet the suppressed desire for change did not vanish — three years later the Boxer Uprising erupted; ten years later the Constitutional Movement appeared; thirteen years later the 1911 Revolution broke out. Without the buffer of the Hundred Days' Reform, the Qing dynasty collapsed even sooner."
+      ],
+      reflection: "<b>Counterfactual analysis:</b> Refusing to reform may seem to avoid the risk of a coup, but it also robbed the system of its last window for self-transformation. This branch reminds us: <b>in the face of structural crisis, 'inaction' is itself a form of action</b> — it traded 'short-term stability' for 'eventual collapse.'"
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "The Early Coup · Reform Cut Short",
+      castOnStage: ["慈禧太后", "光绪帝"],
+      narrative: [
+        "Cixi returned to court before the reforms had a chance to take root. Kang Youwei fled to Japan; Tan Sitong died in prison; Emperor Guangxu was locked away on the Ocean Terrace. Of the hundred-odd reform edicts, only a handful were ever carried out before all were revoked.",
+        "Because the reforms had barely begun, society felt no trace of change, and the scholarly class lost all faith in the Qing court. Two years later the Boxer Uprising and the Eight-Nation Alliance invasion struck simultaneously — and because the Hundred Days' Reform had never accumulated any goodwill in public opinion, almost no 'constitutionalists' were willing to come forward and mediate when Cixi fled to Xi'an."
+      ],
+      reflection: "<b>Counterfactual analysis:</b> The 'speed' and 'thoroughness' of a coup often leaves what was overthrown with no possibility of survival. This branch reveals: <b>suppressing reform too early also means losing the chance to choose again too early.</b> In actual history, the Hundred Days' Reform — though it failed — planted intellectual seeds for the later constitutionalists."
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Quiet Division · The Reform Faction Splits",
+      castOnStage: ["慈禧太后", "梁启超"],
+      narrative: [
+        "Rather than launching an open coup, Cixi secretly instructed Li Hongzhang and Zhang Zhidong to court the moderate reformers and offer them official posts, thereby splitting off the radicals. Kang Youwei held firm to his original positions, found himself isolated, and went into exile abroad; Liang Qichao was recruited by Ronglu into the Zongli Yamen.",
+        "The reform faction split into 'in-court moderates' and 'out-of-court radicals': the former attached themselves to the old system and accomplished nothing; the latter went into exile abroad and gradually moved toward revolution. Ten years later the moderates had vanished into obscurity, while the radicals became the intellectual core of the Tongmenghui — and all the energy of the failed reform poured directly into revolution."
+      ],
+      reflection: "<b>Counterfactual analysis:</b> Dividing and co-opting opponents may seem smarter than a heavy-handed crackdown, but it produced a more hidden form of failure — it stripped the reformers of their internal cohesion without ever genuinely allowing them a voice in decision-making. This branch reminds us: <b>true compromise must be accompanied by a genuine transfer of power, or it is simply another form of purge.</b>"
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Steady Progress · The Slow-Burning New Policy",
+      castOnStage: ["光绪帝", "康有为", "梁启超"],
+      narrative: [
+        "Kang Youwei abandoned the military gamble and worked with Liang Qichao to draft a 'phased implementation schedule' for the reforms, pushing back sensitive changes such as the examination system and bureaucratic restructuring, and first pursuing less contentious measures such as new schools, translation bureaus, and commercial development.",
+        "The reforms moved slowly, but gradually produced real results — the Imperial University opened smoothly, the translation bureau published a wave of Western scholarly works, and commerce in Jiangnan flourished noticeably. Cixi was displeased but found no immediate justification for a coup. The 'Hundred Days' Reform' stretched into a 'Three-Year New Policy,' laying a far thicker foundation than actual history did for the later 'Late Qing New Policies.'"
+      ],
+      reflection: "<b>Counterfactual analysis:</b> The success or failure of a reform often depends not on 'whether the direction is correct,' but on 'whether the pace is right.' This branch reveals: <b>the greatest enemy of the radical is often not the opposition, but the radical's own speed.</b> In actual history, the Hundred Days' Reform failed in no small part because issuing a hundred and eighty edicts in a hundred days was simply impossible to execute."
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Foreign Warships Intervene · A Sign of Half-Ruin",
+      castOnStage: ["康有为", "慈禧太后"],
+      narrative: [
+        "At Kang Youwei's request, British and Japanese warships gathered off the Dagu Forts at Tianjin in a show of force. Cixi was compelled to delay her return to court, and the reforms gained a few more months. But once foreign powers intervened, they would not easily withdraw — Britain and Japan seized the opportunity to demand additional treaty ports and rights over railways and mines.",
+        "The reforms survived on foreign life support, but the Qing court's prestige was utterly destroyed. Provincial governors began to view Beijing as 'a puppet court under foreign guard,' and the governors of the Southern Seas began to entertain thoughts of going their own way. Two years later the court's central authority had completely collapsed, and even more humiliating treaties were signed with the foreign powers."
+      ],
+      reflection: "<b>Counterfactual analysis:</b> Bringing in foreign power to solve domestic problems is always a double-edged sword. This branch reminds us: <b>when a reform movement needs foreign warships to protect it, no matter how noble the reform itself may be, its legitimacy has already been hollowed out.</b>"
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "A Media Campaign · International Isolation",
+      castOnStage: ["康有为", "梁启超"],
+      narrative: [
+        "Kang Youwei dared not call on foreign warships, and instead held private talks with the British and Japanese ministers about lending their press support. Japan's Jiji Shinpō and Britain's The Times ran a series of articles backing China's reform movement. But without coercive force behind it, public opinion moved Cixi not at all.",
+        "The reformers' efforts to leverage foreign opinion were turned against them: the conservatives denounced them for 'colluding with foreigners to endanger the dynasty.' Cixi's coup proceeded on schedule, and because of the taint of 'treasonous contact with foreigners,' the purge of the reformers was even harsher than it might have been — beyond the Six Gentlemen of 1898, dozens more were implicated and either exiled or executed."
+      ],
+      reflection: "<b>Counterfactual analysis:</b> International sympathy without the backing of real power is not only ineffective — it can become a handle for political enemies to seize. This branch reveals: <b>in international relations, 'being pitied' and 'being respected' are two entirely different things</b> — the former is cheap, the latter is costly."
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Yuan Defects Too Early · A Misaligned Crisis",
+      castOnStage: ["慈禧太后", "光绪帝"],
+      narrative: [
+        "Cixi chose to wait a few more days, but after Yuan Shikai rode through the night to Tianjin to report to Ronglu, the secret had already leaked too early. Kang and Liang sensed the danger first and slipped out of the capital overnight; Tan Sitong chose to stay and was arrested.",
+        "Because Cixi moved a little too late, Guangxu was able to issue several self-condemning edicts and memorials asking the Empress Dowager to resume governance — casting doubt in the public mind about the 'script' of the coup. Cixi was forced to retain more moderate reformers after the coup to silence critics — but this left the court's internal factions more tangled than ever, the new policies neither fully abolished nor truly implemented, and the political situation mired in years of confusion."
+      ],
+      reflection: "<b>Counterfactual analysis:</b> 'Waiting just a little longer' at a critical moment can turn a situation that was once controllable into one where every option is bad. This branch reminds us: <b>in power struggles, the ability to read and seize the window of opportunity is often more decisive than the strategy itself.</b>"
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "Canonical Ending · CANONICAL",
+      tagClass: "canonical",
+      title: "The Coup of 1898 · The Reform Dream Shattered",
+      castOnStage: ["光绪帝", "慈禧太后", "康有为", "梁启超", "荣禄"],
+      narrative: [
+        "In the early hours of the sixth day of the eighth month of the twenty-fourth year of Guangxu's reign (21 September 1898), Empress Dowager Cixi returned from the Summer Palace to court and declared herself regent, imprisoning Emperor Guangxu on the Ocean Terrace. Ronglu's forces seized control of Beijing's Nine Gates. The day before, Kang Youwei had boarded a British ship bound for Hong Kong; Liang Qichao slipped out through the Japanese legation to Tokyo.",
+        "Tan Sitong, Lin Xu, Yang Shenxiu, Yang Rui, Liu Guangdi, and Kang Guangren — the 'Six Gentlemen of 1898' — were beheaded at the Caishikou execution ground. All but a handful of reform edicts, such as the Imperial University, were revoked. The Hundred Days' Reform lasted only 103 days; China lost what might have been a relatively peaceful opportunity for modernization."
+      ],
+      reflection: "<b>What history actually chose:</b> Though the Hundred Days' Reform failed, it sowed far-reaching seeds in the realm of ideas and public opinion — Liang Qichao founded the New People's Journal in Japan, awakening a generation of intellectuals; thirteen years later, the 1911 Revolution directly inherited the unfinished work of the 1898 reformers.<br><br>This ending also reminds us: <b>the way a reform fails often determines the character of the revolution that follows.</b> The agony of 1898 set modern China on a path far more radical than constitutional reform — and that path began at the Caishikou execution ground, with those six young men."
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Troops Surround the Summer Palace · The Imperial Clan in Shock",
+      castOnStage: ["慈禧太后", "荣禄", "光绪帝"],
+      narrative: [
+        "Cixi not only returned to court and launched the coup, but also ordered Dong Fuxiang's Gansu Army to surround the reformers' residences outside the Summer Palace. Tan Sitong and others died fighting in the street battles. Blood ran in the streets of Beijing; the imperial princes and nobles were horrified and flooded the Empress Dowager with memorials urging her to 'show magnanimity.'",
+        "The violent purge was thorough, but it stripped the Cixi regime of nearly all its moral legitimacy. In her final years the Empress Dowager grew ever more suspicious, leading her to blindly back the Boxers in declaring war on the foreign powers in 1900 — bringing on the even greater catastrophe of the Eight-Nation Alliance's occupation of Beijing. The Qing dynasty never recovered, and collapsed within ten years."
+      ],
+      reflection: "<b>Counterfactual analysis:</b> Extreme purges often produce a backlash. This branch reveals: <b>the cost of a coup lies not only in the lives paid by those who were purged, but also in the fact that the victors themselves lose the legitimacy to continue ruling.</b> In actual history, Cixi's 'relative restraint' — executing only the Six Gentlemen — effectively bought the Qing dynasty another decade or more."
+    }
+  };
+
+  /* ============================================================
+     Story progress labels
+     ============================================================ */
+  const STORY_PROGRESS_LABELS = [
+    "公车上书与圣上抉择",
+    "新政诏下与暗潮涌动",
+    "百日之中的踟蹰冒进",
+    "围园密谋与紫禁孤注",
+    "政变之夜与维新落幕"
+  ];
+
+  const STORY_PROGRESS_LABELS_EN = [
+    "The Petition Drive and the Emperor's Choice",
+    "The Reform Edicts and Gathering Opposition",
+    "Hesitations and Overreach in the Hundred Days",
+    "The Plot to Surround the Garden and the Palace's Last Gamble",
+    "The Night of the Coup and the End of Reform"
+  ];
+
+  /* ============================================================
+     State & rendering
+     ============================================================ */
+  const state = { pathTrace: [] }; // array of {passageId, choiceIndex}
+
+  function renderCast(names) {
+    const list = document.getElementById("cast-list");
+    const cast = getCast();
+    list.innerHTML = "";
+    (names || []).forEach(key => {
+      const c = cast[key];
+      if (!c) return;
+      const row = document.createElement("div");
+      row.className = "cast-row";
+      row.innerHTML = `<div class="av">${c.avatar}</div><div class="info"><div class="name">${currentLang === 'en' ? c.name : key}</div><div class="role">${c.title}</div><div class="desc">${c.desc}</div></div>`;
+      list.appendChild(row);
+    });
+  }
+
+  function renderProgress(currentIndex) {
+    const list = document.getElementById("progress-list");
+    const labels = getLabels();
+    list.innerHTML = "";
+    labels.forEach((label, i) => {
+      const row = document.createElement("div");
+      let cls = "step";
+      if (currentIndex != null) {
+        if (i < currentIndex) cls += " done";
+        else if (i === currentIndex) cls += " current";
+      }
+      row.className = cls;
+      row.innerHTML = `<span class="dot">●</span><span>${i + 1}. ${label}</span>`;
+      list.appendChild(row);
+    });
+    const meta = document.getElementById("meta-progress");
+    if (meta) {
+      const display = currentIndex == null ? 0 : Math.min(currentIndex + 1, labels.length);
+      meta.textContent = currentLang === 'en' ? `Act ${display} / ${labels.length}` : `第 ${display} / ${labels.length} 幕`;
+    }
+  }
+
+  function go(passageId, choiceIndex) {
+    if (choiceIndex != null) {
+      const last = state.pathTrace[state.pathTrace.length - 1];
+      if (last && last.choiceIndex == null) last.choiceIndex = choiceIndex;
+    }
+    render(passageId);
+  }
+
+  function render(passageId) {
+    currentPassageId = passageId;
+    const passages = getPassages();
+    const p = passages[passageId];
+    if (!p) return;
+    const area = document.getElementById("passage-area");
+    area.innerHTML = "";
+    const card = document.createElement("section");
+    card.className = "stage fade-in" + (p.type === "ending" ? " ending" : "") + (p.type === "start" ? " start" : "");
+
+    if (p.type === "start") {
+      const startLabel = currentLang === 'en' ? 'Begin this story →' : '开始这段历史 →';
+      card.innerHTML = `<div class="stage-body"><div class="ep-emoji">${p.epEmoji}</div><div class="ep-title">${p.epTitle}</div><div class="ep-sub">${p.epSub}</div><p class="ep-desc">${p.desc}</p><button class="start-btn" id="start-btn">${startLabel}</button></div>`;
+      area.appendChild(card);
+      renderCast(["光绪帝", "慈禧太后", "康有为", "梁启超", "荣禄"]);
+      renderProgress(null);
+      document.getElementById("start-btn").onclick = () => { state.pathTrace = []; render(p.next); };
+      window.scrollTo({ top: 0, behavior: "smooth" }); return;
+    }
+
+    if (p.type === "scene") {
+      state.pathTrace.push({ passageId: passageId, choiceIndex: null });
+      const headHtml = `<div class="stage-head"><div><div class="chapter">${p.chapter}</div><div class="scene-title">${p.sceneTitle}</div></div><div class="right-tag">SCENE  ${String(p.progressIndex + 1).padStart(2, "0")}</div></div>`;
+      let bodyHtml = `<div class="stage-body">`;
+      p.narrative.forEach((para, i) => { bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`; });
+      if (p.dialogs && p.dialogs.length) {
+        bodyHtml += `<div class="dialogs">`;
+        p.dialogs.forEach(d => {
+          const av = (CAST[d.who] && CAST[d.who].avatar) || "·";
+          const speakerName = currentLang === 'en' ? (CAST_EN[d.who] ? CAST_EN[d.who].name : d.who) : d.who;
+          bodyHtml += `<div class="line"><div class="who"><span class="av">${av}</span>${speakerName}</div><div class="what">${d.what}</div></div>`;
+        });
+        bodyHtml += `</div>`;
+      }
+      if (p.decision) {
+        const makerAv = (CAST[p.decision.maker] && CAST[p.decision.maker].avatar) || "·";
+        const makerName = currentLang === 'en' ? (CAST_EN[p.decision.maker] ? CAST_EN[p.decision.maker].name : p.decision.maker) : p.decision.maker;
+        const decLabel = currentLang === 'en' ? '▼ KEY DECISION' : '▼ 关键抉择 KEY DECISION';
+        const makerLabel = currentLang === 'en' ? `Decision by ${makerAv} <b>${makerName}</b>` : `由 ${makerAv} <b>${makerName}</b> 拍板`;
+        bodyHtml += `<div class="decision"><div class="label">${decLabel}</div><div class="question">${p.decision.question}</div><div class="maker">${makerLabel}</div></div>`;
+      }
+      if (p.choices && p.choices.length) {
+        bodyHtml += `<div class="choices">`;
+        p.choices.forEach((c, i) => { bodyHtml += `<button class="choice-btn" data-next="${c.next}" data-index="${i}"><span class="arrow">▶</span>${c.label}${c.hint ? `<span class="hint">${c.hint}</span>` : ""}</button>`; });
+        bodyHtml += `</div>`;
+      }
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml; area.appendChild(card);
+      renderCast(p.castOnStage); renderProgress(p.progressIndex);
+      card.querySelectorAll(".choice-btn").forEach(btn => { btn.addEventListener("click", () => { go(btn.getAttribute("data-next"), parseInt(btn.getAttribute("data-index"), 10)); }); });
+      window.scrollTo({ top: 0, behavior: "smooth" }); return;
+    }
+
+    if (p.type === "ending") {
+      const endChapter = currentLang === 'en' ? 'END  ·  THE END' : '终  ·  THE END';
+      const headHtml = `<div class="stage-head"><div><div class="chapter">${endChapter}</div><div class="scene-title">${p.title}</div></div><div class="right-tag">EPISODE COMPLETE</div></div>`;
+      let bodyHtml = `<div class="stage-body"><div class="ending-tag ${p.tagClass || ""}">${p.tag}</div><div class="ending-title">${p.title}</div>`;
+      p.narrative.forEach((para, i) => { bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`; });
+      bodyHtml += `<div class="reflection">${p.reflection}</div>`;
+      if (state.pathTrace.length) {
+        const ptTitle = currentLang === 'en' ? '▼ YOUR STORY PATH' : '▼ 你走过的剧情线 STORY PATH';
+        const endLabel = currentLang === 'en' ? 'Ending reached:' : '抵达结局：';
+        bodyHtml += `<div class="path-trace"><div class="pt-title">${ptTitle}</div><ol>`;
+        state.pathTrace.forEach(t => {
+          const tp = passages[t.passageId];
+          const sceneName = tp ? tp.sceneTitle : t.passageId;
+          let choiceStr = '';
+          if (t.choiceIndex != null && tp && tp.choices && tp.choices[t.choiceIndex]) { choiceStr = ` — <i style="color:var(--accent-2)">${tp.choices[t.choiceIndex].label}</i>`; }
+          bodyHtml += `<li>${sceneName}${choiceStr}</li>`;
+        });
+        bodyHtml += `<li>${endLabel} <b style="color:var(--accent-2)">${p.title}</b></li></ol></div>`;
+      }
+      const restartLabel = currentLang === 'en' ? '↺  Restart' : '↺  重新开始（Restart）';
+      bodyHtml += `<div class="actions"><button id="restart-btn">${restartLabel}</button></div></div>`;
+      card.innerHTML = headHtml + bodyHtml; area.appendChild(card);
+      renderCast(p.castOnStage); renderProgress(getLabels().length - 1);
+      document.getElementById("restart-btn").addEventListener("click", () => { state.pathTrace = []; render("start"); });
+      window.scrollTo({ top: 0, behavior: "smooth" }); return;
+    }
+  }
+
+  // boot
+  updateStaticUI();
+  render("start");
+</script>
+</body>
+</html>

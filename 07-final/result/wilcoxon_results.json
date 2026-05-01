@@ -1,0 +1,107 @@
+{
+  "Narrative Understanding": {
+    "W": 5.0,
+    "p": 0.625,
+    "r": 0.3042903097250923,
+    "mean_diff": 0.4444444444444444,
+    "n_nonzero": 5
+  },
+  "Attentional Focus": {
+    "W": 4.0,
+    "p": 0.4375,
+    "r": 0.4300065817837659,
+    "mean_diff": 0.5000000000000001,
+    "n_nonzero": 5
+  },
+  "Narrative Presence": {
+    "W": 1.5,
+    "p": 0.09375,
+    "r": 0.7724539357611743,
+    "mean_diff": 2.2777777777777777,
+    "n_nonzero": 6
+  },
+  "Emotional Engagement": {
+    "W": 3.0,
+    "p": 0.15625,
+    "r": 0.6419407387663696,
+    "mean_diff": 1.722222222222222,
+    "n_nonzero": 6
+  },
+  "NES Overall": {
+    "W": 3.0,
+    "p": 0.15625,
+    "r": 0.6419407387663696,
+    "mean_diff": 1.2361111111111112,
+    "n_nonzero": 6
+  },
+  "Explanation Quality": {
+    "W": 2.0,
+    "p": 0.09375,
+    "r": 0.7275328372685522,
+    "mean_diff": 1.142857142857143,
+    "n_nonzero": 6
+  },
+  "Alt. Path Plausibility": {
+    "W": 3.5,
+    "p": 0.875,
+    "r": 0.27854300726557785,
+    "mean_diff": 0.3333333333333333,
+    "n_nonzero": 4
+  },
+  "Agency (PENS Core)": {
+    "W": 0.0,
+    "p": 0.0625,
+    "r": 0.904534033733291,
+    "mean_diff": 3.111111111111111,
+    "n_nonzero": 5
+  },
+  "PENS Extended": {
+    "W": 0.0,
+    "p": 0.0625,
+    "r": 0.9086737992230741,
+    "mean_diff": 2.8000000000000003,
+    "n_nonzero": 5
+  },
+  "UMUX-Lite": {
+    "W": 9.5,
+    "p": 1.0,
+    "r": -0.08679260732054928,
+    "mean_diff": -0.08333333333333333,
+    "n_nonzero": 6
+  },
+  "Mental Effort (Paas)": {
+    "W": 0.0,
+    "p": 0.0625,
+    "r": 0.9128709291752767,
+    "mean_diff": 3.5,
+    "n_nonzero": 5
+  },
+  "Perspective Switching": {
+    "W": 0.0,
+    "p": 0.0625,
+    "r": 0.9086737992230741,
+    "mean_diff": 2.8333333333333335,
+    "n_nonzero": 5
+  },
+  "Interest/Enjoyment": {
+    "W": 1.0,
+    "p": 0.0625,
+    "r": 0.8131249357707346,
+    "mean_diff": 2.6666666666666665,
+    "n_nonzero": 6
+  },
+  "Value/Usefulness": {
+    "W": 1.0,
+    "p": 0.0625,
+    "r": 0.8153680433034619,
+    "mean_diff": 1.8809523809523807,
+    "n_nonzero": 6
+  },
+  "Pressure/Tension": {
+    "W": 0.0,
+    "p": 0.0625,
+    "r": 0.904534033733291,
+    "mean_diff": 1.1666666666666665,
+    "n_nonzero": 5
+  }
+}

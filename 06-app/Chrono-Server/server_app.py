@@ -122,6 +122,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 await cast_engine.push_user_message(content, target)
             
 
+            elif func_name == "set_auto_proxy":
+                await cast_engine.set_auto_proxy(params.get("enabled", False))
+
+            elif func_name == "takeover":
+                await cast_engine.input_queue.put({"type": "takeover"})
+
             elif func_name == "backtrack_to":
                 target_id = params.get("target_id")
                 perspective_agent = params.get("perspective_agent")
@@ -135,6 +141,9 @@ async def websocket_endpoint(websocket: WebSocket):
             
             elif func_name == "request_tip":
                 asyncio.create_task(cast_engine.handle_tip_request())
+
+            elif func_name == "continue_agent":
+                await cast_engine.push_agent_continue()
 
             else:
                 print(f"Unknown WS request type: {func_name}")

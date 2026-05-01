@@ -362,7 +362,7 @@ def render_reflection_report(report_data, lang="en"):
     s1 = scenario.get('1_decision_context', {})
     tradeoffs = s1.get('tradeoff_map', [])
     if tradeoffs:
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["tradeoff_map"]}</summary>
             <div class="rf-section-content"><div class="rf-grid">
@@ -383,7 +383,7 @@ def render_reflection_report(report_data, lang="en"):
     # --- 1.2 Stakeholders (Visual Grid) ---
     stakeholders = s1.get('stakeholders_constraints', [])
     if stakeholders:
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["stakeholders"]}</summary>
             <div class="rf-section-content"><div class="rf-grid">
@@ -422,7 +422,7 @@ def render_reflection_report(report_data, lang="en"):
     # --- 2. Outcome Analysis ---
     s2 = scenario.get('2_outcome_analysis', {})
     if s2:
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["outcomes"]}</summary>
             <div class="rf-section-content">
@@ -503,7 +503,7 @@ def render_reflection_report(report_data, lang="en"):
     s4 = scenario.get('4_structure_vs_agency', {}) # 如果还需要展示 Structure，可以在这里接着处理
     
     if s3:
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["fog_hindsight"]}</summary>
             <div class="rf-section-content">
@@ -563,7 +563,7 @@ def render_reflection_report(report_data, lang="en"):
         
     s4 = scenario.get('4_structure_vs_agency', {})
     if s4:
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["structure_agency"]}</summary>
             <div class="rf-section-content"><div class="rf-grid">
@@ -590,7 +590,7 @@ def render_reflection_report(report_data, lang="en"):
     s5 = scenario.get('5_alternative_paths', {})
     if s5:
         unchosen = s5.get('unchosen_options_likely_rollouts', [])
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["alternative_paths"]}</summary>
             <div class="rf-section-content"><div class="rf-grid">
@@ -635,7 +635,7 @@ def render_reflection_report(report_data, lang="en"):
     l1 = learner.get('decision_profile_blind_spots', {})
     l2 = learner.get('personalized_learning_suggestions', {})
 
-    html += """
+    html += f"""
     <details class="rf-section" open>
         <summary class="rf-section-header">{texts["profile_blind_spots"]}</summary>
         <div class="rf-section-content">
@@ -667,7 +667,7 @@ def render_reflection_report(report_data, lang="en"):
     next_steps = l2.get('next_steps', [])
     
     if radar or recs or next_steps:
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["skills_next_steps"]}</summary>
             <div class="rf-section-content">
@@ -744,7 +744,7 @@ def render_reflection_report(report_data, lang="en"):
     
     # 1. Anchors
     if m1.get('canonical_fact_anchors'):
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["historical_anchors"]}</summary>
             <div class="rf-section-content"><div class="rf-grid">
@@ -766,7 +766,7 @@ def render_reflection_report(report_data, lang="en"):
     disclaimers = m1.get('simulation_disclaimer', [])
     
     if lessons or disclaimers:
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["philosophy_limitations"]}</summary>
             <div class="rf-section-content">
@@ -804,7 +804,7 @@ def render_reflection_report(report_data, lang="en"):
 
     # 3. Transfer (Visualized as Split Card)
     if m1.get('transferable_patterns'):
-        html += """
+        html += f"""
         <details class="rf-section" open>
             <summary class="rf-section-header">{texts["transferable_patterns"]}</summary>
             <div class="rf-section-content"><div class="rf-grid">

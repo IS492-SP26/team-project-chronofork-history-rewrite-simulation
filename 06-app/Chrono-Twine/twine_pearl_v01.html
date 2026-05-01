@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attack on Pearl Harbor · Twine IDN Baseline</title>
+<style>
+  :root { --bg-0: #14110d; --bg-1: #1a1612; --bg-2: #221c16; --bg-card: #26201a; --ink-0: #f0e7d8; --ink-1: #d2c4a9; --ink-2: #978769; --ink-3: #6a5e44; --accent: #c0392b; --accent-2: #e8c14a; --accent-3: #5d8a4e; --rule: #3f3424; --shadow: 0 6px 24px rgba(0, 0, 0, 0.55); --serif: "Georgia", "Source Han Serif SC", "Noto Serif SC", "Songti SC", serif; --sans: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans SC", -apple-system, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink-0); font-family: var(--serif); line-height: 1.7; min-height: 100vh; }
+  body { background: radial-gradient(circle at 20% 0%, rgba(192, 57, 43, 0.1), transparent 40%), radial-gradient(circle at 80% 100%, rgba(232, 193, 74, 0.05), transparent 50%), var(--bg-0); }
+  .app { max-width: 1080px; margin: 0 auto; padding: 24px 24px 60px; }
+  header.episode { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: linear-gradient(135deg, var(--bg-2), var(--bg-1)); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 18px; }
+  .episode .title-block { display: flex; align-items: center; gap: 14px; }
+  .episode .emoji { font-size: 32px; line-height: 1; }
+  .episode .title { font-size: 22px; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
+  .episode .sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; letter-spacing: 2px; font-family: var(--sans); }
+  .episode .meta { text-align: right; font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .episode .meta .tag { display: inline-block; padding: 3px 8px; border: 1px solid var(--rule); border-radius: 3px; margin-left: 6px; color: var(--ink-1); }
+  .layout { display: grid; grid-template-columns: 1fr 280px; gap: 18px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } aside.side { order: 2; } }
+  .stage { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); overflow: hidden; }
+  .stage-head { padding: 14px 22px; border-bottom: 1px solid var(--rule); background: linear-gradient(180deg, rgba(192, 57, 43, 0.1), transparent); display: flex; align-items: center; justify-content: space-between; }
+  .stage-head .chapter { color: var(--accent-2); font-size: 13px; letter-spacing: 4px; font-family: var(--sans); }
+  .stage-head .scene-title { font-size: 20px; font-weight: 600; color: var(--ink-0); margin-top: 2px; }
+  .stage-head .right-tag { font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .stage-body { padding: 22px 26px; }
+  .narrative { font-size: 16px; color: var(--ink-1); text-indent: 2em; margin: 0 0 16px; }
+  .narrative.lead { color: var(--ink-0); font-size: 16.5px; }
+  .dialogs { margin: 18px 0 6px; padding: 14px 16px; background: rgba(0, 0, 0, 0.22); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
+  .dialogs .line { display: flex; gap: 10px; margin: 8px 0; align-items: baseline; }
+  .dialogs .who { flex: 0 0 110px; text-align: right; color: var(--accent-2); font-weight: 600; font-size: 14px; font-family: var(--sans); }
+  .dialogs .who .av { margin-right: 4px; }
+  .dialogs .what { flex: 1; color: var(--ink-1); font-size: 15px; line-height: 1.65; }
+  .dialogs .what::before { content: "「"; color: var(--ink-3); }
+  .dialogs .what::after { content: "」"; color: var(--ink-3); }
+  .decision { margin-top: 22px; padding: 16px 18px; border: 1px dashed var(--accent-2); border-radius: 6px; background: rgba(232, 193, 74, 0.04); }
+  .decision .label { font-size: 12px; letter-spacing: 3px; color: var(--accent-2); font-family: var(--sans); margin-bottom: 6px; }
+  .decision .question { font-size: 16px; color: var(--ink-0); font-weight: 600; margin-bottom: 4px; }
+  .decision .maker { font-size: 13px; color: var(--ink-2); font-family: var(--sans); }
+  .choices { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .choice-btn { display: block; width: 100%; text-align: left; background: var(--bg-2); color: var(--ink-0); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 16px; font-family: var(--serif); font-size: 15px; line-height: 1.55; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.05s; }
+  .choice-btn:hover { background: #2f281f; border-color: var(--accent-2); color: var(--accent-2); }
+  .choice-btn:active { transform: translateY(1px); }
+  .choice-btn .arrow { color: var(--accent); margin-right: 8px; font-weight: 700; }
+  .choice-btn .hint { display: block; margin-top: 4px; font-size: 12.5px; color: var(--ink-3); font-family: var(--sans); }
+  aside.side { display: flex; flex-direction: column; gap: 14px; }
+  .panel { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .panel h3 { margin: 0 0 10px; font-size: 13px; color: var(--accent-2); letter-spacing: 3px; font-family: var(--sans); font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+  .cast-list .cast-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+  .cast-list .cast-row:last-child { border-bottom: none; }
+  .cast-list .av { font-size: 22px; flex: 0 0 28px; text-align: center; }
+  .cast-list .info .name { font-weight: 600; color: var(--ink-0); font-size: 14px; }
+  .cast-list .info .role { font-size: 11.5px; color: var(--ink-2); font-family: var(--sans); }
+  .cast-list .info .desc { font-size: 12px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
+  .progress-list .step { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; font-family: var(--sans); color: var(--ink-3); }
+  .progress-list .step .dot { flex: 0 0 12px; color: var(--rule); font-size: 11px; }
+  .progress-list .step.done { color: var(--ink-1); } .progress-list .step.done .dot { color: var(--accent-3); }
+  .progress-list .step.current { color: var(--accent-2); font-weight: 600; } .progress-list .step.current .dot { color: var(--accent); }
+  .ending .stage-head { background: linear-gradient(180deg, rgba(192, 57, 43, 0.18), transparent); }
+  .ending .ending-tag { display: inline-block; padding: 4px 12px; background: var(--accent); color: var(--ink-0); font-size: 12px; letter-spacing: 3px; border-radius: 3px; font-family: var(--sans); margin-bottom: 10px; }
+  .ending .ending-tag.canonical { background: var(--accent-3); }
+  .ending .ending-title { font-size: 26px; font-weight: 700; color: var(--accent-2); margin: 4px 0 14px; }
+  .ending .reflection { margin-top: 18px; padding: 14px 16px; background: rgba(0, 0, 0, 0.22); border-left: 3px solid var(--accent-2); border-radius: 0 6px 6px 0; font-size: 14.5px; color: var(--ink-1); font-family: var(--sans); line-height: 1.7; }
+  .ending .reflection b { color: var(--accent-2); }
+  .ending .path-trace { margin-top: 16px; padding: 12px 14px; background: rgba(0, 0, 0, 0.18); border: 1px solid var(--rule); border-radius: 6px; font-family: var(--sans); font-size: 13px; color: var(--ink-2); }
+  .ending .path-trace .pt-title { color: var(--accent-2); font-weight: 600; margin-bottom: 6px; font-size: 12px; letter-spacing: 2px; }
+  .ending .path-trace ol { margin: 0; padding-left: 20px; } .ending .path-trace ol li { margin: 3px 0; color: var(--ink-1); }
+  .ending .actions { margin-top: 22px; display: flex; gap: 10px; }
+  .ending .actions button { flex: 1; padding: 12px 16px; background: var(--bg-2); border: 1px solid var(--rule); border-radius: 6px; color: var(--ink-0); font-family: var(--serif); font-size: 15px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .ending .actions button:hover { background: #2f281f; border-color: var(--accent-2); color: var(--accent-2); }
+  .start .stage-body { text-align: center; padding: 44px 36px; }
+  .start .ep-emoji { font-size: 68px; margin-bottom: 8px; }
+  .start .ep-title { font-size: 32px; font-weight: 700; color: var(--accent-2); letter-spacing: 4px; margin-bottom: 6px; }
+  .start .ep-sub { font-size: 13px; color: var(--ink-2); letter-spacing: 6px; font-family: var(--sans); margin-bottom: 22px; }
+  .start .ep-desc { text-align: left; color: var(--ink-1); font-size: 15.5px; text-indent: 2em; line-height: 1.85; margin: 0 auto 20px; max-width: 640px; }
+  .start .start-btn { display: inline-block; margin-top: 14px; padding: 14px 36px; background: var(--accent); color: var(--ink-0); border: none; border-radius: 6px; font-family: var(--serif); font-size: 16px; letter-spacing: 4px; cursor: pointer; transition: background 0.15s, transform 0.05s; }
+  .start .start-btn:hover { background: #d44a3a; } .start .start-btn:active { transform: translateY(1px); }
+  footer.foot { margin-top: 26px; text-align: center; color: var(--ink-3); font-size: 12px; letter-spacing: 2px; font-family: var(--sans); }
+  footer.foot .pipe { margin: 0 8px; }
+  .fade-in { animation: fadeIn 0.35s ease; } @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-track { background: var(--bg-1); } ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  /* ---------- Back to home ---------- */
+  .back-home {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.05s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .back-home:hover {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+  .back-home:active { transform: translateY(1px); }
+
+  /* ---------- Lang toggle ---------- */
+  .lang-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .lang-toggle:hover {
+    background: var(--accent-2);
+    color: #1a120b;
+    border-color: var(--accent-2);
+  }
+
+</style>
+</head>
+<body>
+<a class="back-home" id="back-home-link" href="index.html">← Home</a>
+<button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">中文</button>
+
+<div class="app">
+  <header class="episode">
+    <div class="title-block">
+      <div class="emoji">🌊</div>
+      <div>
+        <div class="title" id="ep-title-el">Attack on Pearl Harbor</div>
+        <div class="sub">PEARL HARBOR · DEC 7, 1941 · OAHU · HAWAII</div>
+      </div>
+    </div>
+    <div class="meta">Twine IDN Baseline <span class="tag" id="meta-progress">Act 0 / 5</span></div>
+  </header>
+  <div class="layout">
+    <main id="passage-area"></main>
+    <aside class="side">
+      <div class="panel"><h3 id="cast-panel-h">CAST</h3><div class="cast-list" id="cast-list"></div></div>
+      <div class="panel"><h3 id="story-panel-h">STORY PROGRESS</h3><div class="progress-list" id="progress-list"></div></div>
+    </aside>
+  </div>
+  <footer class="foot">Twine IDN Baseline · Static Branching Narrative <span class="pipe">|</span> Episode 06 — <span id="foot-ep-name">珍珠港事件</span> <span class="pipe">|</span> v1.0</footer>
+</div>
+<script>
+  /* ============================================================
+     Language support
+     ============================================================ */
+  let currentLang = localStorage.getItem('lang') || 'en';
+  let currentPassageId = 'start';
+
+  function toggleLang() {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    localStorage.setItem('lang', currentLang);
+    updateStaticUI();
+    render(currentPassageId);
+  }
+
+  function getPassages() { return currentLang === 'en' ? PASSAGES_EN : PASSAGES; }
+  function getCast()     { return currentLang === 'en' ? CAST_EN     : CAST;     }
+  function getLabels()   { return currentLang === 'en' ? STORY_PROGRESS_LABELS_EN : STORY_PROGRESS_LABELS; }
+
+  function updateStaticUI() {
+    const isEn = currentLang === 'en';
+    document.title = isEn ? 'Attack on Pearl Harbor · Twine IDN Baseline' : '珍珠港偷袭 · Twine IDN Baseline';
+    document.getElementById('ep-title-el').textContent   = isEn ? 'Attack on Pearl Harbor' : '珍珠港偷袭';
+    document.getElementById('cast-panel-h').textContent  = isEn ? 'CAST'                    : '登场人物 CAST';
+    document.getElementById('story-panel-h').textContent = isEn ? 'STORY PROGRESS'          : '剧情进度 STORY';
+    document.getElementById('back-home-link').textContent = isEn ? '← Home'                  : '← 返回首页';
+    document.getElementById('lang-toggle').textContent   = isEn ? '中文'                      : 'EN';
+    document.getElementById('foot-ep-name').textContent  = isEn ? 'Attack on Pearl Harbor'    : '珍珠港事件';
+  }
+
+  /* ============================================================
+     Cast — Chinese
+     ============================================================ */
+  const CAST = {
+    "山本五十六":         { avatar: "⚓", title: "日本联合舰队司令长官",       desc: "珍珠港袭击的主要策划者，主张以先发制人重创美国太平洋舰队。" },
+    "东条英机":           { avatar: "🎖️", title: "日本首相兼陆军大臣",         desc: "战时内阁核心，最终选择战争路线，为对美开战提供政治背书。" },
+    "富兰克林·D·罗斯福":  { avatar: "🦅", title: "美国总统",                    desc: "主导对日制裁与对盟国援助，珍珠港后推动美国正式对日宣战。" },
+    "近卫文麿":           { avatar: "📜", title: "前日本首相",                  desc: "在军部压力与国际形势间寻求妥协，未能阻止对美强硬路线。" },
+    "川崎清":             { avatar: "📐", title: "日本海军军令部作战部长",      desc: "审议并批准珍珠港作战方案，对山本计划给予关键支持。" }
+  };
+
+  /* ============================================================
+     Cast — English
+     ============================================================ */
+  const CAST_EN = {
+    "山本五十六": { avatar: "⚓", name: "Yamamoto Isoroku",      title: "Commander-in-Chief, Imperial Japanese Navy",  desc: "Designed the Pearl Harbor strike plan despite personal doubts about war with the U.S., knowing Japan could not win a prolonged conflict." },
+    "东条英机":   { avatar: "🎖️", name: "Tojo Hideki",           title: "Prime Minister of Japan",                    desc: "Led Japan into war with the United States, believing there was no alternative after U.S. sanctions cut off Japan's oil supply." },
+    "富兰克林·D·罗斯福": { avatar: "🦅", name: "Franklin D. Roosevelt", title: "32nd President of the United States",  desc: "Described December 7 as 'a date which will live in infamy' and led the U.S. into full participation in World War II." },
+    "近卫文麿":   { avatar: "📜", name: "Konoe Fumimaro",         title: "Former Prime Minister of Japan",             desc: "Attempted to negotiate a summit with Roosevelt before resigning; his failure paved the way for Tojo and war." },
+    "川崎清":     { avatar: "📐", name: "Kawasaki Kiyoshi",       title: "Imperial Japanese Navy Staff Officer",       desc: "A staff planning officer involved in detailed operational coordination for the Pearl Harbor attack." },
+    "近卫文麿（前首相，私使）": { avatar: "📜", name: "Konoe Fumimaro (private envoy)", title: "Former Prime Minister of Japan",  desc: "Acting as an unofficial back-channel, he sought a personal summit with Roosevelt to avert war at the last moment." },
+    "南云忠一（机动舰队司令）": { avatar: "🚢", name: "Vice Adm. Nagumo Chuichi",      title: "Commander, First Air Fleet",      desc: "Led the carrier strike force that attacked Pearl Harbor; controversially chose not to launch a third wave of strikes." },
+    "史汀生陆军部长":            { avatar: "🎗️", name: "Sec. Henry Stimson",            title: "U.S. Secretary of War",           desc: "A key figure in shaping U.S. policy toward Japan, including the oil embargo that pushed Tokyo toward war." },
+    "赫尔国务卿":                { avatar: "🏛️", name: "Sec. Cordell Hull",             title: "U.S. Secretary of State",         desc: "Delivered the Hull Note — the final U.S. ultimatum demanding Japan withdraw from China — effectively ending diplomatic options." },
+    "传统派军令次长":            { avatar: "👤", name: "Conservative Vice Chief of Naval Staff", title: "Imperial Japanese Navy", desc: "Represented the cautious faction within the naval command skeptical of the high-risk Pearl Harbor plan." }
+  };
+
+  /* ============================================================
+     Passages — Chinese (original)
+     ============================================================ */
+  const PASSAGES = {
+
+    "start": {
+      type: "start",
+      epEmoji: "🌊",
+      epTitle: "珍珠港偷袭",
+      epSub: "P E A R L   H A R B O R   ·   D E C   7,   1 9 4 1",
+      desc: "1941 年秋，日本与美国的对峙已濒临破裂边缘。美国对日石油禁运冻结日本约 80% 的石油来源；近卫内阁因无法约束军部而倒台，东条英机以陆军大臣身份组阁。山本五十六联合舰队司令在内部酝酿一项前所未有的方案 —— 以航母舰载机奇袭珍珠港，一举瘫痪美国太平洋舰队。当外交、资源、军部、国体等多重压力交织于东京宫廷之时，每一次拍板都将塑造此后整个 20 世纪太平洋的命运。",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "第一幕  ·  东京政变",
+      sceneTitle: "对美谈判破局的阴影",
+      progressIndex: 0,
+      castOnStage: ["近卫文麿", "东条英机", "山本五十六"],
+      narrative: [
+        "1941 年 10 月，近卫文麿三度组阁失败，无法在「日美谅解案」与陆军「南进政策」之间找到平衡。10 月 16 日，他向昭和天皇辞职，推荐宇垣一成出任，但天皇与内大臣木户幸一选定了陆军大臣东条英机。",
+        "东条受命之初，曾被天皇训诫「白纸还原」（重新检讨开战决定）。然东条须在数周内决定：是真正贯彻天皇旨意继续对美谈判、争取对中国战局体面收手？还是顺应陆海军「不战即亡」的逻辑，全面走向战争路线？"
+      ],
+      dialogs: [
+        { who: "近卫文麿",          what: "东条君，对美谈判尚未关门 —— 若我们在中国战线作些让步，罗斯福未必不肯松手。" },
+        { who: "东条英机",          what: "近卫公，撤兵中国便是抛弃皇军在大陆的全部牺牲 —— 此事于陆军绝不可忍。" },
+        { who: "山本五十六",        what: "若真要对美开战，须以非常之策；若不能开战，则一切军备都是徒费 —— 总理须早做决断。" }
+      ],
+      decision: { question: "东条上台后，应取何路线？", maker: "东条英机" },
+      choices: [
+        { label: "贯彻天皇旨意，继续对美外交", hint: "外交妥协 — 偏离正史的和平路线",   next: "end_A" },
+        { label: "顺应军部，全面走向战争路线", hint: "御前会议拍板 — 正史选择",         next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "第二幕  ·  军令部会议",
+      sceneTitle: "奇袭方案的两难",
+      progressIndex: 1,
+      castOnStage: ["山本五十六", "川崎清", "东条英机"],
+      narrative: [
+        "11 月 5 日御前会议决定 12 月初对美英开战。山本将「真珠湾攻击作战要领」郑重提交军令部。然军令部内部分歧严重：传统派认为日本海军应于本土近海集中决战，「九段渐减作战」是日本海军三十年传承的战略；山本则坚持必须以航母奇袭一击瘫痪美国太平洋舰队。",
+        "川崎清作为作战部长，须在两种方略之间拍板：是采纳山本激进的航母奇袭方案，还是仍以传统「南方稳进+本土决战」为主？这个决定将定义整场战争的形态。"
+      ],
+      dialogs: [
+        { who: "山本五十六",   what: "若不在开战首日歼灭美主力舰队，半年之后日本必败 —— 我以辞职担保此案必行。" },
+        { who: "川崎清",       what: "六千海里远征、第一次航母大编队作战、油料补给极为紧张 —— 此案风险何其大。" },
+        { who: "传统派军令次长", what: "日本海军三十年「九段渐减」战略，岂可轻易抛弃 —— 此乃舰队炮战之传统。" }
+      ],
+      decision: { question: "在两种方略之间，川崎清应如何拍板？", maker: "川崎清" },
+      choices: [
+        { label: "拒绝奇袭，仍取南方稳进+本土决战", hint: "稳健战略 — 偏离正史的传统路线",   next: "n2a" },
+        { label: "采纳山本航母奇袭珍珠港方案",      hint: "孤注一掷 — 正史选择",                next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "分支  ·  另一种战争",
+      sceneTitle: "南方资源与美国敌意之间",
+      progressIndex: 2,
+      castOnStage: ["东条英机", "山本五十六"],
+      narrative: [
+        "川崎清拒绝山本激进方案，日本仍按「南方稳进」方略推进 —— 主力转向荷属东印度油田与马来亚锡矿。然美国是否会因此罢手？东条须再做一次抉择：仅夺南洋资源、刻意避开美属菲律宾以争取美国中立？还是仍开战美国但避开珍珠港、改打菲律宾？",
+        "前者赌罗斯福不愿因「与美国无关的资源」开战；后者则承认对美必战，但以传统方式开战。"
+      ],
+      dialogs: [
+        { who: "东条英机",   what: "若我军不动菲律宾、不犯美属，罗斯福可有借口对国会要求宣战？" },
+        { who: "山本五十六", what: "美国孤立主义虽强，但若我们攻取荷英在亚洲的一切，迟早还是要冲突 —— 只是把日子推后。" }
+      ],
+      decision: { question: "在不打珍珠港的前提下，日本应如何对美？", maker: "东条英机" },
+      choices: [
+        { label: "仅夺南洋荷英资源，刻意避开美属菲律宾", hint: "赌美国中立 — 走向资源泥淖结局",   next: "end_B" },
+        { label: "仍打美国但仅攻菲律宾，不击珍珠港",     hint: "传统对美战争 — 走向常规海战结局", next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "第三幕  ·  白宫深夜",
+      sceneTitle: "罗斯福的对日方略",
+      progressIndex: 2,
+      castOnStage: ["富兰克林·D·罗斯福", "近卫文麿"],
+      narrative: [
+        "美方破译的「魔术」情报已透露日方将于 12 月初有重大军事行动。罗斯福在白宫椭圆办公室与赫尔国务卿、史汀生陆军部长、诺克斯海军部长连开数日会议。",
+        "选项有三：是继续 7 月以来的全面石油禁运与冻结日本资产，逼迫日本「屈服或开战」（实际上孤立主义国会仍不会同意美国先开战）；是部分解禁石油以「换取日本停止南进」的有限和解，给和平谈判最后机会；还是采取两面策略 —— 一面继续制裁、一面密遣特使赴东京密谈，以拖延为主？"
+      ],
+      dialogs: [
+        { who: "赫尔国务卿",         what: "总统先生，「赫尔备忘录」已要求日本撤出全部中国与印度支那 —— 这等于逼日本接受不可能的条件。" },
+        { who: "史汀生陆军部长",     what: "若日本动手，则美国国会必然团结一致；若我们先松手，孤立主义将再度抬头。" },
+        { who: "富兰克林·D·罗斯福",  what: "我必须在「迫使日本先开第一枪」与「真正给和平一个机会」之间作出选择 —— 而且必须很快。" }
+      ],
+      decision: { question: "罗斯福应取何对日方略？", maker: "富兰克林·D·罗斯福" },
+      choices: [
+        { label: "继续强化禁运与援盟，迫使日方先动手", hint: "极限施压 — 正史选择",                    next: "n4" },
+        { label: "部分解禁石油，寻求对日有限和解",     hint: "外交缓和 — 偏离正史的和解路线",         next: "n3a" },
+        { label: "明制裁、暗谈判的两面策略",           hint: "阳奉阴违 — 偏离正史的暧昧路线",         next: "end_D" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "分支  ·  外交一线",
+      sceneTitle: "和解的两种打法",
+      progressIndex: 3,
+      castOnStage: ["富兰克林·D·罗斯福", "近卫文麿"],
+      narrative: [
+        "罗斯福选择尝试有限和解。然方法仍有两种：是部分解除石油禁运换取日方暂停南进（即「modus vivendi」临时协议），还是以总统本人名义召集太平洋多边会议、邀请日、英、荷、中等国共同协商？",
+        "前者快速但缺乏国际背书；后者程序冗长但有合法性 —— 各有得失。"
+      ],
+      dialogs: [
+        { who: "近卫文麿（前首相，私使）", what: "罗斯福先生，若您能在石油上稍作松手，日本朝野的强硬派立场会大幅退让。" },
+        { who: "赫尔国务卿",             what: "总统，若召集太平洋会议，蒋介石必抗议日本仍占华北 —— 谈判恐难有进展。" }
+      ],
+      decision: { question: "在和解中，罗斯福应取何打法？", maker: "富兰克林·D·罗斯福" },
+      choices: [
+        { label: "部分解禁石油，达成临时协议",         hint: "实利换时间 — 走向延后开战的结局",     next: "end_E" },
+        { label: "召开太平洋多边会议",                 hint: "多边外交 — 走向程序失败的结局",       next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "第四幕  ·  联合舰队",
+      sceneTitle: "山本的最后裁断",
+      progressIndex: 3,
+      castOnStage: ["山本五十六", "川崎清", "富兰克林·D·罗斯福"],
+      narrative: [
+        "12 月 1 日御前会议正式批准对美开战。第一航空舰队（赤城、加贺、苍龙、飞龙、翔鹤、瑞鹤六艘航母）已于 11 月 26 日自单冠湾秘密启航，驶向夏威夷以北方位。",
+        "然而 12 月 5 日，山本接到密电：美方似已察觉异常，太平洋舰队中关键的航空母舰「企业号」、「列克星敦号」均已不在珍珠港 —— 攻击效果将大打折扣。山本面前是三种选择：因情报泄露中止奇袭、改用常规海战；按原计划仍击珍珠港、接受效果折扣；还是改击美国本土西海岸（旧金山或圣迭戈）以求最大政治震慑？"
+      ],
+      dialogs: [
+        { who: "南云忠一（机动舰队司令）", what: "长官，美国航母不在港 —— 是否依然按原计划行动？" },
+        { who: "山本五十六",             what: "我们的目标是瘫痪美国太平洋舰队的攻势。即使航母不在，战列舰队主力仍然在港 —— 这一击仍然必要。" },
+        { who: "川崎清",                 what: "若改击美本土，作战半径将远超航母续航，且必然引发美国全面动员 —— 切不可冒进。" }
+      ],
+      decision: { question: "在最后时刻，山本应如何决断？", maker: "山本五十六" },
+      choices: [
+        { label: "因情报泄露中止奇袭，改用常规海战", hint: "求稳放弃 — 偏离正史的退缩路线",       next: "end_G" },
+        { label: "按原计划仍击珍珠港",                hint: "12 月 7 日凌晨 — 正史选择",            next: "end_H" },
+        { label: "改击美本土西海岸求震慑",            hint: "战略冒进 — 偏离正史的极端路线",       next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "外交妥协  ·  东条早逝",
+      castOnStage: ["东条英机", "近卫文麿"],
+      narrative: [
+        "东条贯彻天皇旨意，下令暂停南进、接受赫尔备忘录的部分要求 —— 同意自越南撤军、自华北象征性减少驻军。然此举立即激怒陆军中下层青年军官，引发二·二六式的兵变，东条本人于 11 月底遇刺。",
+        "近卫文麿被天皇召回组阁，与美方达成「modus vivendi」临时协议。但日本陆军在中国战线的失控未停 —— 1942 年初昭和天皇甚至面临退位的传言。日本未参与第二次世界大战的太平洋部分，但内部陷入持续的政变与内斗。"
+      ],
+      reflection: "<b>反事实推演：</b>体制内的彻底改变，常常需要付出体制本身的崩塌为代价。这个分支揭示：<b>当军部已经成为一个独立于政府的权力中心时，「文官的妥协」不仅救不了和平，反而会先牺牲妥协者本人</b>。"
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "南洋稳进  ·  美国延参",
+      castOnStage: ["东条英机", "山本五十六"],
+      narrative: [
+        "日本仅夺荷属东印度与马来亚锡矿，刻意绕开美属菲律宾。罗斯福在国会试图推动对日宣战，被孤立主义议员阻止 —— 美国未能立即参战。",
+        "然日本在东南亚战线越拖越长，1943 年起爪哇、苏门答腊抵抗运动此起彼伏。1944 年美国终于以「援助盟国」之名参战，但晚于正史两年。这两年也让纳粹德国在欧洲取得更大优势 —— 整个二战的胜负与时间线被彻底改写。"
+      ],
+      reflection: "<b>反事实推演：</b>战略上「不打谁」与「打谁」同样重要。这个分支揭示：<b>选择不直接挑衅，可以推迟对手的反应，但不能消除最终的对抗</b> —— 最多只是把对抗的形式从「速战」改为「持久」。"
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "菲律宾对决  ·  美军反制",
+      castOnStage: ["山本五十六", "富兰克林·D·罗斯福"],
+      narrative: [
+        "日本仍对美开战，但仅以陆军主力围攻菲律宾，海军沿用「九段渐减」传统战略。麦克阿瑟率美菲联军坚守科雷希多岛三个月，待美国本土援军赶到。",
+        "由于珍珠港主力舰队未受打击，美国太平洋舰队迅速集结、于 1942 年 3 月在巴拉望海域歼灭日本第二舰队主力。日本未能取得任何战略主动权，1943 年初便被迫求和。结果与正史相反：日本没有「半年风光」，但也避免了原子弹之灾。"
+      ],
+      reflection: "<b>反事实推演：</b>奇袭之所以成为奇袭，不在于战术上的精妙，而在于它打破了对手的「时间表」。这个分支揭示：<b>放弃奇袭的代价不只是失去战术优势，更是把战争节奏的主导权交给了对手</b>。"
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "明制裁暗谈判  ·  双边失信",
+      castOnStage: ["富兰克林·D·罗斯福", "东条英机"],
+      narrative: [
+        "罗斯福一面继续禁运、一面密遣特使赴东京密谈。东条察觉美方「两面手段」，反而坚定了「美国不可信」的判断，并在密谈情报泄露后于国内大肆宣传「美国分裂日本之阴谋」。",
+        "12 月 7 日袭击如期进行，且日方在国内动员上比正史更为彻底 —— 「美国背信弃义」成为整个战时国民教育的核心叙事。战后日本对美仇恨延续到数十年后，「珍珠港未必是日本之错」的修正主义在日本内部远比正史深远。"
+      ],
+      reflection: "<b>反事实推演：</b>「明暗两套」常常意味着两边都不信任你。这个分支提醒：<b>外交中的清晰性，往往比手段的灵活性更具长期价值</b> —— 它决定了战争的「叙事结构」。"
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "石油暂解  ·  延后再战",
+      castOnStage: ["富兰克林·D·罗斯福", "近卫文麿"],
+      narrative: [
+        "罗斯福同意临时解除部分石油禁运，换取日方暂停南进 6 个月。日本国内激进派被暂时压制，近卫派得以延续政权。「modus vivendi」临时协议为太平洋赢得了 18 个月的喘息。",
+        "然而日本陆军并未真正放弃南进，仅是将时间表后移。1943 年中，日本在德苏战场出现僵局之际再度启动南进，并于 1944 年初对珍珠港发动了「迟到的奇袭」。但此时美国本土已基本完成战争动员，损失远低于正史。最终战争结果与正史类似，但代价与时间线发生重大变化。"
+      ],
+      reflection: "<b>反事实推演：</b>「时间」是国际关系中最被低估的资源。这个分支揭示：<b>有时候推迟一场冲突，比赢下它更划算</b> —— 因为时间会让双方的实力对比、国内政治、技术水平都发生根本变化。"
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "太平洋会议  ·  各执一词",
+      castOnStage: ["富兰克林·D·罗斯福"],
+      narrative: [
+        "罗斯福召集太平洋多边会议，日、英、荷、中、美五方齐聚檀香山。然蒋介石坚持「日本必须先撤出中国」、日本坚持「中国问题与南方资源问题分开谈」、英荷则关心自身殖民地完整 —— 谈判第一周便陷入僵局。",
+        "12 月初，山本不耐久等，于会议进行中突袭珍珠港。日本此举不仅与正史相同，更被国际舆论指为「会议桌上动手」，丧失了所有道义高地。战后日本被国际孤立的程度远超正史，1950 年代以后才得以重返国际社会。"
+      ],
+      reflection: "<b>反事实推演：</b>多边外交需要参与方都有谈判的诚意。这个分支提醒：<b>当一方已决心动手时，召集会议不仅无效，反而会被用作掩护与污名化对方的工具</b>。"
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "中止奇袭  ·  常规海战",
+      castOnStage: ["山本五十六", "富兰克林·D·罗斯福"],
+      narrative: [
+        "山本因情报泄露下令中止奇袭，第一航空舰队折返。日本同时按原定时间对菲律宾、马来亚发起进攻，珍珠港平安无事。然由于失去战略突袭，美国太平洋舰队在 1942 年 1 月便集结至中途岛，对日本远征船团构成持续打击。",
+        "日本未能取得正史中的「半年风光」—— 中途岛海战于 1942 年 4 月便提前打响，日方四艘航母全部沉没。山本在战败后切腹谢罪。日本投降时间提前两年，但因常规战中军民伤亡远低于正史，反而少了「核武逼降」的转折 —— 战后秩序也因此截然不同。"
+      ],
+      reflection: "<b>反事实推演：</b>放弃赌徒式的押注，未必意味着输给坚守者；恰恰相反，<b>有时候输得更优雅、代价更低</b>。这个分支揭示：山本「半年风光、之后必败」的著名预言，正史中是被自己亲手实现的；如果他放弃奇袭，预言可能反而失效。"
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "正史结局 · CANONICAL",
+      tagClass: "canonical",
+      title: "国耻日演说  ·  全面对日宣战",
+      castOnStage: ["山本五十六", "富兰克林·D·罗斯福", "东条英机"],
+      narrative: [
+        "1941 年 12 月 7 日上午 7 时 55 分（夏威夷时间），日军第一波 183 架舰载机自北方扑向珍珠港。两小时内：4 艘战列舰沉没、4 艘重创、188 架飞机被毁、2,403 名美军官兵阵亡。然由于美军三艘航母（企业、列克星敦、萨拉托加）当时不在港，日军未能达成「彻底瘫痪美国海军」的战略目标。",
+        "12 月 8 日中午，罗斯福在国会发表「国耻日」演说：「December 7, 1941 — a date which will live in infamy」。国会在 33 分钟内以 470 票对 1 票通过对日宣战。三天后德意亦对美宣战，美国全面参战。",
+        "山本五十六著名地预言：「我们叫醒了一个沉睡的巨人，并把可怕的决心填满了他的心。」 1945 年 8 月，广岛、长崎遭原子弹轰炸；8 月 15 日，日本无条件投降。一场以「先发制人」为目标的奇袭，最终以「彻底失败」为代价。"
+      ],
+      reflection: "<b>历史的真实走向：</b>珍珠港事件改变了 20 世纪后半叶的全球格局 —— 它把美国从孤立主义中彻底拉出，奠定了战后「美国治下和平」（Pax Americana）的基础。<br><br>这一结局也提醒我们：<b>战术上的辉煌胜利，未必转化为战略上的胜利</b>。山本五十六本人始终对珍珠港计划持怀疑态度 —— 他说「若与美开战，前半年我可纵横大海，但一年之后我无任何把握」。这一预言在不到一年后的中途岛便兑现。<br><br>更深层的教训是：<b>奇袭可以打开战争，但不能定义战争的结果。</b>真正决定战争胜负的，是动员能力、工业产能与战略耐性 —— 而这些恰恰是日本最缺乏的。"
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "击美本土  ·  战略崩塌",
+      castOnStage: ["山本五十六", "富兰克林·D·罗斯福"],
+      narrative: [
+        "山本最后时刻改变目标，第一航空舰队转向旧金山方向。然航程超出航母续航极限，第二航空波尚未起飞便油料告罄，第一波攻击仅造成轻微伤亡便被迫返航 —— 路上又遭遇美军潜艇与陆基航空兵的拦截。",
+        "翔鹤、瑞鹤受重创，加贺被击沉。日本机动舰队元气大伤，且因「攻击美国本土」被国际舆论一致谴责为「无差别侵略」。罗斯福以此为借口直接动用全部战时权力，1942 年 6 月便在中途岛海域全歼日本残余航母编队。日本败亡时间比正史提前近两年，但战后所受惩罚远比正史严厉。"
+      ],
+      reflection: "<b>反事实推演：</b>极端方案的吸引力在于「一举翻盘」的幻象。这个分支揭示：<b>战略冒进的失败往往比保守失败更彻底 —— 因为它同时输掉了能力与道义</b>。山本作为深谙美国国情的战略家，正史中没有走这条路，正是出于对此的清醒认识。"
+    }
+  };
+
+  /* ============================================================
+     Passages — English
+     ============================================================ */
+  const PASSAGES_EN = {
+    "start": {
+      type: "start",
+      epEmoji: "🌊",
+      epTitle: "Attack on Pearl Harbor",
+      epSub: "P E A R L   H A R B O R   ·   D E C E M B E R   1 9 4 1",
+      desc: "In the autumn of 1941, the confrontation between Japan and the United States had reached a breaking point. An American oil embargo cut off roughly 80% of Japan's petroleum supply. The Konoe cabinet fell, unable to rein in the military; General Tojo Hideki formed a new government. Admiral Yamamoto Isoroku, Commander-in-Chief of the Combined Fleet, had been quietly developing an unprecedented plan — a carrier-based air strike on Pearl Harbor to cripple the U.S. Pacific Fleet in a single blow. As diplomacy, resources, the military brass, and questions of national polity converged in the halls of Tokyo, each decision made would shape the fate of the entire Pacific for the rest of the twentieth century.",
+      next: "n1"
+    },
+    "n1": {
+      type: "scene",
+      chapter: "Act I  ·  Tokyo in Crisis",
+      sceneTitle: "The Shadow of Collapsed U.S.-Japan Negotiations",
+      progressIndex: 0,
+      castOnStage: ["近卫文麿", "东条英机", "山本五十六"],
+      narrative: [
+        "In October 1941, Konoe Fumimaro failed for the third time to hold his cabinet together, unable to bridge the gap between the Draft Understanding with the United States and the Army's 'Southern Advance' policy. On October 16 he tendered his resignation to Emperor Hirohito, recommending General Ugaki Kazushige as successor — but the Emperor and Lord Keeper of the Privy Seal Kido Koichi chose Army Minister Tojo Hideki instead.",
+        "At the outset of his mandate, Tojo was instructed by the Emperor to start 'with a blank slate' and reconsider the decision for war. Yet within weeks he had to choose: genuinely carry out the Emperor's wish, continue diplomatic talks with the U.S., and seek an honorable exit from China — or follow the Army and Navy's logic of 'fight or perish' and commit fully to the path of war."
+      ],
+      dialogs: [
+        { who: "近卫文麿", what: "General Tojo, negotiations with America are not yet closed. If we make some concessions on the China front, Roosevelt may not be entirely unwilling to ease his grip." },
+        { who: "东条英机", what: "Prince Konoe, to withdraw from China is to abandon every sacrifice the Imperial Army has made on the continent — something the Army absolutely cannot accept." },
+        { who: "山本五十六", what: "If we truly mean to fight America, we need an extraordinary strategy. If we cannot fight, then all our arms are a waste. The Prime Minister must make up his mind soon." }
+      ],
+      decision: { question: "Once Tojo takes power, which course should he follow?", maker: "东条英机" },
+      choices: [
+        { label: "Carry out the Emperor's wish and continue U.S.-Japan diplomacy", hint: "Diplomatic compromise — a peace route diverging from history",          next: "end_A" },
+        { label: "Follow the military and commit fully to the path of war",         hint: "The Imperial Conference decides — the historical choice",               next: "n2" }
+      ]
+    },
+    "n2": {
+      type: "scene",
+      chapter: "Act II  ·  Naval General Staff Conference",
+      sceneTitle: "The Dilemma of the Surprise-Attack Plan",
+      progressIndex: 1,
+      castOnStage: ["山本五十六", "川崎清", "东条英机"],
+      narrative: [
+        "The Imperial Conference of November 5 resolved to go to war with the United States and Britain in early December. Yamamoto formally submitted his 'Operational Outline for the Attack on Pearl Harbor' to the Naval General Staff. Yet the Staff was deeply divided: the traditionalists held that the Imperial Navy should mass for a decisive engagement in home waters — the 'Interceptive-Attrition' strategy had been the Navy's doctrine for thirty years. Yamamoto insisted that only a carrier strike could cripple the U.S. Pacific Fleet in a single blow.",
+        "Kawasaki Kiyoshi, as Chief of the Operations Division, had to choose between the two strategies: endorse Yamamoto's bold carrier raid, or stick with the traditional 'Southern Advance plus Home-Waters Decisive Battle' approach? This decision would define the shape of the entire war."
+      ],
+      dialogs: [
+        { who: "山本五十六", what: "If we fail to destroy the main American fleet on the first day of the war, Japan will be defeated within six months. I stake my resignation on the passage of this plan." },
+        { who: "川崎清", what: "A six-thousand-mile sortie, the first-ever mass carrier operation, and fuel replenishment at the extreme limit — the risks of this plan are immense." },
+        { who: "传统派军令次长", what: "Thirty years of 'Interceptive-Attrition' doctrine cannot be discarded lightly — fleet gunnery engagement is the tradition of the Imperial Navy." }
+      ],
+      decision: { question: "Between the two strategies, how should Kawasaki Kiyoshi decide?", maker: "川崎清" },
+      choices: [
+        { label: "Reject the surprise raid; maintain the Southern Advance plus Home-Waters strategy", hint: "Prudent strategy — a traditional route diverging from history",  next: "n2a" },
+        { label: "Approve Yamamoto's carrier strike on Pearl Harbor",                                hint: "All-or-nothing gamble — the historical choice",                    next: "n3" }
+      ]
+    },
+    "n2a": {
+      type: "scene",
+      chapter: "Branch  ·  A Different War",
+      sceneTitle: "Between Southern Resources and American Hostility",
+      progressIndex: 2,
+      castOnStage: ["东条英机", "山本五十六"],
+      narrative: [
+        "Kawasaki rejects Yamamoto's bold plan; Japan proceeds with the 'Southern Advance' strategy, directing its main strength toward the Dutch East Indies oilfields and Malayan tin mines. But will the United States stand aside? Tojo must make one more choice: seize only the Dutch and British resources in Southeast Asia, deliberately avoiding American-held Philippines to preserve U.S. neutrality — or still go to war with America, but bypass Pearl Harbor and strike the Philippines instead.",
+        "The first option bets that Roosevelt will not go to war over resources 'unrelated to America.' The second accepts that war with the U.S. is inevitable but fights it by conventional means."
+      ],
+      dialogs: [
+        { who: "东条英机", what: "If our forces leave the Philippines untouched and do not strike any American territory, does Roosevelt have sufficient grounds to demand a declaration of war from Congress?" },
+        { who: "山本五十六", what: "American isolationism is strong, but if we seize everything the Dutch and British hold in Asia, a clash is inevitable sooner or later — we are merely postponing it." }
+      ],
+      decision: { question: "Without striking Pearl Harbor, how should Japan deal with the United States?", maker: "东条英机" },
+      choices: [
+        { label: "Seize only Dutch and British resources; deliberately avoid American-held Philippines", hint: "Bet on U.S. neutrality — leads to the resource-quagmire ending",   next: "end_B" },
+        { label: "Still fight the U.S., but strike only the Philippines, not Pearl Harbor",            hint: "Conventional war with America — leads to the naval-battle ending", next: "end_C" }
+      ]
+    },
+    "n3": {
+      type: "scene",
+      chapter: "Act III  ·  Late Night at the White House",
+      sceneTitle: "Roosevelt's Strategy Toward Japan",
+      progressIndex: 2,
+      castOnStage: ["富兰克林·D·罗斯福", "近卫文麿"],
+      narrative: [
+        "Decrypts from the 'Magic' intelligence program had already revealed that Japan would undertake a major military action in early December. Roosevelt convened a series of meetings in the Oval Office with Secretary of State Hull, Secretary of War Stimson, and Secretary of the Navy Knox.",
+        "Three options lay on the table: continue the comprehensive oil embargo and asset freeze in place since July, forcing Japan to 'submit or fight' (in practice, an isolationist Congress would still refuse to authorize America to strike first); partially lift the oil embargo in exchange for Japan halting its southern advance — a limited accommodation giving diplomacy one last chance; or pursue a double-track approach — maintain sanctions publicly while secretly dispatching an envoy to Tokyo for back-channel talks, stalling for time."
+      ],
+      dialogs: [
+        { who: "赫尔国务卿", what: "Mr. President, the Hull Note demands that Japan withdraw from all of China and Indochina — that amounts to imposing impossible conditions on Japan." },
+        { who: "史汀生陆军部长", what: "If Japan makes the first move, Congress will unite behind us without question. If we relent first, isolationism will surge again." },
+        { who: "富兰克林·D·罗斯福", what: "I must choose between 'forcing Japan to fire the first shot' and 'genuinely giving peace a chance' — and I must choose quickly." }
+      ],
+      decision: { question: "What strategy toward Japan should Roosevelt adopt?", maker: "富兰克林·D·罗斯福" },
+      choices: [
+        { label: "Reinforce the embargo and aid to Allies; force Japan to make the first move", hint: "Maximum pressure — the historical choice",                              next: "n4" },
+        { label: "Partially lift the oil embargo; seek a limited accommodation with Japan",    hint: "Diplomatic de-escalation — a conciliatory route diverging from history", next: "n3a" },
+        { label: "Sanctions in public, back-channel talks in secret — a double-track strategy", hint: "Playing both sides — an ambiguous route diverging from history",       next: "end_D" }
+      ]
+    },
+    "n3a": {
+      type: "scene",
+      chapter: "Branch  ·  The Diplomatic Front",
+      sceneTitle: "Two Approaches to Accommodation",
+      progressIndex: 3,
+      castOnStage: ["富兰克林·D·罗斯福", "近卫文麿"],
+      narrative: [
+        "Roosevelt chooses to attempt limited accommodation. Yet two methods remain available: partially lift the oil embargo in exchange for Japan suspending its southern advance — a 'modus vivendi' interim agreement — or convene a multilateral Pacific conference in the President's own name, inviting Japan, Britain, the Netherlands, China, and others to negotiate jointly.",
+        "The first option is fast but lacks international legitimacy; the second is slow but carries legal authority — each has its trade-offs."
+      ],
+      dialogs: [
+        { who: "近卫文麿（前首相，私使）", what: "Mr. Roosevelt, if you can ease your grip on the oil question even slightly, the hard-liners in Japan's government and public will back down considerably." },
+        { who: "赫尔国务卿", what: "Mr. President, if we convene a Pacific conference, Chiang Kai-shek will certainly protest that Japan still occupies northern China — negotiations will likely go nowhere." }
+      ],
+      decision: { question: "In pursuing accommodation, which approach should Roosevelt take?", maker: "富兰克林·D·罗斯福" },
+      choices: [
+        { label: "Partially lift the oil embargo and reach an interim agreement", hint: "Practical gains in exchange for time — leads to the delayed-war ending",     next: "end_E" },
+        { label: "Convene a multilateral Pacific conference",                      hint: "Multilateral diplomacy — leads to the procedural-failure ending",            next: "end_F" }
+      ]
+    },
+    "n4": {
+      type: "scene",
+      chapter: "Act IV  ·  The Combined Fleet",
+      sceneTitle: "The Combined Fleet's Final Decision",
+      progressIndex: 3,
+      castOnStage: ["山本五十六", "川崎清", "富兰克林·D·罗斯福"],
+      narrative: [
+        "The Imperial Conference of December 1 formally approved war with the United States. The First Air Fleet — six carriers: Akagi, Kaga, Soryu, Hiryu, Shokaku, and Zuikaku — had already departed Hitokappu Bay in secret on November 26, sailing toward a position north of Hawaii.",
+        "On December 5, however, Yamamoto received an urgent message: American forces appeared to have detected something unusual, and the critical aircraft carriers Enterprise and Lexington were no longer in Pearl Harbor — the attack's impact would be severely diminished. Yamamoto faced three options: abort the strike due to intelligence compromise and revert to conventional warfare; proceed with the original plan against Pearl Harbor and accept the reduced results; or redirect the fleet to strike the American West Coast — San Francisco or San Diego — for maximum political shock."
+      ],
+      dialogs: [
+        { who: "南云忠一（机动舰队司令）", what: "Admiral, the American carriers are not in port — do we still proceed with the original plan?" },
+        { who: "山本五十六", what: "Our objective is to paralyze the offensive power of the U.S. Pacific Fleet. Even without the carriers, the main battleship force is still in harbor — this strike remains necessary." },
+        { who: "川崎清", what: "If we redirect to strike the American mainland, the operational radius will far exceed the carriers' endurance, and it will certainly trigger full American mobilization — we must not overreach." }
+      ],
+      decision: { question: "At this final moment, how should Yamamoto decide?", maker: "山本五十六" },
+      choices: [
+        { label: "Abort the surprise attack due to intelligence compromise; revert to conventional warfare", hint: "Play it safe and stand down — a retreating route diverging from history", next: "end_G" },
+        { label: "Proceed with the original plan and strike Pearl Harbor",                                  hint: "December 7, before dawn — the historical choice",                        next: "end_H" },
+        { label: "Redirect to strike the American West Coast for maximum shock",                            hint: "Strategic overreach — an extreme route diverging from history",          next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS — English
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Diplomatic Compromise · Tojo Falls Early",
+      castOnStage: ["东条英机", "近卫文麿"],
+      narrative: [
+        "Tojo carries out the Emperor's wish, ordering a halt to the southern advance and accepting part of the Hull Note's demands — agreeing to withdraw from Vietnam and symbolically reduce troop numbers in northern China. The move immediately enrages junior Army officers; a coup in the style of the February 26 Incident erupts, and Tojo himself is assassinated before the end of November.",
+        "Konoe Fumimaro is recalled by the Emperor to form a new cabinet and reaches a 'modus vivendi' interim agreement with Washington. But the Army's rampage along the China front does not stop — by early 1942 rumors circulate that Emperor Hirohito himself may face abdication. Japan stays out of the Pacific phase of the Second World War, but is plunged into a cycle of coups and internal strife."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Fundamental change from within a system often demands the collapse of the system itself as its price. This branch reveals: <b>when the military has already become a power center independent of the government, a 'bureaucratic compromise' cannot save the peace — it will sacrifice the compromiser first.</b>"
+    },
+    "end_B": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Steady Southern Advance · America Delays Its Entry",
+      castOnStage: ["东条英机", "山本五十六"],
+      narrative: [
+        "Japan seizes only the Dutch East Indies and Malayan tin mines, deliberately bypassing American-held Philippines. Roosevelt tries to push a declaration of war through Congress, but isolationist legislators block him — America does not immediately enter the conflict.",
+        "Yet Japan's Southeast Asian campaign drags on; from 1943 resistance movements in Java and Sumatra flare up repeatedly. In 1944 the United States finally enters the war under the banner of 'aid to the Allies,' but two years later than in actual history. Those two years give Nazi Germany considerably greater gains in Europe — the outcome and timeline of the entire Second World War are fundamentally rewritten."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> In strategy, 'choosing not to provoke' matters as much as 'choosing whom to strike.' This branch reveals: <b>declining to directly antagonize an opponent can delay their response, but cannot eliminate the ultimate confrontation</b> — at most it transforms the form of conflict from 'swift decisive battle' to 'prolonged war.'"
+    },
+    "end_C": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "The Philippine Showdown · American Counterforce",
+      castOnStage: ["山本五十六", "富兰克林·D·罗斯福"],
+      narrative: [
+        "Japan still goes to war with the United States, but directs its main Army strength at the Philippines while the Navy follows the traditional 'Interceptive-Attrition' doctrine. General MacArthur leads the American-Filipino forces in holding Corregidor Island for three months until American reinforcements arrive from the mainland.",
+        "Because the Pearl Harbor fleet is never struck, the U.S. Pacific Fleet assembles quickly and in March 1942 annihilates the core of Japan's Second Fleet in the Palawan Sea. Japan fails to gain any strategic initiative and is forced to sue for peace in early 1943. The outcome is the reverse of history: Japan has no 'six months of triumph,' but also avoids the atomic bomb."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> A surprise attack is a surprise attack not because of tactical brilliance, but because it shatters the enemy's timetable. This branch reveals: <b>abandoning the surprise attack means not only losing the tactical advantage, but handing the enemy control of the war's tempo.</b>"
+    },
+    "end_D": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Public Sanctions, Secret Talks · Mutual Mistrust",
+      castOnStage: ["富兰克林·D·罗斯福", "东条英机"],
+      narrative: [
+        "Roosevelt maintains the embargo publicly while secretly dispatching an envoy to Tokyo for back-channel talks. Tojo detects the American 'double game,' which only hardens his conviction that 'America cannot be trusted.' When the back-channel intelligence leaks, the Japanese government launches a domestic propaganda campaign around 'America's conspiracy to divide Japan.'",
+        "The December 7 attack proceeds as planned — and Japan's domestic mobilization is even more thorough than in actual history, because 'American betrayal' becomes the central narrative of wartime civic education. Anti-American sentiment in postwar Japan persists for decades; revisionism arguing that 'Pearl Harbor was not necessarily Japan's fault' runs far deeper domestically than in the historical timeline."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> 'Playing it both ways' usually means neither side trusts you. This branch reminds us: <b>clarity in diplomacy often has more long-term value than tactical flexibility</b> — it determines the 'narrative structure' of the war."
+    },
+    "end_E": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Oil Temporarily Restored · War Delayed",
+      castOnStage: ["富兰克林·D·罗斯福", "近卫文麿"],
+      narrative: [
+        "Roosevelt agrees to temporarily lift part of the oil embargo in exchange for Japan suspending its southern advance for six months. Japan's domestic hard-liners are briefly suppressed; the Konoe faction retains power. The 'modus vivendi' interim agreement buys the Pacific eighteen months of breathing room.",
+        "Yet Japan's Army never truly abandons the southern advance — it merely shifts the timetable. In mid-1943, as the German-Soviet front bogs down into stalemate, Japan relaunches its southern push and delivers a 'belated surprise attack' on Pearl Harbor in early 1944. By then, however, America's domestic war mobilization is essentially complete, and losses are far lower than in the original history. The war's final outcome is similar, but its costs and timeline undergo major changes."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> 'Time' is the most underestimated resource in international relations. This branch reveals: <b>sometimes postponing a conflict is more advantageous than winning it</b> — because time fundamentally changes the balance of power, domestic politics, and technology on both sides."
+    },
+    "end_F": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "The Pacific Conference · Each Side Entrenched",
+      castOnStage: ["富兰克林·D·罗斯福"],
+      narrative: [
+        "Roosevelt convenes a multilateral Pacific conference; delegations from Japan, Britain, the Netherlands, China, and the United States gather in Honolulu. Chiang Kai-shek insists 'Japan must withdraw from China first'; Japan insists 'the China question and the southern resources question must be negotiated separately'; Britain and the Netherlands focus on their own colonial territories — talks deadlock within the first week.",
+        "In early December, Yamamoto, impatient with the delays, launches the attack on Pearl Harbor while the conference is still in session. The attack is not only identical to the historical one, but is condemned by international opinion as 'making war at the conference table,' stripping Japan of all moral high ground. Postwar Japan is isolated from the international community far more severely than in actual history, not regaining a place in it until well into the 1950s."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Multilateral diplomacy requires all parties to negotiate in good faith. This branch reminds us: <b>when one side has already resolved to act, convening a conference is not only futile — it will be used as cover and as a means of branding the other side as the aggressor.</b>"
+    },
+    "end_G": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Surprise Attack Aborted · Conventional Naval War",
+      castOnStage: ["山本五十六", "富兰克林·D·罗斯福"],
+      narrative: [
+        "Yamamoto orders the surprise attack aborted due to the intelligence compromise; the First Air Fleet turns back. Japan still launches its planned offensives against the Philippines and Malaya on schedule, while Pearl Harbor remains untouched. Yet without the strategic surprise, the U.S. Pacific Fleet assembles at Midway in January 1942 and delivers sustained blows against Japan's expeditionary convoys.",
+        "Japan never enjoys the historical 'six months of triumph' — the Battle of Midway is fought as early as April 1942, and all four Japanese carriers are sunk. Yamamoto commits ritual suicide after the defeat. Japan surrenders two years ahead of the historical timeline, but because conventional warfare produces far fewer civilian and military casualties than in actual history, there is no 'atomic bomb turning point' — and the postwar order is fundamentally different as a result."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Abandoning a gambler's bet does not necessarily mean losing to those who hold firm; on the contrary, <b>sometimes losing more gracefully, at lower cost,</b> is the outcome. This branch reveals: Yamamoto's famous prophecy of 'six months of triumph, then certain defeat' was fulfilled in actual history by his own hand. Had he abandoned the surprise attack, the prophecy might have proven false."
+    },
+    "end_H": {
+      type: "ending",
+      tag: "Canonical Ending · CANONICAL",
+      tagClass: "canonical",
+      title: "The Day of Infamy Address · Full Declaration of War on Japan",
+      castOnStage: ["山本五十六", "富兰克林·D·罗斯福", "东条英机"],
+      narrative: [
+        "At 7:55 a.m. Hawaiian time on December 7, 1941, the first wave of 183 Japanese carrier aircraft swept down on Pearl Harbor from the north. Within two hours: 4 battleships sunk, 4 more heavily damaged, 188 aircraft destroyed, and 2,403 American servicemen killed. Yet because the three American aircraft carriers Enterprise, Lexington, and Saratoga were not in port that day, Japan failed to achieve its strategic goal of completely crippling the U.S. Navy.",
+        "At noon on December 8, Roosevelt addressed Congress in what became known as the 'Day of Infamy' speech: 'December 7, 1941 — a date which will live in infamy.' Congress passed a declaration of war against Japan in 33 minutes, 470 votes to 1. Three days later Germany and Italy declared war on the United States; America entered the war in full.",
+        "Yamamoto Isoroku reportedly predicted: 'I fear all we have done is to awaken a sleeping giant and fill him with a terrible resolve.' In August 1945, atomic bombs fell on Hiroshima and Nagasaki; on August 15, Japan surrendered unconditionally. A surprise attack conceived as a preemptive blow ended at the cost of total defeat."
+      ],
+      reflection: "<b>The true course of history:</b> The attack on Pearl Harbor reshaped the global order for the second half of the twentieth century — it pulled the United States out of isolationism for good and laid the foundation of the postwar 'Pax Americana.'<br><br>This ending also reminds us: <b>a tactically brilliant victory does not necessarily translate into strategic success.</b> Yamamoto himself always harbored doubts about the Pearl Harbor plan — he said, 'In the first six months to a year of war with the United States and Britain I will run wild, and I will show you an uninterrupted succession of victories; I must also tell you that, should the war be prolonged for two or three years, I have no confidence in our ultimate victory.' That prophecy was fulfilled at Midway less than a year later.<br><br>The deeper lesson is this: <b>a surprise attack can open a war, but it cannot determine the war's outcome.</b> What truly decides wars is mobilization capacity, industrial output, and strategic staying power — precisely the qualities Japan lacked most."
+    },
+    "end_I": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Striking the American Mainland · Strategic Collapse",
+      castOnStage: ["山本五十六", "富兰克林·D·罗斯福"],
+      narrative: [
+        "At the last moment Yamamoto changes his target; the First Air Fleet swings toward San Francisco. But the voyage far exceeds the carriers' fuel endurance; before the second wave can even take off, fuel runs out, and the first wave inflicts only minor casualties before being forced to turn back — only to run into American submarines and land-based aircraft on the return trip.",
+        "Shokaku and Zuikaku are badly damaged; Kaga is sunk. Japan's mobile strike force is crippled, and the international community unanimously condemns the 'attack on the American mainland' as 'indiscriminate aggression.' Roosevelt uses the incident to invoke the full scope of wartime emergency powers; in June 1942, at Midway, the remnants of Japan's carrier fleet are annihilated. Japan collapses nearly two years ahead of the historical timeline, but faces far harsher postwar punishment than in actual history."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> The appeal of an extreme option lies in the illusion of a single decisive reversal. This branch reveals: <b>the failure of strategic overreach is often more complete than the failure of caution — because it squanders both capability and moral standing simultaneously.</b> Yamamoto, as a strategist who understood American society deeply, did not take this path in actual history precisely because of this clear-eyed recognition."
+    }
+  };
+
+  /* ============================================================
+     Story progress labels
+     ============================================================ */
+  const STORY_PROGRESS_LABELS = [
+    "对美谈判破局的阴影",
+    "军令部的奇袭抉择",
+    "罗斯福的对日方略",
+    "联合舰队的最后裁断",
+    "袭击之后的全面参战"
+  ];
+
+  const STORY_PROGRESS_LABELS_EN = [
+    "The Shadow of Collapsed U.S.-Japan Negotiations",
+    "The Imperial Navy's Choice to Strike",
+    "Roosevelt's Strategy Toward Japan",
+    "The Combined Fleet's Final Decision",
+    "After the Attack: Full-Scale War"
+  ];
+
+  const state = {
+    pathTrace: []
+  };
+
+  function renderCast(names) {
+    const list = document.getElementById("cast-list");
+    const cast = getCast();
+    list.innerHTML = "";
+    (names || []).forEach(key => {
+      const c = cast[key];
+      if (!c) return;
+      const row = document.createElement("div");
+      row.className = "cast-row";
+      row.innerHTML = `
+        <div class="av">${c.avatar}</div>
+        <div class="info">
+          <div class="name">${currentLang === 'en' ? c.name : key}</div>
+          <div class="role">${c.title}</div>
+          <div class="desc">${c.desc}</div>
+        </div>`;
+      list.appendChild(row);
+    });
+  }
+
+  function renderProgress(currentIndex) {
+    const list = document.getElementById("progress-list");
+    const labels = getLabels();
+    list.innerHTML = "";
+    labels.forEach((label, i) => {
+      const row = document.createElement("div");
+      let cls = "step";
+      if (currentIndex != null) {
+        if (i < currentIndex) cls += " done";
+        else if (i === currentIndex) cls += " current";
+      }
+      row.className = cls;
+      row.innerHTML = `<span class="dot">●</span><span>${i + 1}. ${label}</span>`;
+      list.appendChild(row);
+    });
+    const meta = document.getElementById("meta-progress");
+    if (meta) {
+      const display = currentIndex == null ? 0 : Math.min(currentIndex + 1, labels.length);
+      meta.textContent = currentLang === 'en'
+        ? `Act ${display} / ${labels.length}`
+        : `第 ${display} / ${labels.length} 幕`;
+    }
+  }
+
+  function go(passageId, choiceIndex) {
+    if (choiceIndex != null) {
+      const last = state.pathTrace[state.pathTrace.length - 1];
+      if (last && last.choiceIndex == null) last.choiceIndex = choiceIndex;
+    }
+    render(passageId);
+  }
+
+  function render(passageId) {
+    currentPassageId = passageId;
+    const passages = getPassages();
+    const p = passages[passageId];
+    if (!p) return;
+
+    const area = document.getElementById("passage-area");
+    area.innerHTML = "";
+
+    const card = document.createElement("section");
+    card.className = "stage fade-in" + (p.type === "ending" ? " ending" : "") + (p.type === "start" ? " start" : "");
+
+    if (p.type === "start") {
+      const startLabel = currentLang === 'en' ? 'Begin this story →' : '开始这段历史 →';
+      card.innerHTML = `
+        <div class="stage-body">
+          <div class="ep-emoji">${p.epEmoji}</div>
+          <div class="ep-title">${p.epTitle}</div>
+          <div class="ep-sub">${p.epSub}</div>
+          <p class="ep-desc">${p.desc}</p>
+          <button class="start-btn" id="start-btn">${startLabel}</button>
+        </div>`;
+      area.appendChild(card);
+      renderCast(["山本五十六", "东条英机", "富兰克林·D·罗斯福", "近卫文麿", "川崎清"]);
+      renderProgress(null);
+      document.getElementById("start-btn").onclick = () => {
+        state.pathTrace = [];
+        render(p.next);
+      };
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (p.type === "scene") {
+      state.pathTrace.push({ passageId: passageId, choiceIndex: null });
+
+      const headHtml = `
+        <div class="stage-head">
+          <div>
+            <div class="chapter">${p.chapter}</div>
+            <div class="scene-title">${p.sceneTitle}</div>
+          </div>
+          <div class="right-tag">SCENE  ${String(p.progressIndex + 1).padStart(2, "0")}</div>
+        </div>`;
+
+      let bodyHtml = `<div class="stage-body">`;
+      p.narrative.forEach((para, i) => {
+        bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`;
+      });
+
+      if (p.dialogs && p.dialogs.length) {
+        bodyHtml += `<div class="dialogs">`;
+        p.dialogs.forEach(d => {
+          if (d.direction) {
+            bodyHtml += `<div class="stage-direction">— ${d.direction} —</div>`;
+          } else {
+            const av = (CAST[d.who] && CAST[d.who].avatar) || "·";
+            const speakerName = currentLang === 'en' ? (CAST_EN[d.who] ? CAST_EN[d.who].name : d.who) : d.who;
+            bodyHtml += `<div class="line">
+              <div class="who"><span class="av">${av}</span>${speakerName}</div>
+              <div class="what">${d.what}</div>
+            </div>`;
+          }
+        });
+        bodyHtml += `</div>`;
+      }
+
+      if (p.decision) {
+        const makerAv = (CAST[p.decision.maker] && CAST[p.decision.maker].avatar) || "·";
+        const makerName = currentLang === 'en' ? (CAST_EN[p.decision.maker] ? CAST_EN[p.decision.maker].name : p.decision.maker) : p.decision.maker;
+        const decLabel = currentLang === 'en' ? '▼ KEY DECISION' : '▼ 关键抉择 KEY DECISION';
+        const makerLabel = currentLang === 'en'
+          ? `Decision by ${makerAv} <b>${makerName}</b>`
+          : `由 ${makerAv} <b>${makerName}</b> 拍板`;
+        bodyHtml += `
+          <div class="decision">
+            <div class="label">${decLabel}</div>
+            <div class="question">${p.decision.question}</div>
+            <div class="maker">${makerLabel}</div>
+          </div>`;
+      }
+
+      if (p.choices && p.choices.length) {
+        bodyHtml += `<div class="choices">`;
+        p.choices.forEach((c, i) => {
+          bodyHtml += `<button class="choice-btn" data-next="${c.next}" data-index="${i}">
+            <span class="arrow">▶</span>${c.label}
+            ${c.hint ? `<span class="hint">${c.hint}</span>` : ""}
+          </button>`;
+        });
+        bodyHtml += `</div>`;
+      }
+
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+
+      renderCast(p.castOnStage);
+      renderProgress(p.progressIndex);
+
+      card.querySelectorAll(".choice-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const next = btn.getAttribute("data-next");
+          const idx = parseInt(btn.getAttribute("data-index"), 10);
+          go(next, idx);
+        });
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (p.type === "ending") {
+      const endChapter = currentLang === 'en' ? 'END  ·  THE END' : '终  ·  THE END';
+      const headHtml = `
+        <div class="stage-head">
+          <div>
+            <div class="chapter">${endChapter}</div>
+            <div class="scene-title">${p.title}</div>
+          </div>
+          <div class="right-tag">EPISODE COMPLETE</div>
+        </div>`;
+
+      let bodyHtml = `<div class="stage-body">
+        <div class="ending-tag ${p.tagClass || ""}">${p.tag}</div>
+        <div class="ending-title">${p.title}</div>`;
+
+      p.narrative.forEach((para, i) => {
+        bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`;
+      });
+
+      bodyHtml += `<div class="reflection">${p.reflection}</div>`;
+
+      if (state.pathTrace.length) {
+        const ptTitle = currentLang === 'en' ? '▼ YOUR STORY PATH' : '▼ 你走过的剧情线 STORY PATH';
+        const endLabel = currentLang === 'en' ? 'Ending reached:' : '抵达结局：';
+        bodyHtml += `<div class="path-trace">
+          <div class="pt-title">${ptTitle}</div>
+          <ol>`;
+        state.pathTrace.forEach(t => {
+          const tp = passages[t.passageId];
+          const sceneName = tp ? tp.sceneTitle : t.passageId;
+          let choiceStr = '';
+          if (t.choiceIndex != null && tp && tp.choices && tp.choices[t.choiceIndex]) {
+            choiceStr = ` — <i style="color:var(--accent-2)">${tp.choices[t.choiceIndex].label}</i>`;
+          }
+          bodyHtml += `<li>${sceneName}${choiceStr}</li>`;
+        });
+        bodyHtml += `<li>${endLabel} <b style="color:var(--accent-2)">${p.title}</b></li>`;
+        bodyHtml += `</ol></div>`;
+      }
+
+      const restartLabel = currentLang === 'en' ? '↺  Restart' : '↺  重新开始（Restart）';
+      bodyHtml += `<div class="actions">
+        <button id="restart-btn">${restartLabel}</button>
+      </div>`;
+
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+
+      renderCast(p.castOnStage);
+      renderProgress(getLabels().length - 1);
+
+      document.getElementById("restart-btn").addEventListener("click", () => {
+        state.pathTrace = [];
+        render("start");
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+  }
+
+  // boot
+  updateStaticUI();
+  render("start");
+</script>
+</body>
+</html>

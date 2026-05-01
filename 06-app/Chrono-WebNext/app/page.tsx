@@ -9,6 +9,7 @@ import {
   TacticalHUDDock,
   HelpPanel,
   TimeWarpOverlay,
+  NodeTransitionOverlay,
 } from "@features/chronofork"
 import { AnimatePresence } from "framer-motion"
 
@@ -43,6 +44,7 @@ function ConsoleInner() {
       <AnimatePresence>
         <TimeWarpOverlay active={state.divergence.inProgress && !state.divergence.exists} />
       </AnimatePresence>
+      <NodeTransitionOverlay />
       <HelpPanel />
     </div>
   )

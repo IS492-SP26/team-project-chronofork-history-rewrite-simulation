@@ -12,6 +12,26 @@ export type FlowPhase =
   | "divergence_ready"    // analysis available
   | "branch_complete"     // branch run ended
   | "reflection_open"     // user on report page
+  | "epilogue_loading"    // stage_update(3) received, waiting for timeline_epilogue
+  | "epilogue"            // timeline_epilogue received, showing full-screen overlay
+
+/* ── Timeline epilogue from server ── */
+export interface TimelineEpilogueChapter {
+  node_id: string
+  title: string
+  type: "canonical" | "diverged"
+  pivot: string
+  consequence: string
+}
+
+export interface TimelineEpilogue {
+  timeline_title: string
+  tagline: string
+  chapters: TimelineEpilogueChapter[]
+  verdict: string
+  ripples: [string, string, string]
+  mood: "triumphant" | "tragic" | "pyrrhic" | "ambiguous"
+}
 
 export type ChatMessageType = "dialogue" | "user_chat" | "user_diverge" | "system" | "clarify" | "node_update" | "backtrack_complete" | "history_divider"
 
@@ -105,7 +125,7 @@ export interface RunState {
   /* ── Connection ── */
   connectionStatus: ConnectionStatus
   serverConfig: ServerConfig | null
-  stage: 1 | 2
+  stage: 1 | 2 | 3
 
   /* ── Core flow ── */
   phase: FlowPhase
@@ -149,6 +169,7 @@ export interface RunState {
   reflectionHtml: string | null
   canReflect: boolean
   saveExport: SaveExportPayload | null
+  timelineEpilogue: TimelineEpilogue | null
 
   /* ── Tips ── */
   tipData: ServerTipData | null
@@ -157,6 +178,12 @@ export interface RunState {
 
   /* ── Input request ── */
   inputRequest: { msg: string; from_name: string } | null
+
+  /* ── Agent continue request (Stage 2) ── */
+  agentContinueRequest: { agent: string } | null
+
+  /* ── Auto proxy mode ── */
+  autoProxy: boolean
 
     /* ── Pending tip fill (tip selection → composer auto-fill) ── */
     pendingTipFill: { text: string; targetName: string } | null
@@ -179,7 +206,7 @@ export type RunAction =
   | { type: "ADVANCE_DIALOGUE" }
   | { type: "OBSERVE_COMPLETE" }
   | { type: "SELECT_NODE"; data: { nodeId: string | null } }
-  | { type: "SET_ROLE"; data: { roleId: string; roleName?: string } }
+  | { type: "SET_ROLE"; data: { roleId: string | null; roleName?: string | null } }
   | { type: "BACKTRACK_AND_INTERVENE"; data: { nodeId: string } }
   | { type: "SEND_CHAT"; data: { text: string; speakerName: string; targetName?: string } }
   | { type: "SEND_DIVERGE"; data: { text: string; speakerName: string } }
@@ -206,7 +233,7 @@ export type RunAction =
   /* ── WebSocket / server-driven actions ── */
   | { type: "SET_CONNECTION_STATUS"; data: { status: ConnectionStatus } }
   | { type: "SET_SERVER_CONFIG"; data: { config: ServerConfig } }
-  | { type: "SET_STAGE"; data: { stage: 1 | 2 } }
+  | { type: "SET_STAGE"; data: { stage: 1 | 2 | 3 } }
   | { type: "SET_SERVER_GRAPH"; data: { graph: ServerGraphData } }
   | { type: "STREAM_TOKEN"; data: { agent: string; token: string; target: string } }
   | { type: "FACILITATOR_STREAM"; data: { token: string } }
@@ -223,5 +250,9 @@ export type RunAction =
   | { type: "SET_TIP_ERROR"; data: { msg: string } }
   | { type: "SET_TIP_LOADING"; data: { loading: boolean } }
   | { type: "SET_INPUT_REQUEST"; data: { msg: string; from_name: string } | null }
+  | { type: "SET_AGENT_CONTINUE_REQUEST"; data: { agent: string } | null }
+  | { type: "SET_AUTO_PROXY"; data: { enabled: boolean } }
+  | { type: "ROLE_SWITCHED"; data: { from_role: string; to_role: string } }
   | { type: "SET_PENDING_TIP_FILL"; data: { text: string; targetName: string } }
   | { type: "CLEAR_PENDING_TIP_FILL" }
+  | { type: "SET_TIMELINE_EPILOGUE"; data: TimelineEpilogue }

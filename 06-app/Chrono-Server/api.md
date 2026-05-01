@@ -98,9 +98,12 @@
 | --- | --- | --- |
 | `system_init` | `{ "config": object, "status": "ready" \| "error_no_config" }` | 建连后的首包 |
 | `graph_update` | 见 3.2 | 图结构与当前节点更新 |
-| `stage_update` | `{ "stage": 1 \| 2 }` | 当前阶段（观察/干预） |
+| `stage_update` | `{ "stage": 1 \| 2 \| 3 }` | 当前阶段（1=观察/2=干预/3=反思等待） |
 | `node_update` | `{ "from_id": "2.0", "to_id": "3.0" }` | 节点切换提示；边界值可能为 `start` 或 `end` |
 | `agent_thinking` | `{ "agent": "角色名" }` | 某角色即将调用 LLM |
+| `agent_continue_request` | `{ "agent": "角色名" }` | Stage2 中某角色准备继续发言，等待前端确认或接管 |
+| `role_switched` | `{ "from_role": "旧角色名", "to_role": "新角色名" }` | 用户接管角色成功通知 |
+| `auto_proxy_changed` | `{ "enabled": true \| false }` | 自动代理模式变更通知 |
 | `stream_token` | `{ "agent": "说话方", "token": "增量文本", "target": "目标角色" }` | 对话流式增量 |
 | `input_request` | `{ "msg": "提示语", "from_name": "角色名" }` | 请求用户输入 |
 | `facilitator_stream` | `{ "token": "增量文本或<END>" }` | 并行反思流；`<END>` 表示一段结束 |
@@ -156,9 +159,18 @@
 | `export_save` | `{}` | 请求导出存档 |
 | `request_reflection` | `{}` | 请求导出 Reflection 报告 |
 | `request_tip` | `{}` | 请求生成回复建议 |
+| `continue_agent` | `{}` | Stage2 中确认允许 `agent_continue_request.data.agent` 继续发言 |
+| `set_auto_proxy` | `{ "enabled": true \| false }` | Stage2 中开启/关闭自动代理模式；开启后用户角色也由 LLM 自动代跑 |
+| `takeover` | `{}` | Stage2 中在 `agent_continue_request` 期间接管当前 pending agent，成为该角色 |
 
 说明：
+- Stage2 中用户初始只选择一个起始角色，可随时通过 `takeover` 接管任意 `agent_continue_request` 中的角色。需要同时回溯节点时，改用 `backtrack_to`（含 `perspective_agent` 字段）。
 - `user_message.data.from_name` 即使传入，当前服务端也不读取（以服务端 `user_role_name` 为准）。
+- Stage2 中服务端在下一位 agent 发言前会先发送 `agent_continue_request`；前端发送 `continue_agent` 后，该 agent 才会开始生成回复。
+- 如果前端在 `agent_continue_request` 之后、`continue_agent` 之前发送 `user_message`，服务端会先记录这条用户插话，并把下一位说话者改为该消息的 `target`；原 agent 不会继续发言，直到新的目标角色再次收到确认。
+- `input_request` 仍表示系统正在邀请用户输入，不需要发送 `continue_agent`。
+- 用户实际发送的消息（`user_message`）在存储时带有 `user_authored` 标记；Reflection 报告中此类消息的发送者会标注为 `角色名 (User)`，以区分 AI 自动生成的内容（包括自动代理期间的消息）。
+- `set_auto_proxy` 开启后，服务端遇到用户角色轮次时自动调用 LLM，不再等待前端输入，也不发 `agent_continue_request`。其他 agent 的 `agent_continue_request` 仍照常发送，前端可随时发 `takeover` 接管。
 - 未识别的 `type` 仅在服务端日志打印，不会返回错误包。
 
 ## 6. 前端实现建议

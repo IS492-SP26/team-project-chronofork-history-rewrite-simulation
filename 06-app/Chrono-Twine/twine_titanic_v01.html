@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Titanic · Twine IDN Baseline</title>
+<style>
+  :root { --bg-0: #0e1419; --bg-1: #131c24; --bg-2: #1a2530; --bg-card: #1e2a36; --ink-0: #ecf3f8; --ink-1: #c6d4dd; --ink-2: #8696a3; --ink-3: #5d6c78; --accent: #c0392b; --accent-2: #e8c14a; --accent-3: #4ea3a3; --rule: #2d3d4a; --shadow: 0 6px 24px rgba(0, 0, 0, 0.55); --serif: "Georgia", "Source Han Serif SC", "Noto Serif SC", "Songti SC", serif; --sans: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans SC", -apple-system, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink-0); font-family: var(--serif); line-height: 1.7; min-height: 100vh; }
+  body { background: radial-gradient(circle at 20% 0%, rgba(78, 163, 163, 0.08), transparent 40%), radial-gradient(circle at 80% 100%, rgba(232, 193, 74, 0.05), transparent 50%), var(--bg-0); }
+  .app { max-width: 1080px; margin: 0 auto; padding: 24px 24px 60px; }
+  header.episode { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: linear-gradient(135deg, var(--bg-2), var(--bg-1)); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 18px; }
+  .episode .title-block { display: flex; align-items: center; gap: 14px; }
+  .episode .emoji { font-size: 32px; line-height: 1; }
+  .episode .title { font-size: 22px; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
+  .episode .sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; letter-spacing: 2px; font-family: var(--sans); }
+  .episode .meta { text-align: right; font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .episode .meta .tag { display: inline-block; padding: 3px 8px; border: 1px solid var(--rule); border-radius: 3px; margin-left: 6px; color: var(--ink-1); }
+  .layout { display: grid; grid-template-columns: 1fr 280px; gap: 18px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } aside.side { order: 2; } }
+  .stage { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); overflow: hidden; }
+  .stage-head { padding: 14px 22px; border-bottom: 1px solid var(--rule); background: linear-gradient(180deg, rgba(78, 163, 163, 0.08), transparent); display: flex; align-items: center; justify-content: space-between; }
+  .stage-head .chapter { color: var(--accent-2); font-size: 13px; letter-spacing: 4px; font-family: var(--sans); }
+  .stage-head .scene-title { font-size: 20px; font-weight: 600; color: var(--ink-0); margin-top: 2px; }
+  .stage-head .right-tag { font-size: 12px; color: var(--ink-2); font-family: var(--sans); }
+  .stage-body { padding: 22px 26px; }
+  .narrative { font-size: 16px; color: var(--ink-1); text-indent: 2em; margin: 0 0 16px; }
+  .narrative.lead { color: var(--ink-0); font-size: 16.5px; }
+  .dialogs { margin: 18px 0 6px; padding: 14px 16px; background: rgba(0, 0, 0, 0.22); border-left: 3px solid var(--accent-3); border-radius: 0 6px 6px 0; }
+  .dialogs .line { display: flex; gap: 10px; margin: 8px 0; align-items: baseline; }
+  .dialogs .who { flex: 0 0 130px; text-align: right; color: var(--accent-2); font-weight: 600; font-size: 14px; font-family: var(--sans); }
+  .dialogs .who .av { margin-right: 4px; }
+  .dialogs .what { flex: 1; color: var(--ink-1); font-size: 15px; line-height: 1.65; }
+  .dialogs .what::before { content: "「"; color: var(--ink-3); }
+  .dialogs .what::after { content: "」"; color: var(--ink-3); }
+  .decision { margin-top: 22px; padding: 16px 18px; border: 1px dashed var(--accent-2); border-radius: 6px; background: rgba(232, 193, 74, 0.04); }
+  .decision .label { font-size: 12px; letter-spacing: 3px; color: var(--accent-2); font-family: var(--sans); margin-bottom: 6px; }
+  .decision .question { font-size: 16px; color: var(--ink-0); font-weight: 600; margin-bottom: 4px; }
+  .decision .maker { font-size: 13px; color: var(--ink-2); font-family: var(--sans); }
+  .choices { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .choice-btn { display: block; width: 100%; text-align: left; background: var(--bg-2); color: var(--ink-0); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 16px; font-family: var(--serif); font-size: 15px; line-height: 1.55; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.05s; }
+  .choice-btn:hover { background: #28384a; border-color: var(--accent-2); color: var(--accent-2); }
+  .choice-btn:active { transform: translateY(1px); }
+  .choice-btn .arrow { color: var(--accent); margin-right: 8px; font-weight: 700; }
+  .choice-btn .hint { display: block; margin-top: 4px; font-size: 12.5px; color: var(--ink-3); font-family: var(--sans); }
+  aside.side { display: flex; flex-direction: column; gap: 14px; }
+  .panel { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .panel h3 { margin: 0 0 10px; font-size: 13px; color: var(--accent-2); letter-spacing: 3px; font-family: var(--sans); font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+  .cast-list .cast-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+  .cast-list .cast-row:last-child { border-bottom: none; }
+  .cast-list .av { font-size: 22px; flex: 0 0 28px; text-align: center; }
+  .cast-list .info .name { font-weight: 600; color: var(--ink-0); font-size: 14px; }
+  .cast-list .info .role { font-size: 11.5px; color: var(--ink-2); font-family: var(--sans); }
+  .cast-list .info .desc { font-size: 12px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
+  .progress-list .step { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; font-family: var(--sans); color: var(--ink-3); }
+  .progress-list .step .dot { flex: 0 0 12px; color: var(--rule); font-size: 11px; }
+  .progress-list .step.done { color: var(--ink-1); } .progress-list .step.done .dot { color: var(--accent-3); }
+  .progress-list .step.current { color: var(--accent-2); font-weight: 600; } .progress-list .step.current .dot { color: var(--accent); }
+  .ending .stage-head { background: linear-gradient(180deg, rgba(192, 57, 43, 0.18), transparent); }
+  .ending .ending-tag { display: inline-block; padding: 4px 12px; background: var(--accent); color: var(--ink-0); font-size: 12px; letter-spacing: 3px; border-radius: 3px; font-family: var(--sans); margin-bottom: 10px; }
+  .ending .ending-tag.canonical { background: var(--accent-3); }
+  .ending .ending-title { font-size: 26px; font-weight: 700; color: var(--accent-2); margin: 4px 0 14px; }
+  .ending .reflection { margin-top: 18px; padding: 14px 16px; background: rgba(0, 0, 0, 0.22); border-left: 3px solid var(--accent-2); border-radius: 0 6px 6px 0; font-size: 14.5px; color: var(--ink-1); font-family: var(--sans); line-height: 1.7; }
+  .ending .reflection b { color: var(--accent-2); }
+  .ending .path-trace { margin-top: 16px; padding: 12px 14px; background: rgba(0, 0, 0, 0.18); border: 1px solid var(--rule); border-radius: 6px; font-family: var(--sans); font-size: 13px; color: var(--ink-2); }
+  .ending .path-trace .pt-title { color: var(--accent-2); font-weight: 600; margin-bottom: 6px; font-size: 12px; letter-spacing: 2px; }
+  .ending .path-trace ol { margin: 0; padding-left: 20px; } .ending .path-trace ol li { margin: 3px 0; color: var(--ink-1); }
+  .ending .actions { margin-top: 22px; display: flex; gap: 10px; }
+  .ending .actions button { flex: 1; padding: 12px 16px; background: var(--bg-2); border: 1px solid var(--rule); border-radius: 6px; color: var(--ink-0); font-family: var(--serif); font-size: 15px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .ending .actions button:hover { background: #28384a; border-color: var(--accent-2); color: var(--accent-2); }
+  .start .stage-body { text-align: center; padding: 44px 36px; }
+  .start .ep-emoji { font-size: 68px; margin-bottom: 8px; }
+  .start .ep-title { font-size: 32px; font-weight: 700; color: var(--accent-2); letter-spacing: 4px; margin-bottom: 6px; }
+  .start .ep-sub { font-size: 13px; color: var(--ink-2); letter-spacing: 6px; font-family: var(--sans); margin-bottom: 22px; }
+  .start .ep-desc { text-align: left; color: var(--ink-1); font-size: 15.5px; text-indent: 2em; line-height: 1.85; margin: 0 auto 20px; max-width: 640px; }
+  .start .start-btn { display: inline-block; margin-top: 14px; padding: 14px 36px; background: var(--accent); color: var(--ink-0); border: none; border-radius: 6px; font-family: var(--serif); font-size: 16px; letter-spacing: 4px; cursor: pointer; transition: background 0.15s, transform 0.05s; }
+  .start .start-btn:hover { background: #d44a3a; } .start .start-btn:active { transform: translateY(1px); }
+  footer.foot { margin-top: 26px; text-align: center; color: var(--ink-3); font-size: 12px; letter-spacing: 2px; font-family: var(--sans); }
+  footer.foot .pipe { margin: 0 8px; }
+  .fade-in { animation: fadeIn 0.35s ease; } @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-track { background: var(--bg-1); } ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  /* ---------- Back to home ---------- */
+  .back-home {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.05s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .back-home:hover {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+  .back-home:active { transform: translateY(1px); }
+
+  /* ---------- Lang toggle ---------- */
+  .lang-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ink-1);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--sans);
+    letter-spacing: 2px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .lang-toggle:hover {
+    background: var(--accent-2);
+    color: #1a120b;
+    border-color: var(--accent-2);
+  }
+
+</style>
+</head>
+<body>
+<a class="back-home" id="back-home-link" href="index.html">← Home</a>
+<button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">中文</button>
+
+<div class="app">
+  <header class="episode">
+    <div class="title-block">
+      <div class="emoji">🚢</div>
+      <div>
+        <div class="title" id="ep-title-el">Titanic</div>
+        <div class="sub">RMS TITANIC · APRIL 14 –15, 1912 · NORTH ATLANTIC</div>
+      </div>
+    </div>
+    <div class="meta">Twine IDN Baseline <span class="tag" id="meta-progress">Act 0 / 5</span></div>
+  </header>
+  <div class="layout">
+    <main id="passage-area"></main>
+    <aside class="side">
+      <div class="panel"><h3 id="cast-panel-h">CAST</h3><div class="cast-list" id="cast-list"></div></div>
+      <div class="panel"><h3 id="story-panel-h">STORY PROGRESS</h3><div class="progress-list" id="progress-list"></div></div>
+    </aside>
+  </div>
+  <footer class="foot">Twine IDN Baseline · Static Branching Narrative <span class="pipe">|</span> Episode 04 — <span id="foot-ep-name">泰坦尼克号沉没</span> <span class="pipe">|</span> v1.0</footer>
+</div>
+<script>
+  /* ============================================================
+     Language support
+     ============================================================ */
+  let currentLang = localStorage.getItem('lang') || 'en';
+  let currentPassageId = 'start';
+
+  function toggleLang() {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    localStorage.setItem('lang', currentLang);
+    updateStaticUI();
+    render(currentPassageId);
+  }
+
+  function getPassages() { return currentLang === 'en' ? PASSAGES_EN : PASSAGES; }
+  function getCast()     { return currentLang === 'en' ? CAST_EN     : CAST;     }
+  function getLabels()   { return currentLang === 'en' ? STORY_PROGRESS_LABELS_EN : STORY_PROGRESS_LABELS; }
+
+  function updateStaticUI() {
+    const isEn = currentLang === 'en';
+    document.title = isEn ? 'Titanic · Twine IDN Baseline' : '泰坦尼克号 · Twine IDN Baseline';
+    document.getElementById('ep-title-el').textContent   = isEn ? 'Titanic'          : '泰坦尼克号';
+    document.getElementById('cast-panel-h').textContent  = isEn ? 'CAST'             : '登场人物 CAST';
+    document.getElementById('story-panel-h').textContent = isEn ? 'STORY PROGRESS'   : '剧情进度 STORY';
+    document.getElementById('back-home-link').textContent = isEn ? '← Home'           : '← 返回首页';
+    document.getElementById('lang-toggle').textContent   = isEn ? '中文'               : 'EN';
+    document.getElementById('foot-ep-name').textContent  = isEn ? 'Sinking of the Titanic' : '泰坦尼克号沉没';
+  }
+
+  /* ============================================================
+     Cast — Chinese
+     ============================================================ */
+  const CAST = {
+    "爱德华·约翰·史密斯":   { avatar: "⚓", title: "泰坦尼克号船长",       desc: "全船最高指挥官，负责航线、航速与整体安全决策。" },
+    "约瑟夫·布鲁斯·伊斯梅": { avatar: "💼", title: "白星航运公司总经理",   desc: "亲自监督首航，被认为支持高航速以创纪录抵达。" },
+    "托马斯·安德鲁斯":       { avatar: "📐", title: "泰坦尼克号首席设计师", desc: "随船考察，对船体抗沉性最了解的人。" },
+    "亨利·威尔德":           { avatar: "🧭", title: "首席大副",             desc: "执行船长命令，直接指挥救生艇部署与登艇秩序。" },
+    "阿瑟·罗斯特伦":         { avatar: "🚢", title: "卡帕西亚号船长",       desc: "收到求救后决策全速夜航驶入冰区营救。" }
+  };
+
+  /* ============================================================
+     Cast — English
+     ============================================================ */
+  const CAST_EN = {
+    "爱德华·约翰·史密斯": { avatar: "⚓", name: "Capt. Edward John Smith",  title: "Captain · RMS Titanic",                  desc: "The most celebrated captain of the White Star Line, on his final voyage before retirement, he went down with the ship." },
+    "约瑟夫·布鲁斯·伊斯梅": { avatar: "💼", name: "J. Bruce Ismay",          title: "Managing Director · White Star Line",     desc: "Aboard as an observer; pressured the captain to maintain speed, and controversially escaped in a lifeboat." },
+    "托马斯·安德鲁斯":    { avatar: "📐", name: "Thomas Andrews",            title: "Chief Designer · Titanic",                desc: "Knew the ship better than anyone; after the collision he told Smith the ship would sink within two hours." },
+    "亨利·威尔德":        { avatar: "🧭", name: "Henry Wilde",               title: "Chief Officer · RMS Titanic",             desc: "Senior deck officer responsible for implementing the captain's orders during the crisis." },
+    "阿瑟·罗斯特伦":      { avatar: "🚢", name: "Capt. Arthur Rostron",      title: "Captain · RMS Carpathia",                 desc: "Raced the Carpathia through icy waters and arrived at 4:10 a.m., rescuing approximately 705 survivors." },
+    "卡帕西亚轮机长":     { avatar: "⚙️", name: "Carpathia's Chief Engineer", title: "Chief Engineer · RMS Carpathia",          desc: "Pushed the Carpathia's engines beyond rated capacity on Rostron's orders to reach the Titanic survivors." }
+  };
+
+  /* ============================================================
+     Passages — Chinese (original)
+     ============================================================ */
+  const PASSAGES = {
+
+    "start": {
+      type: "start",
+      epEmoji: "🚢",
+      epTitle: "泰坦尼克号沉没",
+      epSub: "N O R T H   A T L A N T I C   ·   1 9 1 2",
+      desc: "1912 年 4 月，号称「永不沉没」的英国客轮泰坦尼克号自南安普敦启航，目标纽约。船上 2,224 人 —— 头等舱富商、二等舱中产、底舱移民、以及全体船员。整个航程的安全，取决于船桥上船长史密斯每一道命令的拿捏，以及白星公司总经理伊斯梅在背后施加的、若隐若现的「速度期待」。在大西洋航线上，冰山警报正在一封接一封地从其他船只发来 —— 一场被后世反复检视的灾难，正在 1,500 余条生命的命运之线上悄然收紧。",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "第一幕  ·  舰桥之争",
+      sceneTitle: "豪华首航与速度压力",
+      progressIndex: 0,
+      castOnStage: ["爱德华·约翰·史密斯", "约瑟夫·布鲁斯·伊斯梅"],
+      narrative: [
+        "4 月 14 日下午，泰坦尼克号已收到 7 封冰情电报，预报北纬 41-42 度间有大量浮冰与冰山。海面平静无浪，能见度极佳但夜间将无月。伊斯梅在舰桥与史密斯闲谈中，时常提到「如果能比奥林匹克号早半天抵港，那将是头条新闻」。",
+        "史密斯握着冰情电报，望向夕阳下的海面。是按惯例减速以策安全，还是维持 22 节高速并寄希望于「瞭望员能及时发现」？这位即将退休的船长，须在荣誉与谨慎之间作出此生最重要的一次决断。"
+      ],
+      dialogs: [
+        { who: "约瑟夫·布鲁斯·伊斯梅", what: "船长，奥林匹克号上次西航用了 6 天 23 小时，咱们有把握赢她半个昼夜。届时纽约码头会有摄影记者等着我们。" },
+        { who: "托马斯·安德鲁斯",       what: "船长，从结构与舱壁上讲，本船能扛合理海况；但前提是我们得先能看见冰再来得及躲开。" },
+        { who: "爱德华·约翰·史密斯",   what: "冰情电报已收七封，海面平静却无月 —— 我必须现在就决定夜间的航速。" }
+      ],
+      decision: { question: "在冰区前夜，史密斯应作何决定？", maker: "爱德华·约翰·史密斯" },
+      choices: [
+        { label: "降至 12 节安全航速，加倍瞭望", hint: "保守应对 — 偏离正史的安全路线",     next: "end_A" },
+        { label: "维持 22 节接近全速进入冰区",   hint: "追求纪录 — 正史选择",                 next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "第二幕  ·  甲板之静",
+      sceneTitle: "维持高航速驶入冰区",
+      progressIndex: 1,
+      castOnStage: ["约瑟夫·布鲁斯·伊斯梅", "托马斯·安德鲁斯", "亨利·威尔德"],
+      narrative: [
+        "夕阳沉没，气温骤降至零下。锅炉房继续以接近全速运转，泰坦尼克号在镜面般的海上划出长长的航迹。瞭望员被警告冰情，但他们手中没有望远镜 —— 钥匙在交接班时被遗忘在了南安普敦。",
+        "伊斯梅在头等舱晚宴上接受敬酒。安德鲁斯私下向他建议：船上救生艇仅 20 艘，理论容量约 1,178 人，远低于船上人数；至少应组织一次正式的弃船演练。是接受这个建议，还是继续以「不打扰乘客的体面航行」为由不予理会？"
+      ],
+      dialogs: [
+        { who: "托马斯·安德鲁斯",       what: "伊斯梅先生，我们的救生艇配置只是法定标准，按吨位、不按人数 —— 一旦真出事，半数乘客无艇可上。" },
+        { who: "约瑟夫·布鲁斯·伊斯梅", what: "演练？这会让头等舱客人误以为船有问题，也会上明天的报纸头条 —— 这种事最好等到下一航次。" },
+        { who: "亨利·威尔德",           what: "总经理，至少应让甲板水手熟悉一次降艇程序，以备万一。" }
+      ],
+      decision: { question: "在冰情与体面之间，伊斯梅应如何决定？", maker: "约瑟夫·布鲁斯·伊斯梅" },
+      choices: [
+        { label: "下令立即组织弃船演练与瞭望加倍", hint: "未雨绸缪 — 偏离正史的谨慎路线", next: "n2a" },
+        { label: "拒绝演练，维持航行体面",          hint: "维持商业形象 — 正史选择",         next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "分支  ·  谨慎演练",
+      sceneTitle: "演练之后的两种执行方式",
+      progressIndex: 2,
+      castOnStage: ["约瑟夫·布鲁斯·伊斯梅", "亨利·威尔德", "托马斯·安德鲁斯"],
+      narrative: [
+        "伊斯梅勉强同意，但要求「以最小动静进行」。威尔德召集水手于傍晚在 A 甲板进行了 30 分钟的降艇训练，乘客中只有少数老海员注意到。",
+        "现在的问题是：这次演练应该停留在「形式合规」层面，还是借此机会把所有救生艇编队、登艇通道、紧急集合点都向乘客与各舱班组明确通告？"
+      ],
+      dialogs: [
+        { who: "亨利·威尔德",           what: "总经理，若仅此一次形式演练，我们只能保证水手熟悉降艇 —— 乘客什么也不知道。" },
+        { who: "托马斯·安德鲁斯",       what: "至少应在头等、二等、三等三层张贴登艇路线图，一旦事发，乘客知道往哪里跑。" },
+        { who: "约瑟夫·布鲁斯·伊斯梅", what: "图我准了，但绝不可拉响任何警铃 —— 得让乘客觉得这只是一艘从容不迫的好船。" }
+      ],
+      decision: { question: "在「形式」与「实质」演练之间，应如何取舍？", maker: "约瑟夫·布鲁斯·伊斯梅" },
+      choices: [
+        { label: "全员通告，张贴路线，加倍夜间瞭望", hint: "实质安全 — 走向擦肩而过的结局",     next: "end_B" },
+        { label: "仅水手内部演练，不打扰乘客",        hint: "形式合规 — 走向减损但仍受创的结局", next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "第三幕  ·  撞击之后",
+      sceneTitle: "冰山碰撞与首席之断",
+      progressIndex: 2,
+      castOnStage: ["爱德华·约翰·史密斯", "托马斯·安德鲁斯", "约瑟夫·布鲁斯·伊斯梅"],
+      narrative: [
+        "晚 11 时 40 分，瞭望员突然鸣钟三响：「正前冰山！」 大副默多克下令「右满舵，停车，倒车」 —— 然 46,000 吨巨轮的转向半径远超想象。冰山以擦撞方式刮过右舷水线下，连续撕裂 5 个水密舱。",
+        "安德鲁斯随即下舱勘察，半小时后回到舰桥，神情冷峻：「五舱进水已超设计极限，本船必沉，至多两小时」。史密斯握着电报机，须立刻决定：是立即全面启动弃船程序、同步发布无线电求救？还是先评估损伤、再视情况而定？"
+      ],
+      dialogs: [
+        { who: "托马斯·安德鲁斯",       what: "船长，五舱进水我刚量过 —— 船头将持续下沉，水将翻越各舱壁。本船必沉，最多两小时。" },
+        { who: "爱德华·约翰·史密斯",   what: "无线电室，立即发出 CQD …… 不，用新代码 SOS，附本船坐标。安德鲁斯，去甲板组织疏散。" },
+        { who: "约瑟夫·布鲁斯·伊斯梅", what: "船长，可否先稳住乘客情绪 —— 全面弃船程序未免过早？" }
+      ],
+      decision: { question: "撞击之后，史密斯应如何应对？", maker: "爱德华·约翰·史密斯" },
+      choices: [
+        { label: "立即全面启动弃船与求救，跳过评估", hint: "争分夺秒 — 偏离正史的果断路线",     next: "n3a" },
+        { label: "先评估损伤，逐步通告，谨慎放艇",     hint: "迟疑权衡 — 正史选择",                next: "n4" },
+        { label: "全员抢修堵漏，押船救船",             hint: "孤注一掷 — 偏离正史的孤勇路线",     next: "end_D" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "分支  ·  果断疏散",
+      sceneTitle: "登艇秩序的两种执法",
+      progressIndex: 3,
+      castOnStage: ["亨利·威尔德", "托马斯·安德鲁斯"],
+      narrative: [
+        "史密斯果断下令全员上甲板。威尔德负责右舷救生艇放艇，左舷由二副莱托勒指挥。两人对「妇女儿童优先」的执行尺度截然不同 —— 威尔德倾向于「无女即男」、莱托勒坚持「无女不放」。",
+        "在仅一小时多的窗口里，威尔德须决定：是统一采用「同步登艇、男女老少不论」策略以最大化生还人数；还是仍坚持严格的「妇女儿童优先」秩序？"
+      ],
+      dialogs: [
+        { who: "亨利·威尔德",     what: "船首已开始下沉，我们没有时间让艇半空着下水了 —— 凡到艇边者皆登。" },
+        { who: "托马斯·安德鲁斯", what: "若仍坚持妇女儿童优先，许多救生艇将带着空位入海 —— 这已经不是体面的问题。" }
+      ],
+      decision: { question: "在分秒必争之时，威尔德应取何执法？", maker: "亨利·威尔德" },
+      choices: [
+        { label: "同步登艇，男女老少不论，满载下水", hint: "最大化生还 — 走向高生还率结局",       next: "end_E" },
+        { label: "仍坚持妇女儿童优先严格执行",         hint: "秩序优先 — 走向中等生还率结局",       next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "第四幕  ·  无线电室",
+      sceneTitle: "卡帕西亚号船长的抉择",
+      progressIndex: 3,
+      castOnStage: ["阿瑟·罗斯特伦"],
+      narrative: [
+        "凌晨 0 时 25 分，距事发地约 58 海里的卡帕西亚号无线电室收到「CQD…SOS…TITANIC…41°46'N, 50°14'W」的紧急呼救。船长罗斯特伦被叫醒，5 分钟后即下达决定。",
+        "他面前有三个选项：以正常 14 节安全航速救援，但抵达时大多数艇上幸存者将冻毙；以最高 17 节冒险全速夜航穿越同一片冰区；又或者先将求救信号转发给附近其他更近的船只，请其先行救援？"
+      ],
+      dialogs: [
+        { who: "阿瑟·罗斯特伦", what: "全船熄灯节流，关闭乘客舱供热，主蒸汽全部转入推进 —— 我要在 4 小时内赶到。备好热饮、毛毯、甲板缆梯，准备接应大量幸存者。" },
+        { who: "卡帕西亚轮机长", what: "船长，主机长期未达 17 节，您确定要押上这艘船？而且我们要穿过同一片冰区。" },
+        { who: "阿瑟·罗斯特伦", what: "海上规矩 —— 别人遇险，我们必赴。瞭望加倍，每 30 秒一鸣汽笛。" }
+      ],
+      decision: { question: "在自身安全与营救时效之间，罗斯特伦应如何选择？", maker: "阿瑟·罗斯特伦" },
+      choices: [
+        { label: "维持 14 节安全航速谨慎驰援",       hint: "保守救援 — 偏离正史的迟到路线",   next: "end_G" },
+        { label: "全船熄灯节流，全速 17 节夜航",     hint: "极限营救 — 正史选择",              next: "end_H" },
+        { label: "转发信号让更近船只先行救援",       hint: "优先调度 — 偏离正史的协调路线",   next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "保守减速  ·  与冰擦肩",
+      castOnStage: ["爱德华·约翰·史密斯", "约瑟夫·布鲁斯·伊斯梅"],
+      narrative: [
+        "史密斯不顾伊斯梅的暗示，下令将航速降至 12 节并加倍瞭望。泰坦尼克号在午夜安全穿越冰区，于 4 月 17 日午后抵达纽约 —— 比预定时间晚 8 小时。",
+        "纽约报纸有的赞美「白星新船的稳重」，有的嘲讽其「胆怯首航」。伊斯梅事后于公司董事会上抱怨史密斯「过于保守」，但船长以接近退休之姿不为所动。1500 余条生命因此得以平安抵岸。然海事界并未因此真正改革救生艇配置 —— 灾难只是被推迟，未必能被永久避免。"
+      ],
+      reflection: "<b>反事实推演：</b>正确的决定有时不会被铭记，只有错误的决定才会。这个分支提醒：<b>未发生的灾难是无法被纪念的</b> —— 史密斯本可以成为「沉默的英雄」，但海事行业也因此失去了一次以血换教训的机会。直到数年后另一艘船付出类似代价，救生艇标准才会被真正改写。"
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "实质演练  ·  化险为夷",
+      castOnStage: ["亨利·威尔德", "托马斯·安德鲁斯"],
+      narrative: [
+        "正式演练与全船通告之后，瞭望员被加倍配置且配发望远镜。当晚 11 时 35 分，瞭望员提前发现冰山，大副有充足时间下令转向 —— 泰坦尼克号擦着冰山右侧 30 米掠过。",
+        "船长在事后向白星公司报告中详述了「演练 + 加倍瞭望 + 减速」三重防线的有效性。此案成为海事教材，国际海事会议提前数年通过《海上人命安全公约》（SOLAS），救生艇与瞭望规范从此改革。一场本可发生的悲剧，化为整个行业的进步契机。"
+      ],
+      reflection: "<b>反事实推演：</b>安全往往是「冗余」的产物，而非「最低合规」的结果。这个分支揭示：<b>真正的专业精神，是把演练当作日常，而非把日常当作演练</b>。这条分支显示：单一的「降速」与「演练」，本身都不足以避免灾难，只有「程序冗余」才能。"
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "形式演练  ·  减损但仍受创",
+      castOnStage: ["亨利·威尔德", "托马斯·安德鲁斯"],
+      narrative: [
+        "演练仅在水手内部进行，乘客毫不知情。冰山如期撞击，但因水手熟悉降艇程序，救生艇得以更迅速、更满载地下水。最终生还约 1,100 人 —— 比正史多救出近 400 人，仍有约 1,100 人罹难。",
+        "事后调查中，「内部演练但未通告乘客」成为最大争议。行业从此明确：演练必须包括所有相关人员，否则只是「内部表演」。"
+      ],
+      reflection: "<b>反事实推演：</b>合规可以让人心安，却未必能让人安全。这个分支提醒：<b>「我们做了演练」与「演练真的有用」是两件不同的事</b>。形式与实质的差距，往往就是人命的差距。"
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "押船救船  ·  全员同命",
+      castOnStage: ["爱德华·约翰·史密斯", "托马斯·安德鲁斯"],
+      narrative: [
+        "史密斯不愿过早放弃巨轮，下令全员抢修堵漏 —— 抽水机日夜不停、毛毯堵漏、隔舱壁封闭。然安德鲁斯的判断是正确的：5 舱进水已超设计极限，本船必沉。",
+        "由于将宝贵时间投入抢修，救生艇直至凌晨 1 时半才开始放艇。船下沉过快、艇仅放下 8 艘便全船倾覆。最终生还仅 287 人，约 1,930 人罹难 —— 这是一个比历史更黑暗的数字。"
+      ],
+      reflection: "<b>反事实推演：</b>专业判断的可贵之处，正在于它不让英雄主义压过事实。这个分支揭示：<b>当工程数据已经给出明确答案时，「再试一下」的执着就是对生命的不负责</b>。"
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "满载下水  ·  生还高峰",
+      castOnStage: ["亨利·威尔德", "阿瑟·罗斯特伦"],
+      narrative: [
+        "威尔德统一执法「先到先登、男女老少不论」，所有救生艇满载下水。卡帕西亚号准时赶到，最终生还 1,650 人，仅约 570 人罹难 —— 是有据可查的最佳生还结果。",
+        "事后听证会上，「妇女儿童优先」原则被重新审视：在沉没中的灾难现场，「形式秩序」与「实质生命」之间应该如何取舍？这场讨论改变了此后所有海事疏散的原则编写方式。"
+      ],
+      reflection: "<b>反事实推演：</b>原则是为人服务的，而非反过来。这个分支提醒：<b>当原则与生命发生冲突时，原则应该被解释为「以救人为最终目的」</b> —— 而不是僵化执行某种社会礼仪。"
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "秩序优先  ·  中等生还",
+      castOnStage: ["亨利·威尔德"],
+      narrative: [
+        "威尔德虽果断启动弃船，但仍坚持「妇女儿童优先」严格执行。许多救生艇半空下水：第 1 号艇仅载 12 人（容量 40），第 7 号艇仅载 28 人。最终生还 950 人，约 1,270 人罹难。",
+        "比正史略好，却仍因「秩序」而牺牲了大量本可获救的生命。事后听证会上，莱托勒因「过分严格执行优先原则」饱受质疑。"
+      ],
+      reflection: "<b>反事实推演：</b>果断与僵化的边界往往很微妙。这个分支揭示：<b>救人这件事不能只靠「上层下令」，更要靠「现场决断」</b>。即便船长已经果断，第一线军官的执法尺度仍可能让结果天差地别。"
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "卡帕西亚迟到  ·  寒夜成殇",
+      castOnStage: ["阿瑟·罗斯特伦"],
+      narrative: [
+        "罗斯特伦选择 14 节安全航速救援。卡帕西亚号于上午 8 时 30 分才抵达事发海域 —— 比正史晚约 4 小时。海面零下数度，多数救生艇上的幸存者已冻僵或落水。",
+        "最终救起仅 410 人，约 1,290 人罹难。罗斯特伦事后写道：「我永远不知道，再快一节是否能救下更多生命。」 —— 这成为他余生最大的心结。"
+      ],
+      reflection: "<b>反事实推演：</b>救援工作中，「自己安全」与「他人时间」之间的取舍极为残酷。这个分支提醒：<b>救援者的「合理谨慎」，对被救者而言可能就是「致命延迟」</b>。"
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "正史结局 · CANONICAL",
+      tagClass: "canonical",
+      title: "卡帕西亚疾驰  ·  705 人生还",
+      castOnStage: ["阿瑟·罗斯特伦", "约瑟夫·布鲁斯·伊斯梅"],
+      narrative: [
+        "1912 年 4 月 15 日凌晨 2 时 20 分，泰坦尼克号船尾翘起约 45 度后断为两截，没入海面。罗斯特伦的卡帕西亚号于 4 时许抵达，从 20 艘救生艇上救起约 705 人。",
+        "史密斯船长与首席设计师安德鲁斯随船殉职；威尔德在执行完最后几艘救生艇放下后失踪；伊斯梅作为高层之一登上 C 号折叠艇 —— 在他余生中背负「逃生的负责人」之名。约 1,517 人罹难。",
+        "1912 年 11 月，第一次国际海上人命安全公约（SOLAS）在伦敦达成，规定救生艇必须按全员配置、夜间冰区强制减速、24 小时无线电值守。一场震动世界的灾难，最终以行业规则的彻底改写为代价。"
+      ],
+      reflection: "<b>历史的真实走向：</b>泰坦尼克号沉没是 20 世纪最被反复检视的灾难之一。它的核心教训不是某一个人的过失 —— 而是<b>商业期待、技术傲慢、合规惯性、阶级不平等</b>这四股力量如何共同织就了一张无人逃脱的网。<br><br>这一结局也提醒我们：<b>真正改变行业的，从来不是某次「侥幸成功」，而是某次「血写的失败」</b>。SOLAS 公约的每一行字，背后都是 1,500 余条沉入北大西洋的生命。"
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "另类结局 · 偏离正史",
+      tagClass: "",
+      title: "转发信号  ·  谁也没赶上",
+      castOnStage: ["阿瑟·罗斯特伦"],
+      narrative: [
+        "罗斯特伦先将求救信号转发给附近船只，希望加州人号、维吉尼亚人号等更近的船优先救援。然加州人号无线电值班员已下班关机；维吉尼亚人号自身陷入冰区。",
+        "卡帕西亚号在等待 30 分钟后才确认无人响应、自行驰援，但已错过黄金时间。最终救起约 480 人，约 1,220 人罹难。事后听证会确认：「协调」在没有强制无线电值守制度的时代，不能替代「亲自驰援」。"
+      ],
+      reflection: "<b>反事实推演：</b>分布式救援需要可靠的协调机制。这个分支揭示：<b>「集体行动」如果没有强制规则的支撑，往往会塌缩为「集体观望」</b>。这正是后来 SOLAS 公约强制 24 小时无线电值守的根本原因。"
+    }
+  };
+
+  /* ============================================================
+     Passages — English
+     ============================================================ */
+  const PASSAGES_EN = {
+
+    "start": {
+      type: "start",
+      epEmoji: "🚢",
+      epTitle: "Titanic",
+      epSub: "N O R T H   A T L A N T I C   ·   A P R I L   1 9 1 2",
+      desc: "In April 1912, the British ocean liner RMS Titanic — touted as 'unsinkable' — set sail from Southampton bound for New York. On board were 2,224 souls: wealthy first-class passengers, middle-class families in second class, immigrants in steerage, and a full crew. The safety of the entire voyage rested on every order issued by Captain Smith on the bridge, and on the subtle but ever-present 'speed expectations' of White Star Line Managing Director J. Bruce Ismay. Out on the Atlantic run, ice warnings were arriving one after another from other ships — a disaster that would be scrutinized for generations was quietly tightening its grip around more than 1,500 lives.",
+      next: "n1"
+    },
+
+    "n1": {
+      type: "scene",
+      chapter: "Act I  ·  The Bridge in Dispute",
+      sceneTitle: "The Maiden Voyage and the Speed Pressure",
+      progressIndex: 0,
+      castOnStage: ["爱德华·约翰·史密斯", "约瑟夫·布鲁斯·伊斯梅"],
+      narrative: [
+        "On the afternoon of April 14, the Titanic had already received seven ice warnings forecasting large quantities of drift ice and icebergs between latitudes 41° and 42° North. The sea was glassy and calm, visibility excellent — but there would be no moon that night. In casual conversation on the bridge, Ismay had more than once mentioned to Smith that 'if we can dock half a day ahead of the Olympic, it will be front-page news.'",
+        "Smith held the ice reports and gazed out at the sun setting over the water. Should he reduce speed as a precaution, following standard practice? Or should he maintain 22 knots — nearly full speed — and trust that 'the lookouts would spot danger in time'? This captain, on the cusp of retirement, had to make the most consequential decision of his life, poised between honor and caution."
+      ],
+      dialogs: [
+        { who: "约瑟夫·布鲁斯·伊斯梅", what: "Captain, the Olympic's last westbound crossing took six days and twenty-three hours. We have every chance of beating her by half a day. There will be press photographers waiting for us on the New York pier." },
+        { who: "托马斯·安德鲁斯",       what: "Captain, structurally and in terms of the watertight bulkheads, this ship can handle reasonable sea conditions — but only if we can actually see the ice in time to avoid it." },
+        { who: "爱德华·约翰·史密斯",   what: "Seven ice warnings received, a calm sea but no moon tonight — I have to decide our night speed right now." }
+      ],
+      decision: { question: "On the eve of the ice field, what should Captain Smith decide?", maker: "爱德华·约翰·史密斯" },
+      choices: [
+        { label: "Reduce to 12 knots safe speed and double the lookout watch", hint: "Conservative caution — a safe route diverging from history", next: "end_A" },
+        { label: "Maintain 22 knots near full speed into the ice field",        hint: "Pursue the record — the historical choice",                 next: "n2" }
+      ]
+    },
+
+    "n2": {
+      type: "scene",
+      chapter: "Act II  ·  A Quiet Deck",
+      sceneTitle: "Pressing On at Full Speed into the Ice Field",
+      progressIndex: 1,
+      castOnStage: ["约瑟夫·布鲁斯·伊斯梅", "托马斯·安德鲁斯", "亨利·威尔德"],
+      narrative: [
+        "The sun sank below the horizon and the temperature plummeted below freezing. The boiler rooms continued running at near-full capacity, the Titanic carving a long white wake across a mirror-flat sea. The lookouts had been alerted to the ice danger, but they had no binoculars — the key to the binocular locker had been left behind in Southampton during a crew change.",
+        "Ismay was upstairs at a first-class dinner, accepting toasts. Andrews quietly pulled him aside with a warning: the ship carried only 20 lifeboats with a theoretical capacity of approximately 1,178 persons — far fewer than the number of people aboard. At minimum, a formal lifeboat drill should be organized. Should Ismay accept this advice, or continue to dismiss it on the grounds of 'not disturbing passengers with an undignified spectacle'?"
+      ],
+      dialogs: [
+        { who: "托马斯·安德鲁斯",       what: "Mr. Ismay, our lifeboat provision meets only the statutory minimum — calculated by tonnage, not by headcount. If anything truly goes wrong, half the passengers will have no boat to board." },
+        { who: "约瑟夫·布鲁斯·伊斯梅", what: "A drill? That would make the first-class passengers think there is something wrong with the ship, and it would be in tomorrow's newspapers. That sort of thing is best left for the next voyage." },
+        { who: "亨利·威尔德",           what: "Mr. Ismay, at the very least the deck crew should run through the lowering procedure once — just to be prepared." }
+      ],
+      decision: { question: "Caught between the ice threat and the image of decorum, how should Ismay decide?", maker: "约瑟夫·布鲁斯·伊斯梅" },
+      choices: [
+        { label: "Order an immediate lifeboat drill and double the lookout watch", hint: "Preparation over image — a cautious route diverging from history", next: "n2a" },
+        { label: "Refuse the drill; maintain the dignity of the voyage",           hint: "Preserve the commercial image — the historical choice",            next: "n3" }
+      ]
+    },
+
+    "n2a": {
+      type: "scene",
+      chapter: "Branch  ·  The Cautious Drill",
+      sceneTitle: "Two Ways to Follow Up After the Drill",
+      progressIndex: 2,
+      castOnStage: ["约瑟夫·布鲁斯·伊斯梅", "亨利·威尔德", "托马斯·安德鲁斯"],
+      narrative: [
+        "Ismay grudgingly agreed, but insisted the drill be conducted 'with the minimum of fuss.' Wilde assembled the deck crew on A Deck at dusk for a thirty-minute lowering exercise; only a handful of old hands among the passengers even noticed.",
+        "Now a further question arose: should the drill remain purely a formal compliance exercise, or should this be used as an opportunity to post boarding routes, muster stations, and emergency assembly points for all passengers and crew in every class?"
+      ],
+      dialogs: [
+        { who: "亨利·威尔德",           what: "Mr. Ismay, if this is only a token drill, we can guarantee that the crew know how to lower the boats — but the passengers will be completely in the dark." },
+        { who: "托马斯·安德鲁斯",       what: "At minimum, boarding route maps should be posted on all three decks — first, second, and third class. If something happens, the passengers need to know where to go." },
+        { who: "约瑟夫·布鲁斯·伊斯梅", what: "I will approve the maps, but no alarm bells are to be rung under any circumstances — the passengers must feel they are aboard a calm and confident ship." }
+      ],
+      decision: { question: "Between a 'formal' and a 'substantive' drill, how should the trade-off be made?", maker: "约瑟夫·布鲁斯·伊斯梅" },
+      choices: [
+        { label: "Full shipwide announcement, post the routes, and double the night lookout", hint: "Substantive safety — leads to the near-miss ending",               next: "end_B" },
+        { label: "Drill for crew only; do not disturb the passengers",                        hint: "Formal compliance — leads to the reduced-but-still-damaged ending", next: "end_C" }
+      ]
+    },
+
+    "n3": {
+      type: "scene",
+      chapter: "Act III  ·  After the Collision",
+      sceneTitle: "The Iceberg Collision and the Captain's Call",
+      progressIndex: 2,
+      castOnStage: ["爱德华·约翰·史密斯", "托马斯·安德鲁斯", "约瑟夫·布鲁斯·伊斯梅"],
+      narrative: [
+        "At 11:40 p.m., the lookout suddenly struck the bell three times: 'Iceberg, right ahead!' First Officer Murdoch ordered 'Hard a-starboard, stop engines, full astern' — but the turning radius of a 46,000-ton ship far exceeded what anyone expected. The iceberg scraped along the starboard side below the waterline, tearing open five successive watertight compartments.",
+        "Andrews immediately went below to inspect and returned to the bridge thirty minutes later, his face grave: 'Five compartments flooded — beyond the design limit. This ship will sink. Two hours at most.' Smith stood at the telegraph, and had to decide at once: should he immediately launch the full abandon-ship sequence and simultaneously broadcast an SOS? Or should he first assess the damage and then proceed step by step?"
+      ],
+      dialogs: [
+        { who: "托马斯·安德鲁斯",       what: "Captain, I have just measured the flooding in five compartments — the bow will keep going down and the water will spill over the bulkheads. This ship will sink. Two hours at most." },
+        { who: "爱德华·约翰·史密斯",   what: "Wireless room — send CQD immediately … no, use the new code SOS, with our coordinates. Andrews, get up on deck and start the evacuation." },
+        { who: "约瑟夫·布鲁斯·伊斯梅", what: "Captain, can we first steady the passengers' nerves? A full abandon-ship order seems premature." }
+      ],
+      decision: { question: "After the collision, how should Captain Smith respond?", maker: "爱德华·约翰·史密斯" },
+      choices: [
+        { label: "Immediately launch the full abandon-ship and distress call — skip the assessment", hint: "Race against the clock — a decisive route diverging from history", next: "n3a" },
+        { label: "First assess the damage, then notify passengers gradually and lower boats carefully",  hint: "Hesitant deliberation — the historical choice",                 next: "n4" },
+        { label: "All hands to damage control — try to save the ship",                                  hint: "All-or-nothing gamble — a bold route diverging from history",   next: "end_D" }
+      ]
+    },
+
+    "n3a": {
+      type: "scene",
+      chapter: "Branch  ·  The Decisive Evacuation",
+      sceneTitle: "Two Ways to Enforce Boarding Order",
+      progressIndex: 3,
+      castOnStage: ["亨利·威尔德", "托马斯·安德鲁斯"],
+      narrative: [
+        "Smith issued an immediate order to bring all passengers on deck. Wilde took charge of the starboard lifeboats; Second Officer Lightoller commanded the port side. The two officers interpreted 'women and children first' in fundamentally different ways — Wilde tended toward 'no women means men may board'; Lightoller held strictly to 'no women, no launch.'",
+        "With barely an hour left in the window, Wilde had to decide: adopt a unified 'board in turn regardless of sex or age' policy to maximize the number of survivors, or continue to enforce the strict 'women and children first' protocol?"
+      ],
+      dialogs: [
+        { who: "亨利·威尔德",     what: "The bow is already going under. We do not have time to launch boats half-empty — whoever reaches the boat, boards the boat." },
+        { who: "托马斯·安德鲁斯", what: "If we still insist on women and children first, many lifeboats will enter the water with empty seats — this is no longer a question of decorum." }
+      ],
+      decision: { question: "With every second counting, what enforcement policy should Wilde adopt?", maker: "亨利·威尔德" },
+      choices: [
+        { label: "Board in turn — all ages and sexes — launch at full capacity", hint: "Maximize survival — leads to the high-survival-rate ending", next: "end_E" },
+        { label: "Continue strict enforcement of women and children first",       hint: "Protocol first — leads to the moderate-survival-rate ending", next: "end_F" }
+      ]
+    },
+
+    "n4": {
+      type: "scene",
+      chapter: "Act IV  ·  The Radio Room",
+      sceneTitle: "The Decision of the Carpathia's Captain",
+      progressIndex: 3,
+      castOnStage: ["阿瑟·罗斯特伦"],
+      narrative: [
+        "At 12:25 a.m., the wireless room of the RMS Carpathia — approximately 58 nautical miles from the site — received the urgent distress call: 'CQD…SOS…TITANIC…41°46'N, 50°14'W.' Captain Rostron was woken, and within five minutes had issued his decision.",
+        "He faced three options: proceed at the normal safe speed of 14 knots — but most survivors in the lifeboats would have frozen by the time he arrived; race at maximum speed of 17 knots through the same ice field at night; or relay the distress signal to other ships known to be closer, and ask them to respond first."
+      ],
+      dialogs: [
+        { who: "阿瑟·罗斯特伦", what: "Shut down all non-essential lighting, cut heat to the passenger cabins, redirect all main steam to propulsion — I want to be there in four hours. Prepare hot drinks, blankets, and rope ladders; be ready to receive large numbers of survivors." },
+        { who: "卡帕西亚轮机长", what: "Captain, the main engines have never sustained 17 knots for any length of time. Are you certain you want to push this ship? And we will be sailing through the same ice field." },
+        { who: "阿瑟·罗斯特伦", what: "The law of the sea — when others are in distress, we must go. Double the lookout watch; sound the whistle every thirty seconds." }
+      ],
+      decision: { question: "Between his own ship's safety and the speed of the rescue, how should Rostron choose?", maker: "阿瑟·罗斯特伦" },
+      choices: [
+        { label: "Maintain 14-knot safe speed and proceed cautiously",     hint: "Conservative rescue — a late-arrival route diverging from history", next: "end_G" },
+        { label: "Shut down everything non-essential and race at 17 knots", hint: "Maximum rescue effort — the historical choice",                     next: "end_H" },
+        { label: "Relay the distress signal; let the nearest ship respond first", hint: "Coordination first — a routing route diverging from history",   next: "end_I" }
+      ]
+    },
+
+    /* ============================================================
+       ENDINGS — English
+       ============================================================ */
+
+    "end_A": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "A Conservative Slowdown · A Near Miss with the Ice",
+      castOnStage: ["爱德华·约翰·史密斯", "约瑟夫·布鲁斯·伊斯梅"],
+      narrative: [
+        "Ignoring Ismay's hints, Smith ordered the ship reduced to 12 knots and the lookout watch doubled. The Titanic passed safely through the ice field at midnight and arrived in New York on the afternoon of April 17 — eight hours behind schedule.",
+        "New York papers were divided: some praised 'the steadiness of the White Star Line's new ship,' others mocked 'a timid maiden voyage.' Ismay later complained at the board that Smith had been 'overly conservative,' but the captain, with retirement just weeks away, was unmoved. Over 2,200 lives reached port safely. Yet the maritime world never used this outcome to genuinely reform lifeboat regulations — the disaster had been postponed, not permanently averted."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Correct decisions are sometimes never remembered — only wrong ones are. This branch reminds us: <b>a disaster that never happens cannot be commemorated</b> — Smith might have become a 'silent hero,' but the maritime industry would also have lost the blood-bought lesson. It would take another ship paying a similar price before lifeboat standards were truly rewritten."
+    },
+
+    "end_B": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "A Substantive Drill · Danger Averted",
+      castOnStage: ["亨利·威尔德", "托马斯·安德鲁斯"],
+      narrative: [
+        "After the formal drill and the shipwide announcement, the lookout watch was doubled and binoculars were issued. At 11:35 that night, the lookouts spotted the iceberg early enough for the first officer to order a turn with plenty of time to spare — the Titanic swept past the iceberg's right side with thirty meters to spare.",
+        "The captain's subsequent report to the White Star Line detailed the effectiveness of the triple safeguard of 'drill + doubled lookout + reduced speed.' The case became a teaching example in maritime training; the international maritime conference passed the Safety of Life at Sea Convention (SOLAS) several years ahead of schedule, overhauling lifeboat and lookout standards from that point forward. A tragedy that might have happened became instead a catalyst for industry-wide progress."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Safety is typically the product of redundancy, not minimum compliance. This branch reveals: <b>true professionalism means treating the drill as routine, not treating the routine as a drill</b>. It also shows that neither a 'speed reduction' alone nor a 'drill' alone is enough to prevent disaster — only 'procedural redundancy' is."
+    },
+
+    "end_C": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "A Token Drill · Reduced Casualties but Still Wounded",
+      castOnStage: ["亨利·威尔德", "托马斯·安德鲁斯"],
+      narrative: [
+        "The drill was conducted among crew only, and passengers remained completely unaware. The iceberg struck on schedule — but because the crew were familiar with the lowering procedure, the lifeboats got away faster and more fully loaded. Approximately 1,100 people survived — nearly 400 more than in recorded history, while approximately 1,100 still perished.",
+        "In the subsequent inquiry, 'an internal drill with no passenger notification' became the central controversy. The industry thereafter made it explicit: a drill must involve all relevant parties, or it is merely an 'internal performance.'"
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Compliance can put minds at ease, but it does not necessarily keep people safe. This branch reminds us: <b>'We ran a drill' and 'the drill actually worked' are two very different things</b>. The gap between form and substance is often measured in human lives."
+    },
+
+    "end_D": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "All Hands to Save the Ship · All Share the Same Fate",
+      castOnStage: ["爱德华·约翰·史密斯", "托马斯·安德鲁斯"],
+      narrative: [
+        "Smith refused to abandon the ship prematurely and ordered all hands to damage control — pumps running round the clock, blankets stuffed into gaps, watertight doors sealed. But Andrews' assessment was correct: with five compartments flooded beyond the design limit, the ship was going to sink.",
+        "Because precious time had been poured into the repair effort, lifeboat lowering did not begin until 1:30 a.m. The ship sank too quickly; only eight boats got away before she capsized. Ultimately only 287 survived, and approximately 1,930 perished — a number darker than history ever recorded."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> The value of professional judgment lies precisely in its refusal to let heroism override the facts. This branch reveals: <b>when the engineering data has already given a clear answer, the stubborn insistence on 'one more try' is an abdication of responsibility to the lives in one's care</b>."
+    },
+
+    "end_E": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Boats at Full Capacity · The Peak of Survival",
+      castOnStage: ["亨利·威尔德", "阿瑟·罗斯特伦"],
+      narrative: [
+        "Wilde enforced a uniform 'first to the boat, first aboard — regardless of age or sex' policy, and all lifeboats were launched at full capacity. The Carpathia arrived on time, and approximately 1,650 people survived — only around 570 perished — the best documented survival outcome under the circumstances.",
+        "In the subsequent congressional hearings, the 'women and children first' principle was examined anew: in the midst of an ongoing sinking, how should the trade-off between 'formal order' and 'actual lives' be made? This discussion changed the way maritime evacuation protocols were written for every ship that followed."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Principles exist to serve people, not the other way around. This branch reminds us: <b>when a principle comes into conflict with saving lives, it should be interpreted as having 'the ultimate purpose of preserving life'</b> — not applied rigidly as a social convention."
+    },
+
+    "end_F": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Protocol First · A Moderate Survival Rate",
+      castOnStage: ["亨利·威尔德"],
+      narrative: [
+        "Though Wilde launched the evacuation decisively, he continued strict enforcement of 'women and children first.' Many lifeboats left half-empty: Lifeboat No. 1 carried only 12 people (capacity 40); Lifeboat No. 7 carried only 28. In the end, 950 survived and approximately 1,270 perished.",
+        "Slightly better than history, yet still a massive loss of lives that might have been saved — sacrificed to 'protocol.' In the subsequent hearings, Lightoller was heavily criticized for 'enforcing the priority rule too rigidly.'"
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> The line between decisiveness and rigidity is often razor-thin. This branch reveals: <b>saving lives cannot rely solely on orders from above; it equally depends on on-the-spot judgment</b>. Even with a decisive captain, the enforcement standards of the officer on the ground can still make the difference between life and death for hundreds."
+    },
+
+    "end_G": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "The Carpathia Arrives Late · A Cold Night Becomes a Tragedy",
+      castOnStage: ["阿瑟·罗斯特伦"],
+      narrative: [
+        "Rostron chose to proceed at the safe speed of 14 knots. The Carpathia did not reach the site until 8:30 in the morning — approximately four hours later than in recorded history. The sea temperature was several degrees below freezing; most survivors in the lifeboats had frozen or fallen into the water.",
+        "Only 410 were rescued, and approximately 1,290 perished. Rostron later wrote: 'I will never know whether going one knot faster could have saved more lives.' — It became the greatest weight he carried for the rest of his life."
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> In rescue work, the trade-off between 'one's own safety' and 'the other person's remaining time' is brutal. This branch reminds us: <b>what a rescuer calls 'reasonable caution' can, from the perspective of those waiting to be rescued, amount to a fatal delay</b>."
+    },
+
+    "end_H": {
+      type: "ending",
+      tag: "Canonical Ending · CANONICAL",
+      tagClass: "canonical",
+      title: "The Carpathia's Race · 705 Survivors",
+      castOnStage: ["阿瑟·罗斯特伦", "约瑟夫·布鲁斯·伊斯梅"],
+      narrative: [
+        "At 2:20 a.m. on April 15, 1912, the Titanic's stern rose to roughly 45 degrees, the ship broke in two, and she slipped beneath the surface. Rostron's Carpathia arrived at approximately 4:10 a.m. and rescued approximately 705 people from 20 lifeboats.",
+        "Captain Smith and Chief Designer Andrews went down with the ship; Chief Officer Wilde disappeared after overseeing the final boats; Ismay, as a senior official of the line, stepped into Collapsible Lifeboat C — and carried for the rest of his life the name 'the man in charge who got away.' Approximately 1,517 people perished.",
+        "In November 1912, the first International Convention for the Safety of Life at Sea (SOLAS) was concluded in London, mandating lifeboats sufficient for all persons aboard, mandatory speed reductions in ice zones at night, and 24-hour wireless watch. A catastrophe that shook the world was ultimately paid for with the wholesale rewriting of the rules of the industry."
+      ],
+      reflection: "<b>The true course of history:</b> The sinking of the Titanic is one of the most exhaustively examined disasters of the twentieth century. Its core lesson is not the fault of any single person — rather it is the story of how <b>commercial expectation, technological arrogance, compliance inertia, and class inequality</b> wove together into a net from which no one could escape.<br><br>This ending also reminds us: <b>what truly changes an industry is never a 'lucky escape,' but always a 'lesson written in blood.'</b> Behind every line of the SOLAS Convention lie the lives of more than 1,500 people who sank into the North Atlantic."
+    },
+
+    "end_I": {
+      type: "ending",
+      tag: "Alternative Ending · Diverges from History",
+      tagClass: "",
+      title: "Relaying the Signal · Nobody Gets There in Time",
+      castOnStage: ["阿瑟·罗斯特伦"],
+      narrative: [
+        "Rostron first relayed the distress signal to nearby ships, hoping that the Californian, the Virginian, and others known to be closer would respond first. But the Californian's wireless operator had gone off duty and shut down the radio; the Virginian was herself caught in the ice.",
+        "The Carpathia waited thirty minutes before confirming that no one was responding, and only then set off at full speed — but the golden window had already closed. Approximately 480 were rescued and approximately 1,220 perished. The subsequent inquiry concluded: 'coordination,' in an era without mandatory continuous wireless watch, could not substitute for 'going yourself.'"
+      ],
+      reflection: "<b>Counterfactual reasoning:</b> Distributed rescue requires a reliable coordination mechanism. This branch reveals: <b>'collective action,' without the support of mandatory rules, tends to collapse into 'collective watching from the sidelines.'</b> This is precisely why the SOLAS Convention later made 24-hour wireless watch compulsory for all vessels."
+    }
+  };
+
+  /* ============================================================
+     Story progress labels
+     ============================================================ */
+  const STORY_PROGRESS_LABELS = [
+    "豪华首航与速度压力",
+    "甲板之静与演练之议",
+    "冰山碰撞与首席之断",
+    "无线电室与营救抉择",
+    "凌晨获救与世纪追问"
+  ];
+
+  const STORY_PROGRESS_LABELS_EN = [
+    "The Maiden Voyage and the Speed Pressure",
+    "A Quiet Deck and the Lifeboat Drill Debate",
+    "The Iceberg Collision and the Captain's Call",
+    "The Radio Room and the Rescue Decision",
+    "Rescue at Dawn and a Century of Questions"
+  ];
+
+  const state = {
+    pathTrace: []  // array of {passageId, choiceIndex}
+  };
+
+  function renderCast(names) {
+    const list = document.getElementById("cast-list");
+    const cast = getCast();
+    list.innerHTML = "";
+    (names || []).forEach(key => {
+      const c = cast[key];
+      if (!c) return;
+      const row = document.createElement("div");
+      row.className = "cast-row";
+      row.innerHTML = `
+        <div class="av">${c.avatar}</div>
+        <div class="info">
+          <div class="name">${currentLang === 'en' ? c.name : key}</div>
+          <div class="role">${c.title}</div>
+          <div class="desc">${c.desc}</div>
+        </div>`;
+      list.appendChild(row);
+    });
+  }
+
+  function renderProgress(currentIndex) {
+    const list = document.getElementById("progress-list");
+    const labels = getLabels();
+    list.innerHTML = "";
+    labels.forEach((label, i) => {
+      const row = document.createElement("div");
+      let cls = "step";
+      if (currentIndex != null) {
+        if (i < currentIndex) cls += " done";
+        else if (i === currentIndex) cls += " current";
+      }
+      row.className = cls;
+      row.innerHTML = `<span class="dot">●</span><span>${i + 1}. ${label}</span>`;
+      list.appendChild(row);
+    });
+    const meta = document.getElementById("meta-progress");
+    if (meta) {
+      const display = currentIndex == null ? 0 : Math.min(currentIndex + 1, labels.length);
+      meta.textContent = currentLang === 'en'
+        ? `Act ${display} / ${labels.length}`
+        : `第 ${display} / ${labels.length} 幕`;
+    }
+  }
+
+  function go(passageId, choiceIndex) {
+    if (choiceIndex != null) {
+      const last = state.pathTrace[state.pathTrace.length - 1];
+      if (last && last.choiceIndex == null) last.choiceIndex = choiceIndex;
+    }
+    render(passageId);
+  }
+
+  function render(passageId) {
+    currentPassageId = passageId;
+    const passages = getPassages();
+    const p = passages[passageId];
+    if (!p) return;
+
+    const area = document.getElementById("passage-area");
+    area.innerHTML = "";
+
+    const card = document.createElement("section");
+    card.className = "stage fade-in" + (p.type === "ending" ? " ending" : "") + (p.type === "start" ? " start" : "");
+
+    if (p.type === "start") {
+      const startLabel = currentLang === 'en' ? 'Begin this story →' : '开始这段历史 →';
+      card.innerHTML = `
+        <div class="stage-body">
+          <div class="ep-emoji">${p.epEmoji}</div>
+          <div class="ep-title">${p.epTitle}</div>
+          <div class="ep-sub">${p.epSub}</div>
+          <p class="ep-desc">${p.desc}</p>
+          <button class="start-btn" id="start-btn">${startLabel}</button>
+        </div>`;
+      area.appendChild(card);
+      renderCast(["爱德华·约翰·史密斯", "约瑟夫·布鲁斯·伊斯梅", "托马斯·安德鲁斯", "亨利·威尔德", "阿瑟·罗斯特伦"]);
+      renderProgress(null);
+      document.getElementById("start-btn").onclick = () => {
+        state.pathTrace = [];
+        render(p.next);
+      };
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (p.type === "scene") {
+      state.pathTrace.push({ passageId: passageId, choiceIndex: null });
+
+      const headHtml = `
+        <div class="stage-head">
+          <div>
+            <div class="chapter">${p.chapter}</div>
+            <div class="scene-title">${p.sceneTitle}</div>
+          </div>
+          <div class="right-tag">SCENE  ${String(p.progressIndex + 1).padStart(2, "0")}</div>
+        </div>`;
+
+      let bodyHtml = `<div class="stage-body">`;
+      p.narrative.forEach((para, i) => {
+        bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`;
+      });
+
+      if (p.dialogs && p.dialogs.length) {
+        bodyHtml += `<div class="dialogs">`;
+        p.dialogs.forEach(d => {
+          const av = (CAST[d.who] && CAST[d.who].avatar) || "·";
+          const speakerName = currentLang === 'en' ? (CAST_EN[d.who] ? CAST_EN[d.who].name : d.who) : d.who;
+          bodyHtml += `<div class="line">
+            <div class="who"><span class="av">${av}</span>${speakerName}</div>
+            <div class="what">${d.what}</div>
+          </div>`;
+        });
+        bodyHtml += `</div>`;
+      }
+
+      if (p.decision) {
+        const makerAv = (CAST[p.decision.maker] && CAST[p.decision.maker].avatar) || "·";
+        const makerName = currentLang === 'en' ? (CAST_EN[p.decision.maker] ? CAST_EN[p.decision.maker].name : p.decision.maker) : p.decision.maker;
+        const decLabel = currentLang === 'en' ? '▼ KEY DECISION' : '▼ 关键抉择 KEY DECISION';
+        const makerLabel = currentLang === 'en'
+          ? `Decision by ${makerAv} <b>${makerName}</b>`
+          : `由 ${makerAv} <b>${makerName}</b> 拍板`;
+        bodyHtml += `
+          <div class="decision">
+            <div class="label">${decLabel}</div>
+            <div class="question">${p.decision.question}</div>
+            <div class="maker">${makerLabel}</div>
+          </div>`;
+      }
+
+      if (p.choices && p.choices.length) {
+        bodyHtml += `<div class="choices">`;
+        p.choices.forEach((c, i) => {
+          bodyHtml += `<button class="choice-btn" data-next="${c.next}" data-index="${i}">
+            <span class="arrow">▶</span>${c.label}
+            ${c.hint ? `<span class="hint">${c.hint}</span>` : ""}
+          </button>`;
+        });
+        bodyHtml += `</div>`;
+      }
+
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+
+      renderCast(p.castOnStage);
+      renderProgress(p.progressIndex);
+
+      card.querySelectorAll(".choice-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const next = btn.getAttribute("data-next");
+          const idx = parseInt(btn.getAttribute("data-index"), 10);
+          go(next, idx);
+        });
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (p.type === "ending") {
+      const endChapter = currentLang === 'en' ? 'END  ·  THE END' : '终  ·  THE END';
+      const headHtml = `
+        <div class="stage-head">
+          <div>
+            <div class="chapter">${endChapter}</div>
+            <div class="scene-title">${p.title}</div>
+          </div>
+          <div class="right-tag">EPISODE COMPLETE</div>
+        </div>`;
+
+      let bodyHtml = `<div class="stage-body">
+        <div class="ending-tag ${p.tagClass || ""}">${p.tag}</div>
+        <div class="ending-title">${p.title}</div>`;
+
+      p.narrative.forEach((para, i) => {
+        bodyHtml += `<p class="narrative${i === 0 ? " lead" : ""}">${para}</p>`;
+      });
+
+      bodyHtml += `<div class="reflection">${p.reflection}</div>`;
+
+      if (state.pathTrace.length) {
+        const ptTitle = currentLang === 'en' ? '▼ YOUR STORY PATH' : '▼ 你走过的剧情线 STORY PATH';
+        const endLabel = currentLang === 'en' ? 'Ending reached:' : '抵达结局：';
+        bodyHtml += `<div class="path-trace">
+          <div class="pt-title">${ptTitle}</div>
+          <ol>`;
+        state.pathTrace.forEach(t => {
+          const tp = passages[t.passageId];
+          const sceneName = tp ? tp.sceneTitle : t.passageId;
+          let choiceStr = '';
+          if (t.choiceIndex != null && tp && tp.choices && tp.choices[t.choiceIndex]) {
+            choiceStr = ` — <i style="color:var(--accent-2)">${tp.choices[t.choiceIndex].label}</i>`;
+          }
+          bodyHtml += `<li>${sceneName}${choiceStr}</li>`;
+        });
+        bodyHtml += `<li>${endLabel} <b style="color:var(--accent-2)">${p.title}</b></li>`;
+        bodyHtml += `</ol></div>`;
+      }
+
+      const restartLabel = currentLang === 'en' ? '↺  Restart' : '↺  重新开始（Restart）';
+      bodyHtml += `<div class="actions">
+        <button id="restart-btn">${restartLabel}</button>
+      </div>`;
+
+      bodyHtml += `</div>`;
+      card.innerHTML = headHtml + bodyHtml;
+      area.appendChild(card);
+
+      renderCast(p.castOnStage);
+      renderProgress(getLabels().length - 1);
+
+      document.getElementById("restart-btn").addEventListener("click", () => {
+        state.pathTrace = [];
+        render("start");
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+  }
+
+  // boot
+  updateStaticUI();
+  render("start");
+</script>
+</body>
+</html>

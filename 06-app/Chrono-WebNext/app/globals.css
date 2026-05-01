@@ -231,6 +231,32 @@
 }
 .animate-node-breathe { animation: node-breathe 2.5s ease-in-out infinite; }
 
+@keyframes node-attention {
+  0%, 100% { opacity: 0.22; transform: scale(0.9); }
+  50% { opacity: 0.72; transform: scale(1.18); }
+}
+.animate-node-attention {
+  animation: node-attention 1.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes node-selected-ring {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -18; }
+}
+.animate-node-selected-ring { animation: node-selected-ring 1.2s linear infinite; }
+
+@keyframes node-core-pulse {
+  0%, 100% { opacity: 0.65; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+.animate-node-core-pulse {
+  animation: node-core-pulse 1.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 /* ─── Progress bar stripe ─── */
 @keyframes progress-stripe {
   0% { background-position: 0 0; }
@@ -260,7 +286,10 @@
   .animate-pulse-halo-violet,
   .animate-breathe,
   .animate-glow-cta,
-  .animate-node-breathe { animation: none; }
+  .animate-node-breathe,
+  .animate-node-attention,
+  .animate-node-selected-ring,
+  .animate-node-core-pulse { animation: none; }
   .progress-bar-animated { animation: none; }
 }
 

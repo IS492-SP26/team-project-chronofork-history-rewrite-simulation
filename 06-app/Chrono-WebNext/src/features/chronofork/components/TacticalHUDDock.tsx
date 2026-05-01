@@ -4,18 +4,15 @@ import { useRef, useEffect } from "react"
 import { useChronoFork } from "@features/chronofork/state/context"
 import { useI18n } from "@features/chronofork/i18n"
 import { phaseColor } from "@features/chronofork/phaseColor"
-import { roles, structuredTips, mockAnalysisHtml, scenes, dialogueBeats } from "@features/chronofork/mock/mockData"
-import type { StrategyOption } from "@features/chronofork/mock/mockData"
+import { roles, mockAnalysisHtml, scenes, dialogueBeats } from "@features/chronofork/mock/mockData"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   ChevronDown, ChevronUp, X,
-  Zap, Anchor, ArrowRight, Users, Target, AlertTriangle, Search, Shield,
-  Loader2, Info,
+  Zap, ArrowRight,
+  Loader2,
 } from "lucide-react"
 import type { ChatMessage } from "@features/chronofork/state/types"
-import { toast } from "sonner"
 
 /* ════════════════════════════════════════════════════════════════
    TRANSCRIPT PANEL -- no timestamps, centered speakers
@@ -263,152 +260,6 @@ function TranscriptLine({ message }: { message: ChatMessage }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   TIPS PANEL -- Structured per spec
-   ════════════════════════════════════════════════════════════════ */
-
-const intentColors: Record<string, { bg: string; text: string; label: string }> = {
-  escalation: { bg: "color-mix(in oklch, var(--chrono-red) 12%, transparent)", text: "var(--chrono-red)", label: "Escalation" },
-  "de-escalation": { bg: "color-mix(in oklch, var(--chrono-teal) 12%, transparent)", text: "var(--chrono-teal)", label: "De-escalation" },
-  alliance_building: { bg: "color-mix(in oklch, var(--faction-us) 12%, transparent)", text: "var(--faction-us)", label: "Alliance Building" },
-  info_gathering: { bg: "color-mix(in oklch, var(--chrono-amber) 12%, transparent)", text: "var(--chrono-amber)", label: "Info Gathering" },
-}
-
-function intentIcon(type: string) {
-  switch (type) {
-    case "escalation": return <AlertTriangle className="w-3.5 h-3.5" />
-    case "de-escalation": return <Shield className="w-3.5 h-3.5" />
-    case "alliance_building": return <Users className="w-3.5 h-3.5" />
-    case "info_gathering": return <Search className="w-3.5 h-3.5" />
-    default: return <Zap className="w-3.5 h-3.5" />
-  }
-}
-
-function OptionCard({ option, onSelect }: { option: StrategyOption; onSelect: () => void }) {
-  const { t } = useI18n()
-  const ic = intentColors[option.intentType] ?? intentColors.info_gathering
-  const targetRole = roles.find((r) =>
-    r.id === option.targetAgentId ||
-    r.name === option.targetAgentId ||
-    r.shortName === option.targetAgentId
-  )
-  const targetDisplayName = targetRole?.shortName ?? option.targetAgentId
-
-  return (
-    <div className="flex flex-col rounded-xl border border-border/30 bg-card/60 overflow-hidden">
-      <div className="p-3 flex flex-col gap-2.5 flex-1">
-        {/* Intent badge */}
-        <div className="flex items-center gap-2">
-          <Badge className="text-[10px] font-mono gap-1 py-0.5 px-2 border-0" style={{ backgroundColor: ic.bg, color: ic.text }}>
-            {intentIcon(option.intentType)} {t(ic.label)}
-          </Badge>
-        </div>
-        {/* Target */}
-        {option.targetAgentId && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground font-mono">{t("TO:")}</span>
-            <span className="text-xs font-medium text-foreground truncate max-w-[120px]">{targetDisplayName}</span>
-          </div>
-        )}
-        {/* Label */}
-        <p className="text-xs font-semibold text-foreground leading-snug">{option.label}</p>
-        {/* Example response quote */}
-        <blockquote className="border-l-2 border-border/30 pl-2.5 text-xs text-muted-foreground italic leading-relaxed">
-          {option.exampleResponse}
-        </blockquote>
-        {/* Why / Risk blocks */}
-        <div className="flex flex-col gap-1.5">
-          <div className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "color-mix(in oklch, var(--chrono-teal) 6%, transparent)" }}>
-            <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-teal)" }}>{t("Why")}</p>
-            <p className="text-xs text-foreground/80 leading-relaxed">{option.why}</p>
-          </div>
-          <div className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "color-mix(in oklch, var(--chrono-red) 6%, transparent)" }}>
-            <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "var(--chrono-red)" }}>{t("Risk")}</p>
-            <p className="text-xs text-foreground/80 leading-relaxed">{option.risk}</p>
-          </div>
-        </div>
-      </div>
-      {/* Select button */}
-      <button onClick={onSelect}
-        className="w-full py-2 text-xs font-semibold transition-colors hover:opacity-90 text-primary-foreground"
-        style={{ backgroundColor: ic.text }}>
-        {t("Select Option")}
-      </button>
-    </div>
-  )
-}
-
-function TipsPanelContent({ onSelectOption }: { onSelectOption: (opt: StrategyOption) => void }) {
-  const { state } = useChronoFork()
-  const { t } = useI18n()
-
-  /* Use server-driven tips if available, otherwise fall back to mock */
-  const serverTips = state.tipData
-  const tips = structuredTips
-
-  /* Map server tip options to StrategyOption format */
-  const serverOptions: StrategyOption[] | null = serverTips ? serverTips.options.map((o, i) => {
-    const intentMap: Record<string, StrategyOption["intentType"]> = {
-      "Escalation": "escalation",
-      "De-escalation": "de-escalation",
-      "Alliance Building": "alliance_building",
-      "Info Gathering": "info_gathering",
-    }
-    return {
-      id: `server-opt-${i}`,
-      label: o.label,
-      intentType: intentMap[o.intent_type] ?? "info_gathering",
-      targetAgentId: o.target_agent,
-      exampleResponse: o.example_response,
-      why: o.rationale,
-      risk: o.risks,
-    }
-  }) : null
-
-  const displaySituation = serverTips?.situation_analysis ?? tips.situationAnalysis
-  const displayOptions = serverOptions ?? tips.options
-
-  /* Show error if tip request failed */
-  if (state.tipError) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10 gap-3 px-4">
-        <AlertTriangle className="w-7 h-7" style={{ color: "var(--chrono-red)" }} />
-        <p className="text-sm text-center text-foreground/80">{state.tipError}</p>
-      </div>
-    )
-  }
-
-  /* Show loading if tips are being fetched */
-  if (state.tipLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10 gap-3">
-        <Loader2 className="w-7 h-7 animate-spin" style={{ color: "var(--chrono-amber)" }} />
-        <p className="text-sm font-mono" style={{ color: "var(--chrono-amber)" }}>{t("Generating strategic advice...")}</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-4 p-4">
-      {/* Situation Analysis */}
-      <div className="rounded-xl p-3 border-l-4 flex gap-2.5"
-        style={{ borderLeftColor: "var(--faction-us)", backgroundColor: "color-mix(in oklch, var(--faction-us) 5%, transparent)" }}>
-        <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--faction-us)" }} />
-        <div>
-          <p className="text-[10px] font-mono uppercase tracking-wider mb-1" style={{ color: "var(--faction-us)" }}>{t("Situation Analysis")}</p>
-          <p className="text-xs text-foreground/80 leading-relaxed">{displaySituation}</p>
-        </div>
-      </div>
-      {/* Options -- single column */}
-      <div className="flex flex-col gap-3">
-        {displayOptions.map((opt) => (
-          <OptionCard key={opt.id} option={opt} onSelect={() => onSelectOption(opt)} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════════════════════════
    ANALYSIS PANEL -- HTML container via dangerouslySetInnerHTML
    ════════════════════════════════════════════════════════════════ */
 
@@ -545,16 +396,8 @@ export function TacticalHUDDock() {
   const showDivergenceLoader = phase === "divergence_running"
   const pc = phaseColor(phase)
 
-  /* Only one of tips/analysis open at a time */
   const showAnalysisCard = state.ui.showAnalysis || showDivergenceLoader
-  const showTipsCard = state.ui.showTips && !showAnalysisCard
-  const hasBottomPanel = showTipsCard || showAnalysisCard
-
-  const handleSelectOption = (opt: StrategyOption) => {
-    dispatch({ type: "CLOSE_TIPS" })
-    dispatch({ type: "SET_PENDING_TIP_FILL", data: { text: opt.exampleResponse, targetName: opt.targetAgentId } })
-    toast.success(`${t("Selected:")} ${opt.label}`)
-  }
+  const hasBottomPanel = showAnalysisCard
 
   return (
     <div className="absolute right-3 top-3 bottom-3 z-30 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 380, width: 350 }}>
@@ -578,37 +421,9 @@ export function TacticalHUDDock() {
         )}
       </FloatingCard>
 
-      {/* Tips Card -- 50% of space */}
-      <AnimatePresence>
-        {isOpen && showTipsCard && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.2 }}
-            className="pointer-events-auto flex flex-col min-h-0"
-            style={{ flex: "1 1 50%", minHeight: 0 }}
-          >
-            <FloatingCard className="flex flex-col h-full min-h-0">
-              <div className="flex items-center gap-2 px-3 py-2.5 shrink-0">
-                <Target className="w-3.5 h-3.5" style={{ color: pc }} />
-                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex-1" style={{ color: pc }}>{t("Strategic Advisor")}</h3>
-                <button onClick={() => dispatch({ type: "CLOSE_TIPS" })} className="text-muted-foreground hover:text-foreground" aria-label={t("Close tips")}>
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="border-t border-border/20" />
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <TipsPanelContent onSelectOption={handleSelectOption} />
-              </div>
-            </FloatingCard>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Analysis Card -- 50% of space, shows loader first, then HTML container */}
       <AnimatePresence>
-        {isOpen && showAnalysisCard && (
+        {showAnalysisCard && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

@@ -54,6 +54,7 @@ export const initialState: RunState = {
   reflectionHtml: null,
   canReflect: false,
   saveExport: null,
+  timelineEpilogue: null,
 
   /* ── Tips ── */
   tipData: null,
@@ -62,6 +63,8 @@ export const initialState: RunState = {
 
   /* ── Input request ── */
   inputRequest: null,
+  agentContinueRequest: null,
+  autoProxy: false,
 
   /* ── UI ── */
     /* ── Pending tip fill ── */
@@ -105,6 +108,17 @@ export function runReducer(state: RunState, action: RunAction): RunState {
           currentStreamKey: null,
           currentStreamMessageId: null,
           ui: { ...state.ui, docks: { leftOpen: true, rightOpen: true } },
+        }
+      }
+      if (newStage === 3 && state.stage === 2) {
+        // stage_update(3) is the sole signal that stage 2 ended.
+        // Always enter epilogue_loading; SET_TIMELINE_EPILOGUE will advance to "epilogue".
+        return {
+          ...state,
+          stage: 3,
+          phase: "epilogue_loading",
+          currentStreamKey: null,
+          currentStreamMessageId: null,
         }
       }
       return { ...state, stage: newStage }
@@ -196,9 +210,9 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       newHistory.push(sysMsg)
 
       if (to_id === "end") {
+        // Don't set phase here — stage_update(2) is the canonical signal to show the backtrack panel
         return {
           ...state,
-          phase: "observe_complete",
           observeProgress: 100,
           decisionPointReached: true,
           chatHistory: newHistory,
@@ -263,7 +277,17 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       return {
         ...state,
         canReflect: true,
-        phase: state.divergence.exists ? "branch_complete" : state.phase,
+        // Never override epilogue phases — they manage their own transitions
+        phase: (state.phase === "epilogue" || state.phase === "epilogue_loading")
+          ? state.phase
+          : (state.divergence.exists ? "branch_complete" : state.phase),
+      }
+
+    case "SET_TIMELINE_EPILOGUE":
+      return {
+        ...state,
+        phase: "epilogue",
+        timelineEpilogue: action.data,
       }
 
     case "SET_SAVE_EXPORT":
@@ -279,7 +303,16 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       return { ...state, tipLoading: action.data.loading }
 
     case "SET_INPUT_REQUEST":
-      return { ...state, inputRequest: action.data, currentStreamKey: null, currentStreamMessageId: null }
+      return { ...state, inputRequest: action.data, agentContinueRequest: null, currentStreamKey: null, currentStreamMessageId: null }
+
+    case "SET_AGENT_CONTINUE_REQUEST":
+      return { ...state, agentContinueRequest: action.data }
+
+    case "SET_AUTO_PROXY":
+      return { ...state, autoProxy: action.data.enabled }
+
+    case "ROLE_SWITCHED":
+      return { ...state, activeRoleName: action.data.to_role, agentContinueRequest: null }
 
       case "SET_PENDING_TIP_FILL":
         return { ...state, pendingTipFill: action.data }
@@ -315,7 +348,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
     case "ADVANCE_DIALOGUE": {
       if (state.phase !== "observe_playing") return state
       const currentScene = scenes[state.currentSceneIndex]
-      if (!currentScene) return { ...state, phase: "observe_complete", ui: { ...state.ui, docks: { ...state.ui.docks, leftOpen: true } } }
+      if (!currentScene) return { ...state, ui: { ...state.ui, docks: { ...state.ui.docks, leftOpen: true } } }
       const sceneBeats = dialogueBeats.filter((d) => d.sceneId === currentScene.id)
       const nextIdx = state.currentDialogueIndex + 1
       const totalBeats = dialogueBeats.length
@@ -338,11 +371,11 @@ export function runReducer(state: RunState, action: RunAction): RunState {
           activeNodeId: nextNode?.id ?? state.activeNodeId, observeProgress: progress, chatHistory: newHistory, decisionPointReached,
         }
       }
-      return { ...state, phase: "observe_complete", observeProgress: 100, chatHistory: newHistory, decisionPointReached: true, ui: { ...state.ui, docks: { ...state.ui.docks, leftOpen: true } } }
+      return { ...state, observeProgress: 100, chatHistory: newHistory, decisionPointReached: true, ui: { ...state.ui, docks: { ...state.ui.docks, leftOpen: true } } }
     }
 
     case "OBSERVE_COMPLETE":
-      return { ...state, phase: "observe_complete", observeProgress: 100, ui: { ...state.ui, docks: { ...state.ui.docks, leftOpen: true } } }
+      return { ...state, observeProgress: 100, ui: { ...state.ui, docks: { ...state.ui.docks, leftOpen: true } } }
 
     case "SELECT_NODE": {
       const canSelect = ["observe_complete", "intervene_idle"].includes(state.phase)
@@ -351,7 +384,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
     }
 
     case "SET_ROLE":
-      return { ...state, activeRoleId: action.data.roleId, activeRoleName: action.data.roleName ?? state.activeRoleName }
+      return { ...state, activeRoleId: action.data.roleId, activeRoleName: action.data.roleName === undefined ? state.activeRoleName : action.data.roleName }
 
     case "BACKTRACK_AND_INTERVENE": {
       const canBacktrack = ["observe_complete", "intervene_idle"].includes(state.phase)

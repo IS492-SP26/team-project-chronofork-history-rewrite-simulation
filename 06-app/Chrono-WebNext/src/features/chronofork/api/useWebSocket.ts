@@ -55,6 +55,8 @@ function asString(value: unknown): string | null {
  * Core WebSocket hook. Manages connection lifecycle and routes
  * all server-push messages to the reducer via dispatch.
  */
+const MIN_BLOCK_GAP_MS = 2000
+
 export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn {
   const wsRef = useRef<WebSocket | null>(null)
   const statusRef = useRef<ConnectionStatus>("disconnected")
@@ -67,6 +69,11 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
   const stepStreamKeyRef = useRef<string | null>(null)
   const autoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const autoIntervalDrainingRef = useRef(false)
+  /* ── Auto-mode block gap throttle ── */
+  const currentAutoBlockKeyRef = useRef<string | null>(null)
+  const pendingBlockKeyRef = useRef<string | null>(null)
+  const blockTransitionDetectedAtRef = useRef<number>(0)
+  const autoGapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const streamKeyFromEnvelope = useCallback((msg: EnvelopeMessage): string | null => {
     if (msg.type !== "stream_token") return null
@@ -110,8 +117,8 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
 
         /* ── stage_update ── */
         case "stage_update": {
-          if (data.stage === 1 || data.stage === 2) {
-            dispatch({ type: "SET_STAGE", data: { stage: data.stage } })
+          if (typeof data.stage === "number" && data.stage >= 1) {
+            dispatch({ type: "SET_STAGE", data: { stage: data.stage as 1 | 2 | 3 } })
           }
           break
         }
@@ -144,6 +151,32 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
               type: "STREAM_TOKEN",
               data: { agent, token, target },
             })
+          }
+          break
+        }
+
+        /* ── agent_continue_request ── */
+        case "agent_continue_request": {
+          const agent = asString(data.agent)
+          if (agent) {
+            dispatch({ type: "SET_AGENT_CONTINUE_REQUEST", data: { agent } })
+          }
+          break
+        }
+
+        /* ── auto_proxy_changed ── */
+        case "auto_proxy_changed": {
+          const enabled = !!data.enabled
+          dispatch({ type: "SET_AUTO_PROXY", data: { enabled } })
+          break
+        }
+
+        /* ── role_switched ── */
+        case "role_switched": {
+          const fromRole = asString(data.from_role)
+          const toRole = asString(data.to_role)
+          if (toRole) {
+            dispatch({ type: "ROLE_SWITCHED", data: { from_role: fromRole ?? "", to_role: toRole } })
           }
           break
         }
@@ -196,6 +229,12 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
               data: { report },
             })
           }
+          break
+        }
+
+        /* ── timeline_epilogue ── */
+        case "timeline_epilogue": {
+          dispatch({ type: "SET_TIMELINE_EPILOGUE", data: data as any })
           break
         }
 
@@ -259,9 +298,41 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
     try {
       if (modeRef.current === "auto") {
         while (queueRef.current.length > 0) {
-          const msg = queueRef.current.shift()
-          if (!msg) break
-          routeEnvelope(msg)
+          const peek = queueRef.current[0]
+          const key = streamKeyFromEnvelope(peek)
+
+          if (key) {
+            if (key !== currentAutoBlockKeyRef.current) {
+              if (currentAutoBlockKeyRef.current !== null) {
+                // Transition to a new stream block — enforce minimum gap
+                if (pendingBlockKeyRef.current !== key) {
+                  pendingBlockKeyRef.current = key
+                  blockTransitionDetectedAtRef.current = Date.now()
+                }
+                const elapsed = Date.now() - blockTransitionDetectedAtRef.current
+                if (elapsed < MIN_BLOCK_GAP_MS) {
+                  if (!autoGapTimerRef.current) {
+                    autoGapTimerRef.current = setTimeout(() => {
+                      autoGapTimerRef.current = null
+                      if (!processingRef.current) processQueue()
+                    }, MIN_BLOCK_GAP_MS - elapsed)
+                  }
+                  return
+                }
+                pendingBlockKeyRef.current = null
+                blockTransitionDetectedAtRef.current = 0
+              }
+              currentAutoBlockKeyRef.current = key
+            }
+          } else {
+            // Non-stream message — process immediately and reset block tracking
+            currentAutoBlockKeyRef.current = null
+            pendingBlockKeyRef.current = null
+            blockTransitionDetectedAtRef.current = 0
+          }
+
+          queueRef.current.shift()
+          routeEnvelope(peek)
         }
         return
       }
@@ -295,6 +366,7 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
       // Manual stepped processing: advance until next stream block completes.
       if (!waitingStepRef.current) return
 
+      let processedCount = 0
       while (queueRef.current.length > 0) {
         const peek = queueRef.current[0]
         const key = streamKeyFromEnvelope(peek)
@@ -302,6 +374,7 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
         if (!stepStreamKeyRef.current) {
           queueRef.current.shift()
           routeEnvelope(peek)
+          processedCount += 1
           if (key) stepStreamKeyRef.current = key
           continue
         }
@@ -309,6 +382,7 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
         if (key && key === stepStreamKeyRef.current) {
           queueRef.current.shift()
           routeEnvelope(peek)
+          processedCount += 1
           continue
         }
 
@@ -316,6 +390,13 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
         waitingStepRef.current = false
         stepStreamKeyRef.current = null
         return
+      }
+
+      // If the click consumed everything currently queued, do not let future
+      // server messages auto-play under the previous step request.
+      if (processedCount > 0) {
+        waitingStepRef.current = false
+        stepStreamKeyRef.current = null
       }
     } finally {
       processingRef.current = false
@@ -391,12 +472,19 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
     const previousMode = modeRef.current
     if (previousMode === mode) return
 
-    // Clear any running auto-drain interval when switching modes.
+    // Clear any running auto-drain interval and block-gap timer when switching modes.
     if (autoIntervalRef.current) {
       clearInterval(autoIntervalRef.current)
       autoIntervalRef.current = null
       autoIntervalDrainingRef.current = false
     }
+    if (autoGapTimerRef.current) {
+      clearTimeout(autoGapTimerRef.current)
+      autoGapTimerRef.current = null
+    }
+    currentAutoBlockKeyRef.current = null
+    pendingBlockKeyRef.current = null
+    blockTransitionDetectedAtRef.current = 0
     modeRef.current = mode
 
     if (mode === "auto") {
@@ -457,6 +545,13 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
           autoIntervalRef.current = null
         }
         autoIntervalDrainingRef.current = false
+        if (autoGapTimerRef.current) {
+          clearTimeout(autoGapTimerRef.current)
+          autoGapTimerRef.current = null
+        }
+        currentAutoBlockKeyRef.current = null
+        pendingBlockKeyRef.current = null
+        blockTransitionDetectedAtRef.current = 0
 
         ws.onopen = () => {
           statusRef.current = "connected"
@@ -513,6 +608,10 @@ export function useWebSocket(dispatch: Dispatch<RunAction>): UseWebSocketReturn 
       if (autoIntervalRef.current) {
         clearInterval(autoIntervalRef.current)
         autoIntervalRef.current = null
+      }
+      if (autoGapTimerRef.current) {
+        clearTimeout(autoGapTimerRef.current)
+        autoGapTimerRef.current = null
       }
     }
   }, [])

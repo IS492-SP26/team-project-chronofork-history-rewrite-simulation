@@ -6,7 +6,7 @@ import { graphNodes, graphEdges, timelineNodes, type GraphEdge } from "@features
 import type { ServerGraphData } from "@features/chronofork/state/types"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp } from "lucide-react"
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { createPortal } from "react-dom"
 
 type UnifiedNodeStatus = "completed" | "in_progress" | "unfinished" | "suspended" | "divergent"
@@ -52,12 +52,31 @@ function formatNodeStatus(status: UnifiedNodeStatus): string {
   return "COMPLETED"
 }
 
-/* ── Node colors ── */
-function nodeColor(n: { branch: "canonical" | "divergent" }, isBacktracked: boolean) {
-  if (isBacktracked) return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
-  return n.branch === "divergent"
-    ? { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)" }
-    : { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)" }
+/* ── Node visual language ── */
+function nodeVisual(n: UnifiedNode, isBacktracked: boolean) {
+  if (isBacktracked) {
+    return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)", text: "var(--background)", glow: "var(--chrono-amber)" }
+  }
+  if (n.branch === "divergent" || n.status === "divergent") {
+    return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)", text: "var(--background)", glow: "var(--chrono-amber)" }
+  }
+  if (n.status === "in_progress") {
+    return { fill: "var(--chrono-amber)", stroke: "var(--chrono-amber)", text: "var(--background)", glow: "var(--chrono-amber)" }
+  }
+  if (n.status === "suspended") {
+    return { fill: "var(--chrono-red)", stroke: "var(--chrono-red)", text: "var(--background)", glow: "var(--chrono-red)" }
+  }
+  if (n.status === "unfinished") {
+    return { fill: "var(--background)", stroke: "var(--muted-foreground)", text: "var(--muted-foreground)", glow: "var(--muted-foreground)" }
+  }
+  return { fill: "var(--chrono-teal)", stroke: "var(--chrono-teal)", text: "var(--background)", glow: "var(--chrono-teal)" }
+}
+
+function polygonPoints(x: number, y: number, r: number, sides: number, startAngle = -Math.PI / 2): string {
+  return Array.from({ length: sides }, (_, i) => {
+    const angle = startAngle + (i * 2 * Math.PI) / sides
+    return `${x + Math.cos(angle) * r},${y + Math.sin(angle) * r}`
+  }).join(" ")
 }
 
 function parseBranchFromId(id: string): "canonical" | "divergent" {
@@ -300,14 +319,22 @@ function UnifiedDAGVisualization({ graph }: { graph: UnifiedGraph }) {
           const isSelected = state.selectedNodeId === node.id
           const isActive = (graph.activeNodeId ?? state.activeNodeId) === node.id
           const isBacktracked = state.divergence.backtrackedNodeId === node.id
-          const colors = nodeColor(node, isBacktracked)
+          const colors = nodeVisual(node, isBacktracked)
           const isDivergent = node.branch === "divergent"
+          const isHighlighted = isSelected || isBacktracked
+          const isPulsing = node.status === "in_progress" || isDivergent || isHighlighted
 
           return (
             <g key={node.id}
+              data-node-id={node.id}
               className={node.isClickable ? "cursor-pointer" : "cursor-default"}
               onMouseEnter={(e) => onNodeEnter(e, node)} onMouseMove={onNodeMove} onMouseLeave={onLeave}
-              onClick={() => { if (node.isClickable) dispatch({ type: "SELECT_NODE", data: { nodeId: isSelected ? null : node.id } }) }}
+              onClick={() => {
+                if (node.isClickable) {
+                  dispatch({ type: "SELECT_NODE", data: { nodeId: isSelected ? null : node.id } })
+                  dispatch({ type: "SET_ROLE", data: { roleId: null, roleName: null } })
+                }
+              }}
             >
               <text x={x} y={y - r - 6} textAnchor="middle" dominantBaseline="auto"
                 fill="var(--foreground)"
@@ -316,35 +343,76 @@ function UnifiedDAGVisualization({ graph }: { graph: UnifiedGraph }) {
                 {node.label}
               </text>
 
-              {isActive && node.status === "in_progress" && (
-                <circle cx={x} cy={y} r={r + 5} fill="none" stroke={colors.stroke} strokeWidth="1" opacity={0.35} className="animate-node-breathe" />
+              {isPulsing && (
+                <circle cx={x} cy={y} r={r + 7} fill="none" stroke={colors.glow} strokeWidth="1.4" opacity={0.38} className="animate-node-attention" />
               )}
-              {(hoveredNode?.id === node.id || isSelected) && !(isActive && node.status === "in_progress") && (
-                <circle cx={x} cy={y} r={r + 4} fill="none" stroke={colors.stroke} strokeWidth="0.8" opacity={0.25} />
+              {(hoveredNode?.id === node.id || isSelected) && !isPulsing && (
+                <circle cx={x} cy={y} r={r + 4} fill="none" stroke={colors.stroke} strokeWidth="0.8" opacity={0.35} />
               )}
               {isSelected && (
                 <>
-                  <circle cx={x} cy={y} r={r + 7} fill="none" stroke="var(--foreground)" strokeWidth="2" opacity={0.55} />
-                  <circle cx={x} cy={y} r={r + 10} fill="none" stroke={colors.stroke} strokeWidth="1.2" strokeDasharray="3 2" opacity={0.65} />
+                  <circle cx={x} cy={y} r={r + 9} fill="none" stroke="var(--foreground)" strokeWidth="2.4" opacity={0.72} />
+                  <circle cx={x} cy={y} r={r + 13} fill="none" stroke={colors.stroke} strokeWidth="1.6" strokeDasharray="4 2" opacity={0.85} className="animate-node-selected-ring" />
                 </>
               )}
 
-              <circle cx={x} cy={y} r={r}
-                fill={colors.fill}
-                stroke={colors.stroke} strokeWidth={isSelected ? 2 : 1.2}
-                opacity={1} />
+              {node.status === "in_progress" ? (
+                <rect
+                  x={x - 11}
+                  y={y - 11}
+                  width={22}
+                  height={22}
+                  rx={3}
+                  fill={colors.fill}
+                  stroke={colors.stroke}
+                  strokeWidth={isSelected ? 2.5 : 1.5}
+                  transform={`rotate(45 ${x} ${y})`}
+                />
+              ) : node.status === "suspended" ? (
+                <rect
+                  x={x - 13}
+                  y={y - 13}
+                  width={26}
+                  height={26}
+                  rx={5}
+                  fill={colors.fill}
+                  stroke={colors.stroke}
+                  strokeWidth={isSelected ? 2.5 : 1.5}
+                />
+              ) : isDivergent ? (
+                <polygon
+                  points={polygonPoints(x, y, r + 2, 6)}
+                  fill={colors.fill}
+                  stroke={colors.stroke}
+                  strokeWidth={isSelected ? 2.5 : 1.5}
+                />
+              ) : (
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={r}
+                  fill={colors.fill}
+                  stroke={colors.stroke}
+                  strokeWidth={isSelected ? 2.5 : node.status === "unfinished" ? 1.8 : 1.2}
+                  strokeDasharray={node.status === "unfinished" ? "3 2" : "none"}
+                  opacity={node.status === "unfinished" ? 0.88 : 1}
+                />
+              )}
 
               {node.status === "completed" && (
-                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="11" fontWeight="bold">&#x2713;</text>
+                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill={colors.text} fontSize="11" fontWeight="bold">&#x2713;</text>
               )}
               {node.status === "in_progress" && (
-                <circle cx={x} cy={y} r={3.5} fill="var(--background)" />
+                <circle cx={x} cy={y} r={4} fill={colors.text} className="animate-node-core-pulse" />
               )}
               {node.status === "suspended" && (
-                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="var(--background)" fontSize="10" fontWeight="bold">&#x23F8;</text>
+                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill={colors.text} fontSize="10" fontWeight="bold">&#x23F8;</text>
               )}
               {node.status === "unfinished" && (
-                <circle cx={x} cy={y} r={3} fill="var(--background)" opacity={0.8} />
+                <circle cx={x} cy={y} r={4} fill={colors.text} opacity={0.75} />
+              )}
+              {isDivergent && node.status !== "in_progress" && (
+                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="central" fill={colors.text} fontSize="12" fontWeight="bold">&#x21AF;</text>
               )}
             </g>
           )
@@ -387,28 +455,30 @@ export function TimeRiverDock() {
   const { t } = useI18n()
   const isOpen = state.ui.docks.leftOpen
   const scrollRef = useRef<HTMLDivElement>(null)
-  const activeGraph = state.serverGraph ? buildServerGraph(state.serverGraph, state.phase) : buildMockGraph(state.phase, state.divergence, state.activeNodeId)
+  const activeGraph = useMemo(
+    () => state.serverGraph ? buildServerGraph(state.serverGraph, state.phase) : buildMockGraph(state.phase, state.divergence, state.activeNodeId),
+    [state.serverGraph, state.phase, state.divergence, state.activeNodeId]
+  )
 
   useEffect(() => {
     if (!isOpen || !scrollRef.current) return
-    const activeNodeId = activeGraph.activeNodeId ?? state.activeNodeId
-    if (!activeNodeId) return
+    const focusNodeId = state.selectedNodeId ?? activeGraph.activeNodeId ?? state.activeNodeId
+    if (!focusNodeId) return
 
     const timer = setTimeout(() => {
-      if (scrollRef.current) {
-        const container = scrollRef.current
-        const layout = computeGraphLayout(activeGraph)
-        const activePos = layout.pos[activeNodeId]
-        if (!activePos) return
-        container.scrollTo({
-          left: Math.max(0, activePos.x - container.clientWidth / 2),
-          top: Math.max(0, activePos.y - container.clientHeight / 2),
-          behavior: "smooth",
-        })
-      }
+      if (!scrollRef.current) return
+      const container = scrollRef.current
+      const layout = computeGraphLayout(activeGraph)
+      const focusPos = layout.pos[focusNodeId]
+      if (!focusPos) return
+      container.scrollTo({
+        left: Math.max(0, focusPos.x - container.clientWidth / 2),
+        top: Math.max(0, focusPos.y - container.clientHeight / 2),
+        behavior: "smooth",
+      })
     }, 300)
     return () => clearTimeout(timer)
-  }, [activeGraph, isOpen, state.activeNodeId])
+  }, [activeGraph, isOpen, state.activeNodeId, state.selectedNodeId])
 
   return (
     <div className="absolute left-3 top-3 z-30" style={{ width: isOpen ? "auto" : "auto", maxWidth: 380 }}>
@@ -433,6 +503,7 @@ export function TimeRiverDock() {
               <div className="border-t border-border/20" />
               <div
                 ref={scrollRef}
+                data-timeline-scroll-container
                 className="overflow-auto max-h-[55vh] px-2 py-2"
                 style={{ maxWidth: "380px" }}
                 onWheel={(e) => {
