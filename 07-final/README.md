@@ -1,6 +1,6 @@
 # 07 — Final (CP4 Pilot User Study)
 
-Within-subject pilot (N = 6) comparing **ChronoFork-Web** against an **IDN-Twine** baseline across six historical episodes (赤壁之战 / 鸦片战争 / 戊戌变法 / 泰坦尼克号 / 古巴导弹危机 / 珍珠港事件).
+Within-subject pilot (N = 6) comparing **ChronoFork-Web** against an **IDN-Twine** baseline across six historical episodes (The Battle of Red Cliffs / The Opium Wars / The Hundred Days' Reform / The Titanic / The Cuban Missile Crisis / The Attack on Pearl Harbor).
 
 ## Quick links
 
